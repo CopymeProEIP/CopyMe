@@ -4,7 +4,6 @@
 import cv2
 import mediapipe as mp
 
-# Initialiser MediaPipe Hands
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands()
 mp_draw = mp.solutions.drawing_utils
