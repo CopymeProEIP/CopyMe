@@ -9,12 +9,12 @@ class ObjectDetection:
         self.capture_index = capture_index
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print("Using Device: ", self.device)
-        
+
         self.model = self.load_model(model_path)
         self.CLASS_NAMES_DICT = self.model.model.names
-    
+
     def load_model(self, model_path):
-        model = YOLO(model_path)
+        model = YOLO(model_path).to(self.device)
         model.fuse()
         return model
 
@@ -35,37 +35,37 @@ class ObjectDetection:
 
         for results in results_list:
             keypoints = results.keypoints.xy.cpu().numpy()
-            
+
             for kp in keypoints:
                 for start, end in skeleton:
                     x1, y1 = int(kp[start][0]), int(kp[start][1])
                     x2, y2 = int(kp[end][0]), int(kp[end][1])
                     if x1 != 0 and y1 != 0 and x2 != 0 and y2 != 0:
                         cv2.line(frame, (x1, y1), (x2, y2), (10, 255, 255), 2)
-                        
+
                         if start == 5 and end == 7 and len(kp) > 9:
                             angle = self.calculate_angle(kp[start], kp[7], kp[9])
                             text_x = x2 + 10
                             text_y = y2 + 10
-                            cv2.putText(frame, f'{angle:.0f}', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 1)
+                            cv2.putText(frame, f'{angle:.0f}', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 205, 50), 2)
                             frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[9][0]), int(kp[9][1])))
                         elif start == 6 and end == 8 and len(kp) > 10:
                             angle = self.calculate_angle(kp[start], kp[8], kp[10])
                             text_x = x2 + 10
                             text_y = y2 + 10
-                            cv2.putText(frame, f'{angle:.0f}', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 1)
+                            cv2.putText(frame, f'{angle:.0f}', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 205, 50), 2)
                             frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[10][0]), int(kp[10][1])))
                         elif start == 11 and end == 13 and len(kp) > 15:
                             angle = self.calculate_angle(kp[start], kp[13], kp[15])
                             text_x = x2 + 10
                             text_y = y2 + 10
-                            cv2.putText(frame, f'{angle:.0f}', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 1)
+                            cv2.putText(frame, f'{angle:.0f}', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 205, 50), 2)
                             frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[15][0]), int(kp[15][1])))
                         elif start == 12 and end == 14 and len(kp) > 16:
                             angle = self.calculate_angle(kp[start], kp[14], kp[16])
                             text_x = x2 + 10
                             text_y = y2 + 10
-                            cv2.putText(frame, f'{angle:.0f}', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 1)
+                            cv2.putText(frame, f'{angle:.0f}', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 205, 50), 2)
                             frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[16][0]), int(kp[16][1])))
                 for i in range(len(kp)):
                     x, y = int(kp[i][0]), int(kp[i][1])
@@ -74,13 +74,13 @@ class ObjectDetection:
 
         return frame
 
-    def draw_triangle(self, frame, pt1, pt2, pt3, alpha=0.5):
+    def draw_triangle(self, frame, pt1, pt2, pt3, alpha=0.35):
         overlay = frame.copy()
         output = frame.copy()
-        
+
         triangle_cnt = np.array([pt1, pt2, pt3])
         cv2.drawContours(overlay, [triangle_cnt], 0, (0, 165, 255), -1)
-        
+
         cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
         return output
 
@@ -93,40 +93,40 @@ class ObjectDetection:
 
 
 
-    def __call__(self, video_path):
+    def __call__(self, video_path=None):
         if video_path is None:
             cap = cv2.VideoCapture(self.capture_index)
         else:
             cap = cv2.VideoCapture(video_path)
             assert cap.isOpened(), f"Error: Unable to open video file {video_path}"
-        
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        window_name = 'YOLOv8 Keypoints Detection'
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(window_name, 800, 600)
+
         fps = int(cap.get(cv2.CAP_PROP_FPS))
 
-      
+
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
-            
             results = self.predict(frame)
             frame = self.plot_keypoints(frame, results)
-            
+
             cv2.putText(frame, f'FPS: {int(fps)}', (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            
+
             cv2.imshow('YOLOv8 Keypoints Detection', frame)
- 
+
             if cv2.waitKey(5) & 0xFF == 27:
                 break
-        
+
         cap.release()
         cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Pose Estimation with Keypoints using YOLO')
-    parser.add_argument('--video', type=str, help='Path to video file')
+    parser.add_argument('-v', '--video', type=str, help='Path to video file')
     args = parser.parse_args()
 
     detector = ObjectDetection(capture_index=0)
