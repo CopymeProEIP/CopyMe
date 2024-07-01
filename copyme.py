@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: UTF8 -*-
+
 import argparse
 import torch
 import numpy as np
@@ -9,12 +12,13 @@ class ObjectDetection:
         self.capture_index = capture_index
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print("Using Device: ", self.device)
-        
+
         self.model = self.load_model(model_path)
         self.CLASS_NAMES_DICT = self.model.model.names
-    
+
     def load_model(self, model_path):
-        model = YOLO(model_path)
+        model = YOLO(model_path).to(self.device
+                                    )
         model.fuse()
         return model
 
@@ -35,14 +39,14 @@ class ObjectDetection:
 
         for results in results_list:
             keypoints = results.keypoints.xy.cpu().numpy()
-            
+
             for kp in keypoints:
                 for start, end in skeleton:
                     x1, y1 = int(kp[start][0]), int(kp[start][1])
                     x2, y2 = int(kp[end][0]), int(kp[end][1])
                     if x1 != 0 and y1 != 0 and x2 != 0 and y2 != 0:
                         cv2.line(frame, (x1, y1), (x2, y2), (10, 255, 255), 2)
-                        
+
                         if start == 5 and end == 7 and len(kp) > 9:
                             angle = self.calculate_angle(kp[start], kp[7], kp[9])
                             text_x = x2 + 10
@@ -87,40 +91,40 @@ class ObjectDetection:
 
 
 
-    def __call__(self, video_path):
+    def __call__(self, video_path = None):
         if video_path is None:
             cap = cv2.VideoCapture(self.capture_index)
         else:
             cap = cv2.VideoCapture(video_path)
             assert cap.isOpened(), f"Error: Unable to open video file {video_path}"
-        
+
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         fps = int(cap.get(cv2.CAP_PROP_FPS))
 
-      
+
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
-            
+
             results = self.predict(frame)
             frame = self.plot_keypoints(frame, results)
-            
+
             cv2.putText(frame, f'FPS: {int(fps)}', (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            
+
             cv2.imshow('YOLOv8 Keypoints Detection', frame)
- 
+
             if cv2.waitKey(5) & 0xFF == 27:
                 break
-        
+
         cap.release()
         cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Object Detection with Keypoints using YOLO')
-    parser.add_argument('--video', type=str, help='Path to video file')
+    parser.add_argument('--video', type=str, help='Path to video file', required=False)
     args = parser.parse_args()
 
     detector = ObjectDetection(capture_index=0)
