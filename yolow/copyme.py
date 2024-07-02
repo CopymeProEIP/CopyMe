@@ -79,7 +79,8 @@ class ObjectDetection:
         output = frame.copy()
 
         triangle_cnt = np.array([pt1, pt2, pt3])
-        cv2.drawContours(overlay, [triangle_cnt], 0, (0, 165, 255), -1)
+        if pt3[0] >= 1 and pt3[0] >= 1 :
+            cv2.drawContours(overlay, [triangle_cnt], 0, (0, 165, 255), -1)
 
         cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
         return output
