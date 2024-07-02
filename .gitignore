@@ -170,3 +170,5 @@ cython_debug/
 
 # models files
 *.pt
+
+*.vs
