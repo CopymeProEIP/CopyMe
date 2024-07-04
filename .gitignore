@@ -170,5 +170,8 @@ cython_debug/
 
 # models files
 *.pt
-
-*.vs
+.idea
+*Zone.Identifier
+.vscode
+yolow/shoot
+yolow/ref
