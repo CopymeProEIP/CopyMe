@@ -1,16 +1,16 @@
-import numpy as np
 import cv2
-from time import time
+import numpy as np
 import torch
 from ultralytics import YOLO
-import argparse
-import os
+from pathlib import Path
+from typing import List, Tuple
+from Shoot import ShotPhase
 
-class ObjectDetection:
-    def __init__(self, capture_index, save_dir, model_path, frame_interval=5):
+class BasketballAnalysis:
+    def __init__(self, capture_index: int, save_dir: str, model_path: str, frame_interval: int = 5):
         self.capture_index = capture_index
-        self.save_dir = save_dir
-        os.makedirs(self.save_dir, exist_ok=True)
+        self.save_dir = Path(save_dir)
+        self.save_dir.mkdir(parents=True, exist_ok=True)
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print("Using Device: ", self.device)
@@ -23,16 +23,19 @@ class ObjectDetection:
         self.frame_interval = frame_interval
         self.current_frame_count = 0
 
-    def load_model(self, model_path):
+    def load_model(self, model_path: str) -> YOLO:
+        """Load the YOLO model from the given path."""
         model = YOLO(model_path)
         model.fuse()
         return model
 
-    def predict(self, frame):
+    def predict(self, frame: np.ndarray) -> List:
+        """Predict the objects in the given frame."""
         results = self.model(frame)
         return results
 
-    def plot_bboxes_and_save(self, results, frame):
+    def plot_bboxes_and_save(self, results: List, frame: np.ndarray) -> None:
+        """Plot bounding boxes on the frame and save the frame if a shoot is detected."""
         shoot_detected = False
 
         for result in results:
@@ -41,70 +44,92 @@ class ObjectDetection:
                 class_id = int(boxes.cls[i])
                 conf = boxes.conf[i]
                 xyxy = boxes.xyxy[i]
-                label = self.CLASS_NAMES_DICT[class_id]
 
-                if label == 'shoot' or label == 'ball':
-                    color = (0, 163, 250)
-                    if label == 'shoot':
-                        color = (138, 83, 244)
-                        shoot_detected = True
-                    cv2.rectangle(frame, (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3])), color, 2)
-                    label_text = f"{label}"
-                    cv2.putText(frame, label_text, (int(xyxy[0]), int(xyxy[1]) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                                color, 2)
+                # Draw bounding box
+                cv2.rectangle(frame, (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3])), (0, 255, 0), 2)
+                label = f"{self.CLASS_NAMES_DICT[class_id]}: {conf:.2f}"
+                cv2.putText(frame, label, (int(xyxy[0]), int(xyxy[1]) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+                if self.CLASS_NAMES_DICT[class_id] == 'shoot':
+                    shoot_detected = True
 
         if shoot_detected:
-            if not self.shoot_detected:
-                self.shoot_detected = True
-                self.shoot_frame_count = 0
-
-            if self.shoot_frame_count < 6:
-                self.save_shoot_frame(frame)
-                self.shoot_frame_count += 1
+            self.shoot_frame_count += 1
+            if self.shoot_frame_count % self.frame_interval == 0:
+                save_path = self.save_dir / f"frame_{self.sequence_count}.jpg"
+                cv2.imwrite(str(save_path), frame)
+                self.sequence_count += 1
         else:
-            self.shoot_detected = False
+            self.shoot_frame_count = 0
 
-        return frame
+    def calculate_angle(self, a: Tuple[int, int], b: Tuple[int, int], c: Tuple[int, int]) -> float:
+        """Calculate the angle between three points."""
+        a = np.array(a)
+        b = np.array(b)
+        c = np.array(c)
+        ba = a - b
+        bc = c - b
+        cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+        angle = np.degrees(np.arccos(cosine_angle))
+        return angle
 
-    def save_shoot_frame(self, frame):
-        save_path = os.path.join(self.save_dir, f"shoot{self.shoot_frame_count:04d}.jpg")
-        cv2.imwrite(save_path, frame)
+    def detect_phase(self, keypoints: np.ndarray, previous_phase: str, timestamp: float) -> str:
+        """Detect the current phase of the movement based on keypoints."""
+        try:
+            shoulder = keypoints[5]
+            elbow = keypoints[7]
+            wrist = keypoints[9]
+            hip = keypoints[11]
+            knee = keypoints[13]
+            ankle = keypoints[15]
 
-    def __call__(self):
-        cap = cv2.VideoCapture(self.capture_index)
-        assert cap.isOpened(), f"Error: Unable to open video file {self.capture_index}"
+            elbow_angle = self.calculate_angle(shoulder, elbow, wrist)
+            knee_angle = self.calculate_angle(hip, knee, ankle)
 
-        cv2.namedWindow('YOLOv8 Detection', cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('YOLOv8 Detection', 900, 600)
+            if knee_angle < 90 and previous_phase == 'Preparation':
+                return 'Jump', timestamp
+            elif elbow_angle > 160 and previous_phase == 'Jump':
+                return 'Release', timestamp
+            elif elbow_angle < 160 and previous_phase == 'Release':
+                return 'Follow-Through', timestamp
+            else:
+                return previous_phase
+        except IndexError:
+            return previous_phase
 
-        while True:
-            start_time = time()
-            ret, frame = cap.read()
-            if not ret:
-                break
+    def provide_feedback(self, frame: np.ndarray, previous_phase: str) -> Tuple[str, str]:
+        """Provide feedback on the current phase of the movement."""
+        keypoints = self.predict(frame)
+        current_phase = self.detect_phase(keypoints, previous_phase)
+        feedback = f"Current Phase: {current_phase}"
+        return feedback, current_phase
+    
+    def save_phase(self, phase, keypoints, timestamp, phases_list):
+        shot_phase = ShotPhase(phase, keypoints, timestamp)
+        phases_list.append(shot_phase.to_dict())
 
-            self.current_frame_count += 1
+def main(video_path: str) -> None:
+    """Main function to run the basketball analysis."""
+    phases_list = []
+    cap = cv2.VideoCapture(video_path)
+    previous_phase = 'Preparation'
 
-            results = self.predict(frame)
-            frame = self.plot_bboxes_and_save(results, frame)
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        # timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
+        feedback, current_phase = BasketballAnalysis.provide_feedback(frame, previous_phase)
+        
+        cv2.putText(frame, feedback, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.imshow('Basketball Analysis', frame)
 
-            end_time = time()
-            fps = 1 / np.round(end_time - start_time, 2)
-            cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 255), 2)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
-            cv2.imshow('YOLOv8 Detection', frame)
-            if cv2.waitKey(5) & 0xFF == 27:
-                break
+    cap.release()
+    cv2.destroyAllWindows()
 
-        cap.release()
-        cv2.destroyAllWindows()
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Shoot detection using YOLOv8')
-    parser.add_argument('-v', '--video', type=str, default='0', help='Path to video file or capture index')
-    parser.add_argument('-m', '--model', type=str, default='yolov8m.pt', help='Path to YOLOv8 model')
-    parser.add_argument('-s', '--save_dir', type=str, required=True, help='Directory to save frames of "shoot" class')
-    args = parser.parse_args()
-
-    detector = ObjectDetection(capture_index=args.video, save_dir=args.save_dir, model_path=args.model)
-    detector()
+if __name__ == "__main__":
+    video_path = 'basketball_video.mp4'
+    main(video_path)
