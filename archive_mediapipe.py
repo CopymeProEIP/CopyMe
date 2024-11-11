@@ -3,14 +3,13 @@ import mediapipe as mp
 import argparse
 
 class Keypoint:
-    def __init__(self, x=0.0, y=0.0, z=0.0, visibility=0.0):
+    def __init__(self, x=0.0, y=0.0, z=0.0):
         self.x = x
         self.y = y
         self.z = z
-        self.visibility = visibility
 
     def __repr__(self):
-        return f"Keypoint(x={self.x}, y={self.y}, z={self.z}, visibility={self.visibility})"
+        return f"Keypoint(x={self.x}, y={self.y}, z={self.z})"
 
 class PoseKeypoints:
     def __init__(self):
@@ -82,41 +81,41 @@ def main(video_path):
             # Remplir l'objet pose_keypoints avec les valeurs détectées
             for idx, landmark in enumerate(results.pose_landmarks.landmark):
                 h, w, _ = frame.shape  # Taille de l'image pour convertir les coordonnées normalisées
-                x, y, z, visibility = int(landmark.x * w), int(landmark.y * h), landmark.z, landmark.visibility
+                x, y, z = int(landmark.x * w), int(landmark.y * h), landmark.z
 
                 # Assigner les coordonnées aux keypoints
-                if idx == 0: pose_keypoints.nose = Keypoint(x, y, z, visibility)
-                elif idx == 1: pose_keypoints.left_eye_outer = Keypoint(x, y, z, visibility)
-                elif idx == 2: pose_keypoints.left_eye_inner = Keypoint(x, y, z, visibility)
-                elif idx == 3: pose_keypoints.right_eye_inner = Keypoint(x, y, z, visibility)
-                elif idx == 4: pose_keypoints.right_eye_outer = Keypoint(x, y, z, visibility)
-                elif idx == 5: pose_keypoints.left_ear = Keypoint(x, y, z, visibility)
-                elif idx == 6: pose_keypoints.right_ear = Keypoint(x, y, z, visibility)
-                elif idx == 7: pose_keypoints.left_shoulder = Keypoint(x, y, z, visibility)
-                elif idx == 8: pose_keypoints.right_shoulder = Keypoint(x, y, z, visibility)
-                elif idx == 9: pose_keypoints.left_elbow = Keypoint(x, y, z, visibility)
-                elif idx == 10: pose_keypoints.right_elbow = Keypoint(x, y, z, visibility)
-                elif idx == 11: pose_keypoints.left_wrist = Keypoint(x, y, z, visibility)
-                elif idx == 12: pose_keypoints.right_wrist = Keypoint(x, y, z, visibility)
-                elif idx == 13: pose_keypoints.left_palm = Keypoint(x, y, z, visibility)
-                elif idx == 14: pose_keypoints.right_palm = Keypoint(x, y, z, visibility)
-                elif idx == 15: pose_keypoints.left_index_tip = Keypoint(x, y, z, visibility)
-                elif idx == 16: pose_keypoints.right_index_tip = Keypoint(x, y, z, visibility)
-                elif idx == 17: pose_keypoints.left_hip = Keypoint(x, y, z, visibility)
-                elif idx == 18: pose_keypoints.right_hip = Keypoint(x, y, z, visibility)
-                elif idx == 19: pose_keypoints.left_knee = Keypoint(x, y, z, visibility)
-                elif idx == 20: pose_keypoints.right_knee = Keypoint(x, y, z, visibility)
-                elif idx == 21: pose_keypoints.left_ankle = Keypoint(x, y, z, visibility)
-                elif idx == 22: pose_keypoints.right_ankle = Keypoint(x, y, z, visibility)
-                elif idx == 23: pose_keypoints.left_heel = Keypoint(x, y, z, visibility)
-                elif idx == 24: pose_keypoints.right_heel = Keypoint(x, y, z, visibility)
-                elif idx == 25: pose_keypoints.left_foot_index = Keypoint(x, y, z, visibility)
-                elif idx == 26: pose_keypoints.right_foot_index = Keypoint(x, y, z, visibility)
-                elif idx == 27: pose_keypoints.left_hip_close = Keypoint(x, y, z, visibility)
-                elif idx == 28: pose_keypoints.right_hip_close = Keypoint(x, y, z, visibility)
-                elif idx == 29: pose_keypoints.spine_chest = Keypoint(x, y, z, visibility)
-                elif idx == 30: pose_keypoints.spine_upper = Keypoint(x, y, z, visibility)
-                elif idx == 31: pose_keypoints.chin = Keypoint(x, y, z, visibility)
+                if idx == 0: pose_keypoints.nose = Keypoint(x, y, z)
+                elif idx == 1: pose_keypoints.left_eye_outer = Keypoint(x, y, z)
+                elif idx == 2: pose_keypoints.left_eye_inner = Keypoint(x, y, z)
+                elif idx == 3: pose_keypoints.right_eye_inner = Keypoint(x, y, z)
+                elif idx == 4: pose_keypoints.right_eye_outer = Keypoint(x, y, z)
+                elif idx == 5: pose_keypoints.left_ear = Keypoint(x, y, z)
+                elif idx == 6: pose_keypoints.right_ear = Keypoint(x, y, z)
+                elif idx == 7: pose_keypoints.left_shoulder = Keypoint(x, y, z)
+                elif idx == 8: pose_keypoints.right_shoulder = Keypoint(x, y, z)
+                elif idx == 9: pose_keypoints.left_elbow = Keypoint(x, y, z)
+                elif idx == 10: pose_keypoints.right_elbow = Keypoint(x, y, z)
+                elif idx == 11: pose_keypoints.left_wrist = Keypoint(x, y, z)
+                elif idx == 12: pose_keypoints.right_wrist = Keypoint(x, y, z)
+                elif idx == 13: pose_keypoints.left_palm = Keypoint(x, y, z)
+                elif idx == 14: pose_keypoints.right_palm = Keypoint(x, y, z)
+                elif idx == 15: pose_keypoints.left_index_tip = Keypoint(x, y, z)
+                elif idx == 16: pose_keypoints.right_index_tip = Keypoint(x, y, z)
+                elif idx == 17: pose_keypoints.left_hip = Keypoint(x, y, z)
+                elif idx == 18: pose_keypoints.right_hip = Keypoint(x, y, z)
+                elif idx == 19: pose_keypoints.left_knee = Keypoint(x, y, z)
+                elif idx == 20: pose_keypoints.right_knee = Keypoint(x, y, z)
+                elif idx == 21: pose_keypoints.left_ankle = Keypoint(x, y, z)
+                elif idx == 22: pose_keypoints.right_ankle = Keypoint(x, y, z)
+                elif idx == 23: pose_keypoints.left_heel = Keypoint(x, y, z)
+                elif idx == 24: pose_keypoints.right_heel = Keypoint(x, y, z)
+                elif idx == 25: pose_keypoints.left_foot_index = Keypoint(x, y, z)
+                elif idx == 26: pose_keypoints.right_foot_index = Keypoint(x, y, z)
+                elif idx == 27: pose_keypoints.left_hip_close = Keypoint(x, y, z)
+                elif idx == 28: pose_keypoints.right_hip_close = Keypoint(x, y, z)
+                elif idx == 29: pose_keypoints.spine_chest = Keypoint(x, y, z)
+                elif idx == 30: pose_keypoints.spine_upper = Keypoint(x, y, z)
+                elif idx == 31: pose_keypoints.chin = Keypoint(x, y, z)
 
             # Ajouter l'objet pose_keypoints au tableau
             keypoints_array.append(pose_keypoints)
