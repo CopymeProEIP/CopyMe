@@ -18,20 +18,14 @@ The CopyMe project leverages advanced computer vision techniques to analyze bask
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/your-username/copyme.git
-   cd copyme
+   git clone https://github.com/mpJunot/CopyMe.git
+   cd Copyme
    ```
 
 2. Install the dependencies:
 
    ```sh
    pip install -r requirements.txt
-   ```
-
-3. Download the YOLOv8 model and place it in the appropriate directory:
-   ```sh
-   # Example command to download the model
-   wget https://path/to/yolov8m.pt -O yolov8m.pt
    ```
 
 ## Usage
