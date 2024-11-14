@@ -35,5 +35,5 @@ The CopyMe project leverages advanced computer vision techniques to analyze bask
 To run motion detection on a video, use the following command:
 
 ```sh
-python [alpha.py](http://_vscodecontentref_/0) --video path/to/video.mp4 --model yolov8m.pt --save_dir path/to/save_directory
+python copyme --video <path/to/video.mp4> --model <basket.pt> --save_dir <path/to/save_directory>
 ```
