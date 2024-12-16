@@ -23,6 +23,7 @@ const AccordionItem = forwardRef<HTMLDivElement, AccordionItemProps>(
 		</Accordion.Item>
 	),
 );
+AccordionItem.displayName = 'AccordionItem';
 
 type AccordionTriggerProps = {
 	children: React.ReactNode;
@@ -44,6 +45,7 @@ const AccordionTrigger = forwardRef<HTMLButtonElement, AccordionTriggerProps>(
 		</Accordion.Header>
 	),
 );
+AccordionTrigger.displayName = 'AccordionTrigger';
 
 type AccordionContentProps = {
 	children: ReactNode;
@@ -63,6 +65,7 @@ const AccordionContent = forwardRef<HTMLDivElement, AccordionContentProps>(
 		</Accordion.Content>
 	),
 );
+AccordionContent.displayName = 'AccordionContent';
 
 type CardDataProps = {
 	id: number;
@@ -181,8 +184,8 @@ const Feature = ({ collapseDelay = 5000, ltr = false, linePosition = 'left' }: F
 
 	return (
 		<section ref={ref} id='features'>
-			<div className='py-14'>
-				<div className='container flex w-full flex-col items-center justify-center p-4'>
+			<div className='py-10 flex flex-col items-center'>
+				<div className='container flex w-full flex-col items-center justify-center'>
 					<div className='mx-auto max-w-5xl text-center'>
 						<h2 className='font-mono text-[14px] font-medium tracking-tight text-primary'>
 							Comment contribuer au projet ?
