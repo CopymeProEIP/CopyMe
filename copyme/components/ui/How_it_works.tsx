@@ -184,7 +184,7 @@ const Feature = ({ collapseDelay = 5000, ltr = false, linePosition = 'left' }: F
 
 	return (
 		<section ref={ref} id='features'>
-			<div className='py-14'>
+			<div className='py-14 flex flex-col items-center'>
 				<div className='container flex w-full flex-col items-center justify-center p-4'>
 					<div className='mx-auto max-w-5xl text-center'>
 						<h2 className='font-mono text-[14px] font-medium tracking-tight text-primary'>
