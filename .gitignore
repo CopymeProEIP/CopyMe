@@ -176,7 +176,10 @@ videos/
 
 # models files
 *.pt
-.idea
+.idea/
 *.Identifier
 *.identifier
 .vscode
+BasketAnalysis-8/
+roboflow-python/
+datasets/
