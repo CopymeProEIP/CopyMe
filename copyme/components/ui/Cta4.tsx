@@ -45,7 +45,7 @@ export function CallToAction4() {
 
 	return (
 		<section id='cta4' className='flex justify-center'>
-			<div className='md:w-5/6 w-full h-[650px] px-8 md:px-14 py-10'>
+			<div className='md:w-5/6 w-full px-8 md:px-14 py-10'>
 				<div className='grid gap-6 lg:grid-cols-2 lg:gap-12 xl:grid-cols-2'>
 					<div className='flex flex-col justify-center space-y-4'>
 						<div className='space-y-2'>
