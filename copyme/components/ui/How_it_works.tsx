@@ -188,7 +188,7 @@ const Feature = ({ collapseDelay = 5000, ltr = false, linePosition = 'left' }: F
 							Comment contribuer au projet ?
 						</h2>
 						<h2 className='text-4xl font-bold tracking-tight text-black dark:text-white'>
-							Juste 3 étapes pour nous rejoindre
+							Juste 3 étapes pour y contribuer
 						</h2>
 					</div>
 					<div className='mx-auto my-12 grid h-full max-w-5xl grid-cols-5 gap-x-10'>
