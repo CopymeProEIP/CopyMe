@@ -15,9 +15,32 @@ export function CallToAction4() {
 		setForm((prevForm) => ({ ...prevForm, [id]: value }));
 	};
 
-	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		console.log('Form Data:', form);
+
+		try {
+			const response = await fetch('/api/form', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(form),
+			});
+
+			const result = await response.json();
+
+			if (response.ok) {
+				console.log('Success:', result.message);
+				alert('Merci ! Votre formulaire a été soumis avec succès.');
+				setForm({ name: '', email: '', work: '', otherWork: '' });
+			} else {
+				console.error('Error:', result.error);
+				alert(`Erreur: ${result.error}`);
+			}
+		} catch (error) {
+			console.error('Unexpected error:', error);
+			alert('Une erreur inattendue est survenue.');
+		}
 	};
 
 	return (
