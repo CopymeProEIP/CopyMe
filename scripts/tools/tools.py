@@ -16,7 +16,7 @@ def load_labels(file_path):
     return labels
 
 def check_fileType(file_path):
-    if file_path.split('.')[-1] == 'jpg' or file_path.split('.')[-1] == 'png' or file_path.split('.')[-1] == 'jpeg' or file_path.split('.')[-1] == 'bmp':
+    if file_path.split('.')[-1] == 'jpg' or file_path.split('.')[-1] == 'png' or file_path.split('.')[-1] == 'jpeg' or file_path.split('.')[-1] == 'bmp' or file_path.split('.')[-1] == 'webp':
         return 'image'
     elif file_path.split('.')[-1] == 'mp4' or file_path.split('.')[-1] == 'avi' or file_path.split('.')[-1] == 'mov':
         return 'video'

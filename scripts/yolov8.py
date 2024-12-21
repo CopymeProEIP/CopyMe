@@ -149,10 +149,12 @@ class YOLOv8:
         """
         # check if is an image or video
         if utils.check_fileType(self.capture_index) == 'image':
+            print(f"Processing image {self.capture_index}")
             frame = cv2.imread(self.capture_index)
             results = self.infer(frame)
             self.plot_result(results, frame)
         elif utils.check_fileType(self.capture_index) == 'video':
+            print(f"Processing video {self.capture_index}")
             cap = cv2.VideoCapture(self.capture_index)
             while cap.isOpened():
                 success, frame = cap.read()
@@ -168,7 +170,7 @@ class YOLOv8:
             cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    yolo = YOLOv8(capture_index='shoot.jpg')
-    yolo.load_model('yolov8m.pt')
+    yolo = YOLOv8(capture_index='a.jpg')
+    yolo.load_model('best.pt')
     yolo.capture()
 #------------------------------------------------
