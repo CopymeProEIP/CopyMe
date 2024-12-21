@@ -14,6 +14,11 @@ window_name='ShootAnalysis'
 
 class YOLOv8:
     def __init__(self, capture_index: str):
+        """
+        Initialize the YOLOv8 class.
+        
+        :param capture_index: Index of the capture device or path to the image/video file.
+        """
         # check the device if cuda is available use it otherwise use cpu
         # check the platform and use mps to improve performance on mac
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -23,7 +28,12 @@ class YOLOv8:
         self.is_model_loaded = False
 
     # load given model with YOLO
-    def load_model(self, model_path='yolov8m.pt'):
+    def load_model(self, model_path: str = 'yolov8m.pt') -> None:
+        """
+        Load the YOLO model.
+
+        :param model_path: Path to the model file.
+        """
         self.is_model_loaded = True
         self.model = YOLO(model_path)
         # get the class names
@@ -31,7 +41,16 @@ class YOLOv8:
         self.model.fuse()
 
     # function that trains the model with given parameters
-    def train(self, epochs=100, image_size=640, models='yolov8m.pt', data='data.yaml', eval=True):
+    def train(self, epochs: int = 100, image_size: int = 640, models: str = 'yolov8m.pt', data: str = 'data.yaml', eval: bool = True) -> None:
+        """
+        Train the YOLO model.
+
+        :param epochs: Number of epochs to train.
+        :param image_size: Size of the input images.
+        :param models: Path to the model file.
+        :param data: Path to the data configuration file.
+        :param eval: Whether to evaluate the model after training.
+        """
         self.load_model(models)
         self.model.train(data, epochs=epochs, imgsz=image_size, device=self.device)
         if eval:
@@ -39,19 +58,42 @@ class YOLOv8:
 
     # function that validates the model with test dataset
     # with that we can see the model performance and statistics
-    def val(self):
+    def val(self) -> None:
+        """
+        Validate the YOLO model.
+        """
         self.model.val()
 
     # function that infer given image of video or camera and return the results
-    def infer(self, frame):
+    def infer(self, frame: torch.Tensor) -> list:
+        """
+        Perform inference on a given frame.
+
+        :param frame: Input frame for inference.
+        :return: Inference results.
+        """
         assert self.is_model_loaded, "Model not loaded"
         return self.model(frame)
     
-    def detect(self, image_path, save_path='output.jpg'):
+    def detect(self, image_path: str, save_path: str = 'output.jpg') -> list:
+        """
+        Detect objects in an image.
+
+        :param image_path: Path to the input image.
+        :param save_path: Path to save the output image.
+        :return: Detection results.
+        """
         assert self.is_model_loaded, "Model not loaded"
         return self.model.predict(image_path, save_path=save_path)
 
-    def plot_result(self, results: list, frame):
+    def plot_result(self, results: list, frame: torch.Tensor) -> torch.Tensor:
+        """
+        Plot the detection results on the frame.
+
+        :param results: List of detection results.
+        :param frame: Input frame.
+        :return: Frame with plotted results.
+        """
         # loop over the results
         for result in results:
             # extract the boxes from cpu in numpy format for easy access and manipulation
@@ -68,7 +110,14 @@ class YOLOv8:
                 self.save_frame(frame, 'feedback', class_name)
         return frame
     
-    def save_frame(self, frame, output_path, class_name):
+    def save_frame(self, frame: torch.Tensor, output_path: str, class_name: str) -> None:
+        """
+        Save the frame with detected objects.
+
+        :param frame: Input frame.
+        :param output_path: Path to save the frame.
+        :param class_name: Name of the detected class.
+        """
         # we load the class names from the csv file
         classes = utils.load_labels(class_csv)
         if class_name in classes:
@@ -81,26 +130,34 @@ class YOLOv8:
         else:
             print(f"Class {class_name} not found in the class csv file")
 
-    def capture(self):
-        cap = cv2.VideoCapture(self.capture_index)
-        assert cap.isOpened(), f"Error: Unable to open file {self.capture_index}"
-        while cap.isOpened():
-            success, frame = cap.read()
-            if success:
-                results = self.infer(frame)
-                self.plot_result(results, frame)
-                cv2.imshow(window_name, frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+    def capture(self) -> None:
+        """
+        Capture and process frames from the input source.
+        """
+        # check if is an image or video
+        if utils.check_fileType(self.capture_index) == 'image':
+            frame = cv2.imread(self.capture_index)
+            results = self.infer(frame)
+            self.plot_result(results, frame)
+            cv2.imshow(window_name, frame)
+            cv2.waitKey(0)
+        elif utils.check_fileType(self.capture_index) == 'video':
+            cap = cv2.VideoCapture(self.capture_index)
+            while cap.isOpened():
+                success, frame = cap.read()
+                if success:
+                    results = self.infer(frame)
+                    self.plot_result(results, frame)
+                    cv2.imshow(window_name, frame)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+                else:
                     break
-            else:
-                break
         cap.release()
         cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     yolo = YOLOv8(capture_index='shoot.jpg')
     yolo.load_model()
-    resulst = yolo.infer('shoot.jpg')
-    print(resulst)
-    # yolo.plot_result(resulst, 'shoot.jpg')
+    yolo.capture()
 #------------------------------------------------

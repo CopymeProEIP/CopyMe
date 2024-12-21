@@ -180,6 +180,7 @@ videos/
 *.Identifier
 *.identifier
 .vscode
+.DS_Store
 BasketAnalysis-8/
 roboflow-python/
 datasets/
