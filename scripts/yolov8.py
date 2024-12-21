@@ -26,6 +26,8 @@ class YOLOv8:
         self.capture_index = "0" if capture_index == None else capture_index
         self.CLASS_NAMES_DICT = None
         self.is_model_loaded = False
+        # we load the class names from the csv file
+        self.shoot_classes = utils.load_labels(class_csv)
 
     # load given model with YOLO
     def load_model(self, model_path: str = 'yolov8m.pt') -> None:
@@ -118,9 +120,7 @@ class YOLOv8:
         :param output_path: Path to save the frame.
         :param class_name: Name of the detected class.
         """
-        # we load the class names from the csv file
-        classes = utils.load_labels(class_csv)
-        if class_name in classes:
+        if class_name in self.shoot_classes:
             class_folder = os.path.join(output_path, class_name)
             if not os.path.exists(class_folder):
                 os.makedirs(class_folder)
@@ -155,7 +155,7 @@ class YOLOv8:
             cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    yolo = YOLOv8(capture_index='shoot.jpg')
-    yolo.load_model()
+    yolo = YOLOv8(capture_index='videos/pro.mov')
+    yolo.load_model('best.pt')
     yolo.capture()
 #------------------------------------------------

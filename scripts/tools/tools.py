@@ -12,7 +12,7 @@ def load_labels(file_path):
     if os.path.exists(file_path):
         with open(file_path, 'r') as file:
             reader = csv.reader(file)
-            labels = list(reader)
+            labels = [row[0] for row in reader]
     return labels
 
 def check_fileType(file_path):
