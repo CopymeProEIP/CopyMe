@@ -13,7 +13,7 @@ window_name='ShootAnalysis'
 # out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), 10, (640, 480))
 
 class YOLOv8:
-    def __init__(self, capture_index: str):
+    def __init__(self, capture_index: str, save_path: str = 'feedback') -> None:
         """
         Initialize the YOLOv8 class.
         
@@ -26,8 +26,15 @@ class YOLOv8:
         self.capture_index = "0" if capture_index == None else capture_index
         self.CLASS_NAMES_DICT = None
         self.is_model_loaded = False
+        self.save_path = save_path
+        self.last_saved_class = None
+        self.saved_classes = set()
         # we load the class names from the csv file
+        print(f"Starting YOLOv8 on {self.device}")
+        print(f"Capture index: {self.capture_index}")
         self.shoot_classes = utils.load_labels(class_csv)
+        print(f"Classes: {self.shoot_classes}")
+        print(f"Frame saved to: {self.save_path}")
 
     # load given model with YOLO
     def load_model(self, model_path: str = 'yolov8m.pt') -> None:
@@ -109,7 +116,7 @@ class YOLOv8:
                 cv2.rectangle(frame, r[:2], r[2:], (0, 255, 0), 2)
 
                 # save the frame with the class name
-                self.save_frame(frame, 'feedback', class_name)
+                self.save_frame(frame, self.save_path, class_name)
         return frame
     
     def save_frame(self, frame: torch.Tensor, output_path: str, class_name: str) -> None:
@@ -121,12 +128,18 @@ class YOLOv8:
         :param class_name: Name of the detected class.
         """
         if class_name in self.shoot_classes:
-            class_folder = os.path.join(output_path, class_name)
-            if not os.path.exists(class_folder):
-                os.makedirs(class_folder)
-            print(f"Saving frame with class {class_name}")
-            img_id = len(os.listdir(class_folder)) + 1
-            cv2.imwrite(f"{class_folder}/{class_name}_{img_id}.jpg", frame)
+            if class_name not in self.saved_classes or len(self.saved_classes) == len(self.shoot_classes):
+                class_folder = os.path.join(output_path, class_name)
+                if not os.path.exists(class_folder):
+                    os.makedirs(class_folder)
+                print(f"Saving frame with class {class_name}")
+                img_id = len(os.listdir(class_folder)) + 1
+                cv2.imwrite(f"{class_folder}/{class_name}_{img_id}.jpg", frame)
+                self.saved_classes.add(class_name)
+                if len(self.saved_classes) == len(self.shoot_classes):
+                    self.saved_classes.clear()
+            else:
+                print(f"Class {class_name} already saved in the current cycle")
         else:
             print(f"Class {class_name} not found in the class csv file")
 
@@ -155,7 +168,7 @@ class YOLOv8:
             cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    yolo = YOLOv8(capture_index='videos/pro.mov')
-    yolo.load_model('best.pt')
+    yolo = YOLOv8(capture_index='shoot.jpg')
+    yolo.load_model('yolov8m.pt')
     yolo.capture()
 #------------------------------------------------
