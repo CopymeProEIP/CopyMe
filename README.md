@@ -81,5 +81,5 @@ This project focuses on detecting the different phases of a basketball shot usin
 
 ## References
 
-- YOLOv8 Documentation
-- Roboflow Documentation
+- [YOLOv8](https://docs.ultralytics.com/)
+- [Roboflow](https://docs.roboflow.com/)
