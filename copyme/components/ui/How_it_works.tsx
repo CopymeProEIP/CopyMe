@@ -78,14 +78,14 @@ const cardData: CardDataProps[] = [
 		title: 'Remplissez le formulaire',
 		content: 'Remplissez le formulaire de participation',
 		image:
-			'https://images.unsplash.com/photo-1720371300677-ba4838fa0678?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+			'/formulaire.png',
 	},
 	{
 		id: 2,
 		title: 'Lien Google Drive',
 		content: 'Une fois l\'inscription fait vous serez inscrit à la newsletter et vous recevrez un lien Google drive pour contribuer au projet',
 		image:
-			'https://images.unsplash.com/photo-1686170287433-c95faf6d3608?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwzfHx8ZW58MHx8fHx8',
+			'/upload.png',
 	},
 	{
 		id: 3,
@@ -93,7 +93,7 @@ const cardData: CardDataProps[] = [
 		content:
 			'Poster des vidéos de vous, vos amis ou vos joueurs pendant l\'entraînement',
 		image:
-			'https://images.unsplash.com/photo-1720378042271-60aff1e1c538?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwxMHx8fGVufDB8fHx8fA%3D%3D',
+			'/training.png',
 	},
 ];
 
@@ -182,7 +182,7 @@ const Feature = ({ collapseDelay = 5000, ltr = false, linePosition = 'left' }: F
 	return (
 		<section ref={ref} id='features'>
 			<div className='py-14'>
-				<div className='container flex w-full flex-col items-center justify-center p-4'>
+				<div className='container flex m-auto w-full flex-col items-center justify-center p-4'>
 					<div className='mx-auto max-w-5xl text-center'>
 						<h2 className='font-mono text-[14px] font-medium tracking-tight text-primary'>
 							Comment contribuer au projet ?
