@@ -8,12 +8,17 @@ const team = [
 		name: 'Idriss Said',
 		role: 'Développeur & Co-Fondateur',
 		desc: "Maman, ils m'ont mis une description",
-		img_url: 'idriss',
+		img_url: 'idriss.jpeg',
 	},
-	{ name: 'Hasnain', role: 'Développeur & Co-Fondateur', desc: '', img_url: 'singe' },
-	{ name: 'Lucas', role: 'Développeur & Co-Fondateur', desc: '', img_url: 'singe' },
+	{
+		name: 'Hasnain Pyarali',
+		role: 'Développeur & Co-Fondateur',
+		desc: '',
+		img_url: 'hasnain.jpeg',
+	},
+	{ name: 'Lucas Arnassalom', role: 'Développeur & Co-Fondateur', desc: '', img_url: 'lucas.jpeg' },
 	{ name: 'Junot', role: 'Développeur & Co-Fondateur', desc: '', img_url: 'singe' },
-	{ name: 'Samuel', role: 'Développeur & Co-Fondateur', desc: '', img_url: 'singe' },
+	{ name: 'Samuel', role: 'Développeur & Co-Fondateur', desc: '', img_url: 'samuel.jpeg' },
 ];
 
 export function Team() {
@@ -30,10 +35,10 @@ export function Team() {
 						{team.map((member, idx) => (
 							<div key={idx} className='w-[256px] flex flex-col gap-2'>
 								<Image
-									src={`/${member.img_url}.png`}
-									width={256}
-									height={350}
-									className='object-cover dark:brightness-0 dark:invert'
+									src={`/${member.img_url}`}
+									width={200}
+									height={200}
+									className='dark:brightness-0 dark:invert'
 									alt={member.name}
 								/>
 								<p className='scroll-m-20 text-2xl font-semibold tracking-tight leading-7'>

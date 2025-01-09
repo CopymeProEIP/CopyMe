@@ -3,7 +3,7 @@ import HeroVideoDialog from '@/components/ui/hero-video-dialog';
 
 export function Solution() {
 	return (
-		<section id='problematique'>
+		<section id='problematique' className='bg-gray-100'>
 			<div className='px-2 py-10 md:px-6 flex items-center justify-center flex-col'>
 				<div className='mx-auto space-y-4 py-6 text-center'>
 					<h2 className='font-mono text-[14px] font-medium tracking-tight text-primary'>
@@ -14,15 +14,15 @@ export function Solution() {
 					<HeroVideoDialog
 						className='dark:hidden block'
 						animationStyle='from-center'
-						videoSrc='https://www.youtube.com/embed/qh3NGpYRG3I?si=4rb-zSdDkVK9qxxb'
-						thumbnailSrc='https://startup-template-sage.vercel.app/hero-light.png'
+						videoSrc='/video_pres.mp4'
+						thumbnailSrc='/screen.png'
 						thumbnailAlt='Hero Video'
 					/>
 					<HeroVideoDialog
 						className='hidden dark:block'
 						animationStyle='from-center'
-						videoSrc='https://www.youtube.com/embed/qh3NGpYRG3I?si=4rb-zSdDkVK9qxxb'
-						thumbnailSrc='https://startup-template-sage.vercel.app/hero-dark.png'
+						videoSrc='/video_pres.mp4'
+						thumbnailSrc='/screen.png'
 						thumbnailAlt='Hero Video'
 					/>
 				</div>

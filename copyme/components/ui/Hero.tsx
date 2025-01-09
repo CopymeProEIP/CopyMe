@@ -7,7 +7,7 @@ import { BorderBeam } from '@/components/ui/border-beam';
 import { motion, useInView } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { useRef } from 'react';
-import Project from '@/app/assets/project.png';
+import Project from '@/app/assets/app2.png';
 import Image from 'next/image';
 
 export function Hero() {
