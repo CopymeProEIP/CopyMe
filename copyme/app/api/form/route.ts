@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/connectDB'
 import Form from '@/Model/Form';
 
-export async function POST(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest) {
 	const { name, email, work, otherWork } = await req.json();
 
 	// Basic validation
