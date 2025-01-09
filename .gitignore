@@ -165,7 +165,7 @@ cython_debug/
 
 # assets files
 
-*.mp4
+no*.mp4
 *.mov
 
 # models files
