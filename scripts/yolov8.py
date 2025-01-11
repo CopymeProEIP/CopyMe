@@ -93,53 +93,43 @@ class YOLOv8:
             for kp in keypoints:
                 if kp.shape[0] != 17:
                     continue
-
                 for start, end in skeleton:
-                    x1, y1 = int(kp[start][0]), int(kp[start][1])
-                    x2, y2 = int(kp[end][0]), int(kp[end][1])
-                    if x1 != 0 and y1 != 0 and x2 != 0 and y2 != 0:
-                        cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), 3)
-                        angle = self.draw_angle_and_triangle(frame, kp, start, end, keypoint_names)
-                        if angle is not None:
-                            angles.append((keypoint_names.get(end, f'Keypoint {end}'), angle))
-                for i in range(len(kp)):
-                    x, y = int(kp[i][0]), int(kp[i][1])
-                    if x != 0 and y != 0:
-                        cv2.circle(frame, (x, y), 6, (147, 20, 255), -1)
+                    angle, frame = self.draw_angle_and_triangle(frame, kp, start, end, keypoint_names)
+                    if angle is not None:
+                        angles.append((keypoint_names.get(end, f'Keypoint {end}'), angle))
 
         return frame, angles
 
     def draw_angle_and_triangle(self, frame, kp, start, end, keypoint_names):
+        x1, y1 = int(kp[start][0]), int(kp[start][1])
+        x2, y2 = int(kp[end][0]), int(kp[end][1])
         angle = None
-        if start == 5 and end == 7 and len(kp) > 9:
-            angle = self.calculate_angle(kp[start], kp[7], kp[9])
-            self.draw_text(frame, f'{keypoint_names[7]}: {angle:.0f}', (int(kp[end][0]), int(kp[end][1])))
-            frame = self.draw_triangle(frame, (int(kp[start][0]), int(kp[start][1])), (int(kp[end][0]), int(kp[end][1])), (int(kp[9][0]), int(kp[9][1])))
-        elif start == 6 and end == 8 and len(kp) > 10:
-            angle = self.calculate_angle(kp[start], kp[8], kp[10])
-            self.draw_text(frame, f'{keypoint_names[8]}: {angle:.0f}', (int(kp[end][0]), int(kp[end][1])))
-            frame = self.draw_triangle(frame, (int(kp[start][0]), int(kp[start][1])), (int(kp[end][0]), int(kp[end][1])), (int(kp[10][0]), int(kp[10][1])))
-        elif start == 11 and end == 13 and len(kp) > 15:
-            angle = self.calculate_angle(kp[start], kp[13], kp[15])
-            self.draw_text(frame, f'{keypoint_names[13]}: {angle:.0f}', (int(kp[end][0]), int(kp[end][1])))
-            frame = self.draw_triangle(frame, (int(kp[start][0]), int(kp[start][1])), (int(kp[end][0]), int(kp[end][1])), (int(kp[15][0]), int(kp[15][1])))
-        elif start == 12 and end == 14 and len(kp) > 16:
-            angle = self.calculate_angle(kp[start], kp[14], kp[16])
-            self.draw_text(frame, f'{keypoint_names[14]}: {angle:.0f}', (int(kp[end][0]), int(kp[end][1])))
-            frame = self.draw_triangle(frame, (int(kp[start][0]), int(kp[start][1])), (int(kp[end][0]), int(kp[end][1])), (int(kp[16][0]), int(kp[16][1])))
-        return angle
+        if x1 != 0 and y1 != 0 and x2 != 0 and y2 != 0:
+            if start == 5 and end == 7 and len(kp) > 9:
+                frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[9][0]), int(kp[9][1])))
+                angle = self.calculate_angle(kp[start], kp[7], kp[9])
+                frame = self.draw_text(frame, f'{keypoint_names[7]}: {angle:.0f}', (x2, y2))
+            elif start == 6 and end == 8 and len(kp) > 10:
+                frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[10][0]), int(kp[10][1])))
+                angle = self.calculate_angle(kp[start], kp[8], kp[10])
+                frame = self.draw_text(frame, f'{keypoint_names[8]}: {angle:.0f}', (x2, y2))
+            elif start == 11 and end == 13 and len(kp) > 15:
+                frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[15][0]), int(kp[15][1])))
+                angle = self.calculate_angle(kp[start], kp[13], kp[15])
+                frame = self.draw_text(frame, f'{keypoint_names[13]}: {angle:.0f}', (x2, y2))
+            elif start == 12 and end == 14 and len(kp) > 16:
+                frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[16][0]), int(kp[16][1])))
+                angle = self.calculate_angle(kp[start], kp[14], kp[16])
+                frame = self.draw_text(frame, f'{keypoint_names[14]}: {angle:.0f}', (x2, y2))
+        return angle, frame
 
     def draw_text(self, frame, text, position):
-        font_scale = 0.6
-        font_thickness = 2
         font = cv2.FONT_HERSHEY_SIMPLEX
-        text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
-        text_w, text_h = text_size
         x, y = position
-        cv2.rectangle(frame, (x, y - text_h - 5), (x + text_w, y + 5), (200, 200, 200), -1)
-        cv2.putText(frame, text, (x, y), font, font_scale, (50, 205, 50), font_thickness)
+        cv2.putText(frame, text, (x + 10, y), font, 0.4, (50, 205, 50), 1)
+        return frame
 
-    def draw_triangle(self, frame, pt1, pt2, pt3, alpha=0.35):
+    def draw_triangle(self, frame, pt1, pt2, pt3, alpha=0.2):
         overlay = frame.copy()
         output = frame.copy()
 

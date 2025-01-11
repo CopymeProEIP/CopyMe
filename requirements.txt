@@ -1,3 +1,4 @@
 ultralytics ## for YOLOv8
+opencv-python ## for image processing
 roboflow ## for dataset annotation
 selenium ## for web scraping
