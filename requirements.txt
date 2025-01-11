@@ -1,4 +1,3 @@
-ultralytics
-numpy
-opencv-python
-torch
+ultralytics ## for YOLOv8
+roboflow ## for dataset annotation
+selenium ## for web scraping

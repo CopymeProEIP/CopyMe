@@ -1,0 +1,9 @@
+Class: shot_realese
+L elbow: 144
+R elbow: 156
+L knee: 9
+R knee: 7
+L elbow: 98
+R elbow: 144
+L knee: 159
+R knee: 161

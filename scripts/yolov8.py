@@ -1,3 +1,7 @@
+import csv
+import os
+from utils import load_labels, check_fileType
+
 #----------------------------------------------------
 # YOLOv8 class to train, validate and infer the model
 from ultralytics import YOLO
@@ -5,104 +9,156 @@ import torch
 import cv2
 import os
 from sys import platform
-import tools.tools as utils
+import numpy as np
 
 class_csv = 'shoot.csv'
 window_name='ShootAnalysis'
+default_save_path = 'feedback'
+default_capture_index = "0"
+default_model_path = 'yolov8m.pt'
+default_keypoint_model_path = 'yolov8l-pose.pt'
+default_data = 'data.yaml'
 
 # out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), 10, (640, 480))
 
 class YOLOv8:
-    def __init__(self, capture_index: str, save_path: str = 'feedback') -> None:
-        """
-        Initialize the YOLOv8 class.
-        
-        :param capture_index: Index of the capture device or path to the image/video file.
-        """
+    def __init__(self, capture_index=default_capture_index, save_path=default_save_path, load_labels_flag=True):
         # check the device if cuda is available use it otherwise use cpu
         # check the platform and use mps to improve performance on mac
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.device = 'mps' if platform == 'darwin' else self.device
-        self.capture_index = "0" if capture_index == None else capture_index
+        self.capture_index = capture_index
         self.CLASS_NAMES_DICT = None
         self.is_model_loaded = False
+        self.is_keypoint_model_loaded = False
         self.save_path = save_path
         self.last_saved_class = None
         self.saved_classes = set()
-        # we load the class names from the csv file
-        print(f"Starting YOLOv8 on {self.device}")
+        self.model = None  # Initialize model
+        self.keypoint_model = None  # Initialize keypoint_model
+
+        print(f"Using YOLOv8 on {self.device}")
         print(f"Capture index: {self.capture_index}")
-        self.shoot_classes = utils.load_labels(class_csv)
-        print(f"Classes: {self.shoot_classes}")
+        if load_labels_flag:
+            self.shoot_classes = load_labels(class_csv)
+        else:
+            self.shoot_classes = []
+        print(f"Classes available: {self.shoot_classes}")
         print(f"Frame saved to: {self.save_path}")
 
     # load given model with YOLO
-    def load_model(self, model_path: str = 'yolov8m.pt') -> None:
-        """
-        Load the YOLO model.
-
-        :param model_path: Path to the model file.
-        """
-        self.is_model_loaded = True
-        self.model = YOLO(model_path)
-        # get the class names
+    def load_model(self, model_path=default_model_path):
+        self.model = YOLO(model_path).to(self.device)
         self.CLASS_NAMES_DICT = self.model.model.names
-        self.model.fuse()
+        self.model.fuse()  # Fuse layers for faster inference
+        self.is_model_loaded = self.model is not None
 
-    # function that trains the model with given parameters
-    def train(self, epochs: int = 100, image_size: int = 640, models: str = 'yolov8m.pt', data: str = 'data.yaml', eval: bool = True) -> None:
-        """
-        Train the YOLO model.
-
-        :param epochs: Number of epochs to train.
-        :param image_size: Size of the input images.
-        :param models: Path to the model file.
-        :param data: Path to the data configuration file.
-        :param eval: Whether to evaluate the model after training.
-        """
-        self.load_model(models)
-        self.model.train(data, epochs=epochs, imgsz=image_size, device=self.device)
-        if eval:
-            self.val()
-
-    # function that validates the model with test dataset
-    # with that we can see the model performance and statistics
-    def val(self) -> None:
-        """
-        Validate the YOLO model.
-        """
-        self.model.val()
+    def load_keypoint_model(self, model_path=default_keypoint_model_path):
+        self.keypoint_model = YOLO(model_path).to(self.device)
+        self.keypoint_model.fuse()  # Fuse layers for faster inference
+        print(f"Keypoint model loaded from {model_path}")
+        self.is_keypoint_model_loaded = self.keypoint_model is not None
 
     # function that infer given image of video or camera and return the results
-    def infer(self, frame: torch.Tensor) -> list:
-        """
-        Perform inference on a given frame.
-
-        :param frame: Input frame for inference.
-        :return: Inference results.
-        """
-        assert self.is_model_loaded, "Model not loaded"
-        return self.model(frame)
+    def infer(self, frame, mode=['pose', 'object']):
+        results = []
+        if 'object' in mode:
+            assert self.is_model_loaded, "Model not loaded"
+            results = self.model(frame)
+        if 'pose' in mode:
+            assert self.is_keypoint_model_loaded, "Keypoint model not loaded"
+            results = self.keypoint_model(frame)
+        return results
     
-    def detect(self, image_path: str, save_path: str = 'output.jpg') -> list:
-        """
-        Detect objects in an image.
+    def pose_detector(self, frame, results_list):
+        skeleton = [
+            (5, 6),  # Shoulders connection
+            (5, 11), (6, 12),  # Shoulders to hips
+            (11, 12),  # Hips connection
+            (5, 7), (7, 9),  # Left arm
+            (6, 8), (8, 10),  # Right arm
+            (11, 13), (13, 15),  # Left leg
+            (12, 14), (14, 16)  # Right leg
+        ]
 
-        :param image_path: Path to the input image.
-        :param save_path: Path to save the output image.
-        :return: Detection results.
-        """
-        assert self.is_model_loaded, "Model not loaded"
-        return self.model.predict(image_path, save_path=save_path)
+        keypoint_names = {
+            7: "L elbow", 8: "R elbow",
+            13: "L knee", 14: "R knee"
+        }
 
-    def plot_result(self, results: list, frame: torch.Tensor) -> torch.Tensor:
-        """
-        Plot the detection results on the frame.
+        angles = []
 
-        :param results: List of detection results.
-        :param frame: Input frame.
-        :return: Frame with plotted results.
-        """
+        for results in results_list:
+            keypoints = results.keypoints.xy.cpu().numpy()
+            for kp in keypoints:
+                if kp.shape[0] != 17:
+                    continue
+
+                for start, end in skeleton:
+                    x1, y1 = int(kp[start][0]), int(kp[start][1])
+                    x2, y2 = int(kp[end][0]), int(kp[end][1])
+                    if x1 != 0 and y1 != 0 and x2 != 0 and y2 != 0:
+                        cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), 3)
+                        angle = self.draw_angle_and_triangle(frame, kp, start, end, keypoint_names)
+                        if angle is not None:
+                            angles.append((keypoint_names.get(end, f'Keypoint {end}'), angle))
+                for i in range(len(kp)):
+                    x, y = int(kp[i][0]), int(kp[i][1])
+                    if x != 0 and y != 0:
+                        cv2.circle(frame, (x, y), 6, (147, 20, 255), -1)
+
+        return frame, angles
+
+    def draw_angle_and_triangle(self, frame, kp, start, end, keypoint_names):
+        angle = None
+        if start == 5 and end == 7 and len(kp) > 9:
+            angle = self.calculate_angle(kp[start], kp[7], kp[9])
+            self.draw_text(frame, f'{keypoint_names[7]}: {angle:.0f}', (int(kp[end][0]), int(kp[end][1])))
+            frame = self.draw_triangle(frame, (int(kp[start][0]), int(kp[start][1])), (int(kp[end][0]), int(kp[end][1])), (int(kp[9][0]), int(kp[9][1])))
+        elif start == 6 and end == 8 and len(kp) > 10:
+            angle = self.calculate_angle(kp[start], kp[8], kp[10])
+            self.draw_text(frame, f'{keypoint_names[8]}: {angle:.0f}', (int(kp[end][0]), int(kp[end][1])))
+            frame = self.draw_triangle(frame, (int(kp[start][0]), int(kp[start][1])), (int(kp[end][0]), int(kp[end][1])), (int(kp[10][0]), int(kp[10][1])))
+        elif start == 11 and end == 13 and len(kp) > 15:
+            angle = self.calculate_angle(kp[start], kp[13], kp[15])
+            self.draw_text(frame, f'{keypoint_names[13]}: {angle:.0f}', (int(kp[end][0]), int(kp[end][1])))
+            frame = self.draw_triangle(frame, (int(kp[start][0]), int(kp[start][1])), (int(kp[end][0]), int(kp[end][1])), (int(kp[15][0]), int(kp[15][1])))
+        elif start == 12 and end == 14 and len(kp) > 16:
+            angle = self.calculate_angle(kp[start], kp[14], kp[16])
+            self.draw_text(frame, f'{keypoint_names[14]}: {angle:.0f}', (int(kp[end][0]), int(kp[end][1])))
+            frame = self.draw_triangle(frame, (int(kp[start][0]), int(kp[start][1])), (int(kp[end][0]), int(kp[end][1])), (int(kp[16][0]), int(kp[16][1])))
+        return angle
+
+    def draw_text(self, frame, text, position):
+        font_scale = 0.6
+        font_thickness = 2
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+        text_w, text_h = text_size
+        x, y = position
+        cv2.rectangle(frame, (x, y - text_h - 5), (x + text_w, y + 5), (200, 200, 200), -1)
+        cv2.putText(frame, text, (x, y), font, font_scale, (50, 205, 50), font_thickness)
+
+    def draw_triangle(self, frame, pt1, pt2, pt3, alpha=0.35):
+        overlay = frame.copy()
+        output = frame.copy()
+
+        triangle_cnt = np.array([pt1, pt2, pt3])
+        if pt3[0] >= 1 and pt3[1] >= 1:
+            cv2.drawContours(overlay, [triangle_cnt], 0, (0, 165, 255), -1)
+
+        cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
+        return output
+
+    def calculate_angle(self, joint1, joint2, joint3):
+        v1 = np.array(joint1) - np.array(joint2)
+        v2 = np.array(joint3) - np.array(joint2)
+        cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        angle_rad = np.arccos(np.clip(cos_theta, -1.0, 1.0))
+        angle_deg = np.degrees(angle_rad)
+        return angle_deg
+
+    def plot_result(self, results: list, frame):
         # loop over the results
         for result in results:
             # extract the boxes from cpu in numpy format for easy access and manipulation
@@ -113,20 +169,15 @@ class YOLOv8:
                 class_id = int(box.cls[0])  # Get class ID
                 class_name = self.CLASS_NAMES_DICT[class_id] # Get class name
                 print(f"Class: {class_name}, Box: {r}")
-                cv2.rectangle(frame, r[:2], r[2:], (0, 255, 0), 2)
 
-                # save the frame with the class name
-                self.save_frame(frame, self.save_path, class_name)
+                # save the frame with the class name and get keypoints
+                keypoints = self.infer(frame, mode=['pose'])
+                frame, angles = self.pose_detector(frame, keypoints)
+                self.save_frame(frame, self.save_path, class_name, angles)
         return frame
     
-    def save_frame(self, frame: torch.Tensor, output_path: str, class_name: str) -> None:
-        """
-        Save the frame with detected objects.
-
-        :param frame: Input frame.
-        :param output_path: Path to save the frame.
-        :param class_name: Name of the detected class.
-        """
+    # function that save the frame with the class name
+    def save_frame(self, frame, output_path, class_name, angles):
         if class_name in self.shoot_classes:
             if class_name not in self.saved_classes or len(self.saved_classes) == len(self.shoot_classes):
                 class_folder = os.path.join(output_path, class_name)
@@ -134,8 +185,17 @@ class YOLOv8:
                     os.makedirs(class_folder)
                 print(f"Saving frame with class {class_name}")
                 img_id = len(os.listdir(class_folder)) + 1
-                cv2.imwrite(f"{class_folder}/{class_name}_{img_id}.jpg", frame)
+                frame_path = f"{class_folder}/{class_name}_{img_id}.jpg"
+                cv2.imwrite(frame_path, frame)
                 self.saved_classes.add(class_name)
+                
+                # Save the angles in a text file
+                angle_file_path = os.path.join(class_folder, 'angles.txt')
+                with open(angle_file_path, 'w') as file:
+                    file.write(f'Class: {class_name}\n')
+                    for i, (keypoint_name, angle) in enumerate(angles, 1):
+                        file.write(f'{keypoint_name}: {angle:.0f}\n')
+                
                 if len(self.saved_classes) == len(self.shoot_classes):
                     self.saved_classes.clear()
             else:
@@ -143,23 +203,37 @@ class YOLOv8:
         else:
             print(f"Class {class_name} not found in the class csv file")
 
-    def capture(self) -> None:
-        """
-        Capture and process frames from the input source.
-        """
+
+    # function that capture the image or video and process it
+    def capture(self):
         # check if is an image or video
-        if utils.check_fileType(self.capture_index) == 'image':
+        if check_fileType(self.capture_index) == 'image':
             print(f"Processing image {self.capture_index}")
             frame = cv2.imread(self.capture_index)
-            results = self.infer(frame)
+            results = self.infer(frame, mode=['object'])
             self.plot_result(results, frame)
-        elif utils.check_fileType(self.capture_index) == 'video':
+        elif check_fileType(self.capture_index) == 'video':
             print(f"Processing video {self.capture_index}")
             cap = cv2.VideoCapture(self.capture_index)
             while cap.isOpened():
                 success, frame = cap.read()
                 if success:
-                    results = self.infer(frame)
+                    results = self.infer(frame, mode=['object'])
+                    self.plot_result(results, frame)
+                    cv2.imshow(window_name, frame)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+                else:
+                    break
+            cap.release()
+            cv2.destroyAllWindows()
+        else:
+            print(f"Processing camera index {self.capture_index}")
+            cap = cv2.VideoCapture(self.capture_index)
+            while cap.isOpened():
+                success, frame = cap.read()
+                if success:
+                    results = self.infer(frame, mode=['object'])
                     self.plot_result(results, frame)
                     cv2.imshow(window_name, frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -170,7 +244,8 @@ class YOLOv8:
             cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    yolo = YOLOv8(capture_index='a.jpg')
+    yolo = YOLOv8(capture_index='./test/a.jpg')
     yolo.load_model('best.pt')
+    yolo.load_keypoint_model()
     yolo.capture()
 #------------------------------------------------
