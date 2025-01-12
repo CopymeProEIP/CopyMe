@@ -1,0 +1,5 @@
+ultralytics ## for YOLOv8
+opencv-python ## for image processing
+numpy ## for array processing
+roboflow ## for dataset annotation
+selenium ## for web scraping
