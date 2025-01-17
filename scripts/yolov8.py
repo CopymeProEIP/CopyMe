@@ -197,7 +197,7 @@ class YOLOv8:
                     continue
                 elif class_name in self.saved_classes:
                     if class_name in self.saved_frames_data:
-                        saved_conf = self.saved_frames_data[class_name].split(':')[1]
+                        saved_conf = self.saved_frames_data[class_name]
                         confidence_saved = float(saved_conf)
                         if confidence > confidence_saved:
                             print(f"Class: {class_name}, Confidence: {confidence} above saved confidence, replacing.")
@@ -223,7 +223,7 @@ class YOLOv8:
         # Save the best frame
         if best_frame is not None and best_class_name is not None:
             if self.sync == False:
-                self.saved_frames_data[best_class_name] = f"{best_class_name}:{highest_confidence}"
+                self.saved_frames_data[best_class_name] = f"{highest_confidence}"
             self.save_frame(best_frame, self.save_path, best_class_name, best_angles, sync=self.sync)
         return frame
 
@@ -240,7 +240,6 @@ class YOLOv8:
                     os.makedirs(class_folder)
                 print(f"Saving frame for class {class_name}")
                 frame_path = f"{class_folder}/{class_name}.jpg"
-                # if sync is True that's mean we need to replace the last saved frame
                 cv2.imwrite(frame_path, frame)
                 if sync == False:
                     self.saved_classes.add(class_name)
@@ -249,7 +248,6 @@ class YOLOv8:
                     file.write(f'Class: {class_name}\n')
                     for i, (keypoint_name, angle) in enumerate(angles, 1):
                         file.write(f'{keypoint_name}: {angle:.0f}\n')
-                
                 print(f"saved class {self.saved_classes}")
                 if len(self.saved_classes) == len(self.shoot_classes):
                     self.saved_classes.clear()
