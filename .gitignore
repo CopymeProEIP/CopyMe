@@ -179,3 +179,4 @@ feedback/
 roboflow-python/
 datasets/
 shoot.jpg
+.DS_Store
