@@ -3,12 +3,13 @@ import csv
 import os
 from utils import load_labels, check_fileType
 from ultralytics import YOLO
+from pymongo import MongoClient
 import torch
 import cv2
 import os
 from sys import platform
 import numpy as np
-
+from datetime import date
 
 #----------------------------------------------------
 # check if the class csv file is available
@@ -56,6 +57,8 @@ class YOLOv8:
         self.model = None  # Initialize model
         self.keypoint_model = None  # Initialize keypoint_model
 
+        self.db = None
+
         print(f"Using YOLOv8 on {self.device}")
         print(f"Capture index: {self.capture_index}")
         if load_labels_flag:
@@ -64,6 +67,69 @@ class YOLOv8:
             self.shoot_classes = []
         print(f"Classes available: {self.shoot_classes}")
         print(f"Frame saved to: {self.save_path}")
+        MONGODB_URI = "mongodb+srv://copyme:dgg5kQCAVmGoJ4qD@cluster0.iea0zmj.mongodb.net/CopyMe?retryWrites=true&w=majority&appName=Cluster0"
+        self.connect_to_bdd(MONGODB_URI)
+
+
+    def convert_numpy_to_python(self, data):
+        """
+        Convertit les types numpy en types Python natifs dans une structure de données.
+        """
+        if isinstance(data, dict):
+            return {key: self.convert_numpy_to_python(value) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [self.convert_numpy_to_python(item) for item in data]
+        elif isinstance(data, np.ndarray):
+            return data.tolist()  # Convertit un tableau numpy en liste Python
+        elif isinstance(data, (np.float32, np.float64)):
+            return float(data)  # Convertit un float numpy en float Python
+        elif isinstance(data, (np.int32, np.int64)):
+            return int(data)  # Convertit un int numpy en int Python
+        else:
+            return data  # Retourne les autres types inchangés
+
+
+    def connect_to_bdd(self, uri):
+        """Connect to the MongoDB 'CopyMe' database."""
+        try:
+            client = MongoClient(uri)
+            self.db = client["CopyMe"]
+            print("Successfully connected to the database: CopyMe")
+            return self.db
+        except Exception as e:
+            print(f"Failed to connect to MongoDB: {e}")
+            return None
+
+
+    def save_angles_to_db(self, frame_id, class_name, angles, keypoints_positions):
+        """
+        Sauvegarde les angles et positions des points clés dans MongoDB.
+        """
+
+        try:
+            if (keypoints_positions['L shoulder'][0] == 0 ): return
+
+            # Vérifiez si la collection existe
+            collection_name = "angles_collection"
+            collection = self.db[collection_name]
+
+            # Préparez les données
+            document = {
+                "frame_id": frame_id,
+                "class_name": class_name,
+                "angles": self.convert_numpy_to_python(angles),
+                "keypoints_positions": keypoints_positions,
+            }
+
+            # Insérez les données dans la base de données
+            result = collection.insert_one(document)
+            print(f"Données sauvegardées avec succès. ID du document : {result.inserted_id}")
+            return True  # Retourne True si la sauvegarde réussit
+
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde dans MongoDB : {e}")
+            return False  # Retourne False si une erreur se produit
+
 
     # load given model with YOLO
     def load_model(self, model_path=default_model_path):
@@ -88,8 +154,9 @@ class YOLOv8:
             assert self.is_keypoint_model_loaded, "Keypoint model not loaded"
             results = self.keypoint_model(frame)
         return results
-    
-    def pose_detector(self, frame, results_list):
+
+
+    def pose_detector(self, frame, results_list, class_name):
         skeleton = [
             (5, 6),  # Shoulders connection
             (5, 11), (6, 12),  # Shoulders to hips
@@ -100,47 +167,95 @@ class YOLOv8:
             (12, 14), (14, 16)  # Right leg
         ]
 
+        # Optional: Name the keypoints for clarity
         keypoint_names = {
+            0: "Nose", 1: "L eye", 2: "R eye", 3: "L ear", 4: "R ear",
+            5: "L shoulder", 6: "R shoulder",
             7: "L elbow", 8: "R elbow",
-            13: "L knee", 14: "R knee"
+            9: "L wrist", 10: "R wrist",
+            11: "L hip", 12: "R hip",
+            13: "L knee", 14: "R knee",
+            15: "L ankle", 16: "R ankle"
         }
 
-        angles = []
+        angles_with_points = []  # List to store angles linked to points
+        keypoints_positions = {}  # Dictionary to store keypoint positions for all keypoints
 
         for results in results_list:
-            keypoints = results.keypoints.xy.cpu().numpy()
-            for kp in keypoints:
-                if kp.shape[0] != 17:
-                    continue
-                for start, end in skeleton:
-                    angle, frame = self.draw_angle_and_triangle(frame, kp, start, end, keypoint_names)
-                    if angle is not None:
-                        angles.append((keypoint_names.get(end, f'Keypoint {end}'), angle))
+            # Extract keypoints coordinates
+            if not hasattr(results, 'keypoints') or results.keypoints is None:
+                continue
 
-        return frame, angles
+            keypoints = results.keypoints.xy.cpu().numpy()  # Assuming keypoints are in this format
+
+            for kp in keypoints:
+                if kp.shape[0] < 17:  # Ensure we have all 17 keypoints
+                    continue
+
+                # Store positions of all keypoints
+                for idx, coord in enumerate(kp):
+                    keypoint_name = keypoint_names.get(idx, f"Keypoint {idx}")
+                    keypoints_positions[keypoint_name] = coord.tolist()
+
+                # Calculate angles for each pair in the skeleton
+                for start, end in skeleton:
+                    if start >= len(kp) or end >= len(kp):
+                        continue
+
+                    angle, frame, third_point = self.draw_angle_and_triangle(frame, kp, start, end, keypoint_names)
+                    if angle is not None:
+                        print(angle)
+                        # Get the keypoint names
+                        start_name = keypoint_names.get(start, f"Keypoint {start}")
+                        end_name = keypoint_names.get(end, f"Keypoint {end}")
+
+                        # Append angle and linked points
+                        angles_with_points.append({
+                            "start_point": start_name,
+                            "end_point": end_name,
+                            "third_point": third_point,
+                            "angle": angle
+                        })
+
+                frame_id = f"frame_{id(frame)}"
+                success = self.save_angles_to_db(frame_id, class_name, angles_with_points, keypoints_positions)
+                if success:
+                    print("Données sauvegardées pour le frame :", frame_id)
+
+
+        return frame, angles_with_points
+
 
     def draw_angle_and_triangle(self, frame, kp, start, end, keypoint_names):
         x1, y1 = int(kp[start][0]), int(kp[start][1])
         x2, y2 = int(kp[end][0]), int(kp[end][1])
         angle = None
+        third_point = None
+
         if x1 != 0 and y1 != 0 and x2 != 0 and y2 != 0:
             if start == 5 and end == 7 and len(kp) > 9:
+                third_point = keypoint_names[9]
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[9][0]), int(kp[9][1])))
                 angle = self.calculate_angle(kp[start], kp[7], kp[9])
                 frame = self.draw_text(frame, f'{keypoint_names[7]}: {angle:.0f}', (x2, y2))
             elif start == 6 and end == 8 and len(kp) > 10:
+                third_point = keypoint_names[10]
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[10][0]), int(kp[10][1])))
                 angle = self.calculate_angle(kp[start], kp[8], kp[10])
                 frame = self.draw_text(frame, f'{keypoint_names[8]}: {angle:.0f}', (x2, y2))
             elif start == 11 and end == 13 and len(kp) > 15:
+                third_point = keypoint_names[15]
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[15][0]), int(kp[15][1])))
                 angle = self.calculate_angle(kp[start], kp[13], kp[15])
                 frame = self.draw_text(frame, f'{keypoint_names[13]}: {angle:.0f}', (x2, y2))
             elif start == 12 and end == 14 and len(kp) > 16:
+                third_point = keypoint_names[16]
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[16][0]), int(kp[16][1])))
                 angle = self.calculate_angle(kp[start], kp[14], kp[16])
                 frame = self.draw_text(frame, f'{keypoint_names[14]}: {angle:.0f}', (x2, y2))
-        return angle, frame
+
+        return angle, frame, third_point
+
 
     def draw_text(self, frame, text, position):
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -210,15 +325,16 @@ class YOLOv8:
                     continue
 
                 keypoints = self.infer(frame, mode=['pose'])
-                frame, angles = self.pose_detector(frame, keypoints)
-                
+                frame, angles = self.pose_detector(frame, keypoints, class_name)
+
+                only_angles = [angle["angle"] for angle in angles]
+
                 # Update the best frame if the current one has higher confidence
                 if confidence > highest_confidence:
                     highest_confidence = confidence
                     best_frame = frame
                     best_class_name = class_name
-                    best_angles = angles
-
+                    best_angles = only_angles
 
         # Save the best frame
         if best_frame is not None and best_class_name is not None:
@@ -227,7 +343,8 @@ class YOLOv8:
             self.save_frame(best_frame, self.save_path, best_class_name, best_angles, sync=self.sync)
         return frame
 
-    # function that save the frame with the class name
+
+
     def save_frame(self, frame, output_path, class_name, angles, sync=False):
         if class_name in self.shoot_classes:
             if class_name not in self.saved_classes or len(self.saved_classes) == len(self.shoot_classes):
@@ -246,9 +363,9 @@ class YOLOv8:
                 angle_file_path = os.path.join(class_folder, 'angles.txt')
                 with open(angle_file_path, 'w') as file:
                     file.write(f'Class: {class_name}\n')
-                    for i, (keypoint_name, angle) in enumerate(angles, 1):
-                        file.write(f'{keypoint_name}: {angle:.0f}\n')
-                print(f"saved class {self.saved_classes}")
+                    for i, angle in enumerate(angles, 1):  # Fix here
+                        file.write(f'Angle {i}: {angle:.0f}\n')  # Assuming angles are simple float values
+                print(f"Saved class {class_name}")
                 if len(self.saved_classes) == len(self.shoot_classes):
                     self.saved_classes.clear()
             else:
