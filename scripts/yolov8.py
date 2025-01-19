@@ -9,7 +9,7 @@ import cv2
 import os
 from sys import platform
 import numpy as np
-from datetime import date
+from datetime import date, datetime
 
 #----------------------------------------------------
 # check if the class csv file is available
@@ -57,6 +57,8 @@ class YOLOv8:
         self.model = None  # Initialize model
         self.keypoint_model = None  # Initialize keypoint_model
 
+        self.result = []
+
         self.db = None
 
         print(f"Using YOLOv8 on {self.device}")
@@ -102,34 +104,54 @@ class YOLOv8:
 
 
     def save_angles_to_db(self, frame_id, class_name, angles, keypoints_positions):
-        """
-        Sauvegarde les angles et positions des points clés dans MongoDB.
-        """
-
         try:
-            if (keypoints_positions['L shoulder'][0] == 0 ): return
+            # Vérification : ne pas sauvegarder si les positions sont nulles
+            if keypoints_positions.get('L shoulder', [0, 0])[0] == 0:
+                return
 
-            # Vérifiez si la collection existe
+            # Nettoyage des positions nulles
+            keypoints_positions = {
+                key: value for key, value in keypoints_positions.items() if value != [0.0, 0.0]
+            }
+
             collection_name = "angles_collection"
             collection = self.db[collection_name]
+            version = 1
+
+            # Obtenez le nombre de documents existants
+            existing_count = collection.count_documents({"video": self.capture_index})
+            if existing_count > 0:
+                version = existing_count + 1
 
             # Préparez les données
             document = {
+                "video": self.capture_index,
                 "frame_id": frame_id,
                 "class_name": class_name,
                 "angles": self.convert_numpy_to_python(angles),
                 "keypoints_positions": keypoints_positions,
+                "created_at": datetime.combine(date.today(), datetime.min.time()),
+                "version": version,
             }
 
-            # Insérez les données dans la base de données
-            result = collection.insert_one(document)
-            print(f"Données sauvegardées avec succès. ID du document : {result.inserted_id}")
-            return True  # Retourne True si la sauvegarde réussit
+            collection.insert_one(document)
+
+            # Append corrected structure
+            self.result.append({
+                "class_name": class_name,
+                "keypoints_positions": keypoints_positions,
+                "angles": self.convert_numpy_to_python(angles),
+            })
+            print(self.result)
+            return True
 
         except Exception as e:
             print(f"Erreur lors de la sauvegarde dans MongoDB : {e}")
-            return False  # Retourne False si une erreur se produit
+            return False
 
+
+    def get_results(self):
+        return self.result
 
     # load given model with YOLO
     def load_model(self, model_path=default_model_path):
@@ -156,7 +178,7 @@ class YOLOv8:
         return results
 
 
-    def pose_detector(self, frame, results_list, class_name):
+    def pose_detector(self, frame, results_list, class_name, confidence):
         skeleton = [
             (5, 6),  # Shoulders connection
             (5, 11), (6, 12),  # Shoulders to hips
@@ -204,7 +226,6 @@ class YOLOv8:
 
                     angle, frame, third_point = self.draw_angle_and_triangle(frame, kp, start, end, keypoint_names)
                     if angle is not None:
-                        print(angle)
                         # Get the keypoint names
                         start_name = keypoint_names.get(start, f"Keypoint {start}")
                         end_name = keypoint_names.get(end, f"Keypoint {end}")
@@ -216,11 +237,9 @@ class YOLOv8:
                             "third_point": third_point,
                             "angle": angle
                         })
-
-                frame_id = f"frame_{id(frame)}"
-                success = self.save_angles_to_db(frame_id, class_name, angles_with_points, keypoints_positions)
-                if success:
-                    print("Données sauvegardées pour le frame :", frame_id)
+                if (confidence >= MIN_CONFIDENCE):
+                    frame_id = f"frame_{id(frame)}"
+                    self.save_angles_to_db(frame_id, class_name, angles_with_points, keypoints_positions)
 
 
         return frame, angles_with_points
@@ -325,7 +344,7 @@ class YOLOv8:
                     continue
 
                 keypoints = self.infer(frame, mode=['pose'])
-                frame, angles = self.pose_detector(frame, keypoints, class_name)
+                frame, angles = self.pose_detector(frame, keypoints, class_name, confidence)
 
                 only_angles = [angle["angle"] for angle in angles]
 

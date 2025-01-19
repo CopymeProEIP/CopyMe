@@ -8,10 +8,12 @@ import { Footer } from '@/components/ui/Footer';
 import { Problem } from '@/components/ui/Problem';
 import { Solution } from '@/components/ui/Solution';
 import { How_it_works } from '@/components/ui/How_it_works';
+import { BlurHeader } from '@/components/ui/Header';
 
 export default function Home() {
 	return (
-		<div className=''>
+		<div className='w-full'>
+			<BlurHeader />
 			<Hero />
 			<Companies />
 			<Problem />
