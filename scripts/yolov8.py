@@ -9,7 +9,7 @@ import cv2
 import os
 from ultralytics import YOLO
 from sys import platform
-from utils import (
+from scripts.utils import (
     load_labels,
     check_fileType,
     calculate_angle,
@@ -392,8 +392,11 @@ class YOLOv8:
                 angle_file_path = os.path.join(class_folder, 'angles.txt')
                 with open(angle_file_path, 'w') as file:
                     file.write(f'Class: {class_name}\n')
-                    for i, (keypoint_name, angle) in enumerate(angles, 1):
-                        file.write(f'{keypoint_name}: {angle:.0f}\n')
+                    for i, angle in enumerate(angles, 1):  # Fix here
+                        file.write(f'Angle {i}: {angle:.0f}\n')  # Assuming angles are simple float values
+                print(f"Saved class {class_name}")
+                if len(self.saved_classes) == len(self.shoot_classes):
+                    self.saved_classes.clear()
                 DEBUG.log(f"saved class {self.saved_classes}")
             else:
                 DEBUG.log(f"{class_name} already saved in the current cycle")

@@ -88,7 +88,6 @@ export default function DemoPage() {
 				ctx!.lineWidth = 2;
 
 				angleData.angles
-					.slice(0, 4)
 					.forEach(({ start_point, end_point, third_point, angle }: any) => {
 						const start = angleData.keypoints_positions[start_point];
 						const end = angleData.keypoints_positions[end_point];
