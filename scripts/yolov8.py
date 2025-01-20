@@ -103,6 +103,14 @@ class YOLOv8:
             return None
 
 
+    def get_latest_angle_collection(self):
+        collection_name = "angles_collection"
+        collection = self.db[collection_name]
+
+        latest_data = collection.find_one(sort=[("_id", -1)])
+        return latest_data
+
+
     def save_angles_to_db(self, frame_id, class_name, angles, keypoints_positions):
         try:
             # Vérification : ne pas sauvegarder si les positions sont nulles
