@@ -28,7 +28,6 @@ def calculate_angle(a, b, c):
 
 def load_labels(file_path):
     assert os.path.exists(file_path), f"File {file_path} not found"
-    print(f"Loading labels from {file_path}")
     labels = []
     if os.path.exists(file_path):
         with open(file_path, 'r') as file:
@@ -48,3 +47,15 @@ def check_fileType(file_path):
         return 'unknown'
 
 #----------------------------------------------------------
+
+class Debugger:
+    def __init__(self, enabled=True):
+        self.enabled = enabled
+
+    def log(self, message):
+        if self.enabled:
+            print(f"[DEBUG] {message}")
+
+    def log_variable(self, var_name, var_value):
+        if self.enabled:
+            print(f"[DEBUG] {var_name}: {var_value}")

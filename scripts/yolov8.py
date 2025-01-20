@@ -7,25 +7,35 @@ from pymongo import MongoClient
 import torch
 import cv2
 import os
+from ultralytics import YOLO
 from sys import platform
+from utils import (
+    load_labels,
+    check_fileType,
+    calculate_angle,
+    Debugger
+)
 import numpy as np
 from datetime import date, datetime
 
+DEBUG = Debugger(enabled=True)
+
 #----------------------------------------------------
 # check if the class csv file is available
-class_csv = 'shoot.csv'
 
-if not os.path.exists(class_csv):
-    print(f"Class csv file {class_csv} not found")
+CLASS_CSV = 'shoot.csv'
+
+if not os.path.exists(CLASS_CSV):
+    DEBUG.log(f"Class csv file {CLASS_CSV} not found")
     exit(1)
 
-# V1RIABLES
-window_name='ShootAnalysis'
-default_save_path = 'feedback'
-default_capture_index = "0"
-default_model_path = 'yolov8m.pt'
-default_keypoint_model_path = 'yolov8l-pose.pt'
-MIN_CONFIDENCE = 0.8
+# VARIABLES
+WINDOW_NAME='ShootAnalysis'
+DEFAULT_SAVE_PATH='feedback'
+DEFAULT_CAPTURE_INDEX="0"
+DEFAULT_MODEL_PATH='yolov8m.pt'
+DEFAULT_KEYPOINT_MODEL_PATH='yolov8l-pose.pt'
+MIN_CONFIDENCE=0.6
 
 # out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), 10, (640, 480))
 #----------------------------------------------------
@@ -37,9 +47,9 @@ MIN_CONFIDENCE = 0.8
 class YOLOv8:
 
     # Class mode
-    modes=['debug', 'show']
+    MODES = ['debug', 'show']
 
-    def __init__(self, capture_index=default_capture_index, save_path=default_save_path, load_labels_flag=True, mode=modes[0]):
+    def __init__(self, capture_index=DEFAULT_CAPTURE_INDEX, save_path=DEFAULT_SAVE_PATH, load_labels_flag=True, mode=MODES[0]):
         # check the device if cuda is available use it otherwise use cpu
         # check the platform and use mps to improve performance on mac
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -64,9 +74,14 @@ class YOLOv8:
         print(f"Using YOLOv8 on {self.device}")
         print(f"Capture index: {self.capture_index}")
         if load_labels_flag:
-            self.shoot_classes = load_labels(class_csv)
+            self.shoot_classes = load_labels(CLASS_CSV)
         else:
             self.shoot_classes = []
+        
+        DEBUG.log(f"Using YOLOv8 on {self.device}")
+        DEBUG.log(f"Input: {self.capture_index}")
+        DEBUG.log(f"Avalaible classes: {self.shoot_classes}")
+
         print(f"Classes available: {self.shoot_classes}")
         print(f"Frame saved to: {self.save_path}")
         MONGODB_URI = "mongodb+srv://copyme:dgg5kQCAVmGoJ4qD@cluster0.iea0zmj.mongodb.net/CopyMe?retryWrites=true&w=majority&appName=Cluster0"
@@ -161,16 +176,16 @@ class YOLOv8:
         return self.result
 
     # load given model with YOLO
-    def load_model(self, model_path=default_model_path):
+    def load_model(self, model_path=DEFAULT_MODEL_PATH):
+        DEBUG.log(f"Using model: {model_path}")
         self.model = YOLO(model_path).to(self.device)
         self.CLASS_NAMES_DICT = self.model.model.names
         self.model.fuse()  # Fuse layers for faster inference
         self.is_model_loaded = self.model is not None
 
-    def load_keypoint_model(self, model_path=default_keypoint_model_path):
+    def load_keypoint_model(self, model_path=DEFAULT_KEYPOINT_MODEL_PATH):
         self.keypoint_model = YOLO(model_path).to(self.device)
         self.keypoint_model.fuse()  # Fuse layers for faster inference
-        print(f"Keypoint model loaded from {model_path}")
         self.is_keypoint_model_loaded = self.keypoint_model is not None
 
     # function that infer given image of video or camera and return the results
@@ -262,22 +277,22 @@ class YOLOv8:
             if start == 5 and end == 7 and len(kp) > 9:
                 third_point = keypoint_names[9]
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[9][0]), int(kp[9][1])))
-                angle = self.calculate_angle(kp[start], kp[7], kp[9])
+                angle = calculate_angle(kp[start], kp[7], kp[9])
                 frame = self.draw_text(frame, f'{keypoint_names[7]}: {angle:.0f}', (x2, y2))
             elif start == 6 and end == 8 and len(kp) > 10:
                 third_point = keypoint_names[10]
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[10][0]), int(kp[10][1])))
-                angle = self.calculate_angle(kp[start], kp[8], kp[10])
+                angle = calculate_angle(kp[start], kp[8], kp[10])
                 frame = self.draw_text(frame, f'{keypoint_names[8]}: {angle:.0f}', (x2, y2))
             elif start == 11 and end == 13 and len(kp) > 15:
                 third_point = keypoint_names[15]
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[15][0]), int(kp[15][1])))
-                angle = self.calculate_angle(kp[start], kp[13], kp[15])
+                angle = calculate_angle(kp[start], kp[13], kp[15])
                 frame = self.draw_text(frame, f'{keypoint_names[13]}: {angle:.0f}', (x2, y2))
             elif start == 12 and end == 14 and len(kp) > 16:
                 third_point = keypoint_names[16]
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[16][0]), int(kp[16][1])))
-                angle = self.calculate_angle(kp[start], kp[14], kp[16])
+                angle = calculate_angle(kp[start], kp[14], kp[16])
                 frame = self.draw_text(frame, f'{keypoint_names[14]}: {angle:.0f}', (x2, y2))
 
         return angle, frame, third_point
@@ -300,14 +315,6 @@ class YOLOv8:
         cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
         return output
 
-    def calculate_angle(self, joint1, joint2, joint3):
-        v1 = np.array(joint1) - np.array(joint2)
-        v2 = np.array(joint3) - np.array(joint2)
-        cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-        angle_rad = np.arccos(np.clip(cos_theta, -1.0, 1.0))
-        angle_deg = np.degrees(angle_rad)
-        return angle_deg
-
     def plot_result(self, results: list, frame):
         highest_confidence = 0
         best_frame = None
@@ -321,7 +328,6 @@ class YOLOv8:
             for box in boxes:
                 # get the coordinates left top and right bottom of the box
                 r = box.xyxy[0].astype(int)
-                print(f"Box: {r}")
                 class_id = int(box.cls[0])  # Get class ID
                 class_name = self.CLASS_NAMES_DICT[class_id] # Get class name
 
@@ -331,25 +337,24 @@ class YOLOv8:
                 # here i want to arround the confidence to 2 numbers after the point
                 confidence = round(float(box.conf), 2)
 
-                print(f"Class: {class_name}, Confidence: {confidence}")
-                
                 if confidence < MIN_CONFIDENCE:
-                    print(f"Class: {class_name}, Confidence: {confidence} below threshold, skipping.")
+                    DEBUG.log(f"{class_name}, conf: {confidence} below threshold, skipping.")
                     continue
                 elif class_name in self.saved_classes:
                     if class_name in self.saved_frames_data:
                         saved_conf = self.saved_frames_data[class_name]
                         confidence_saved = float(saved_conf)
                         if confidence > confidence_saved:
-                            print(f"Class: {class_name}, Confidence: {confidence} above saved confidence, replacing.")
+                            DEBUG.log(f"{class_name}, conf: {confidence} above saved confidence, replacing.")
                             self.sync = True
                         else:
-                            print(f"Class: {class_name}, Confidence: {confidence} already saved, skipping.")
+                            DEBUG.log(f"{class_name}, conf: {confidence} below saved confidence, skipping.")
                             continue
                 elif class_name not in self.shoot_classes:
-                    print(f"Class: {class_name}, Confidence: {confidence} not found in class csv file, skipping.")
+                    DEBUG.log(f"{class_name}, not in shoot classes, skipping.")
                     continue
-
+                if self.sync == False:
+                    DEBUG.log(f"{class_name}, conf: {confidence} above threshold, processing.")
                 keypoints = self.infer(frame, mode=['pose'])
                 frame, angles = self.pose_detector(frame, keypoints, class_name, confidence)
 
@@ -364,8 +369,7 @@ class YOLOv8:
 
         # Save the best frame
         if best_frame is not None and best_class_name is not None:
-            if self.sync == False:
-                self.saved_frames_data[best_class_name] = f"{highest_confidence}"
+            self.saved_frames_data[best_class_name] = f"{highest_confidence}"
             self.save_frame(best_frame, self.save_path, best_class_name, best_angles, sync=self.sync)
         return frame
 
@@ -373,15 +377,14 @@ class YOLOv8:
 
     def save_frame(self, frame, output_path, class_name, angles, sync=False):
         if class_name in self.shoot_classes:
-            if class_name not in self.saved_classes or len(self.saved_classes) == len(self.shoot_classes):
+            if class_name not in self.saved_classes or class_name in self.saved_classes and sync == True:
                 # Ensure angles are present before saving the frame
                 if not angles:
-                    print(f"No angles detected for class {class_name}, skipping save.")
+                    DEBUG.log(f"No angles detected for class {class_name}, skipping save.")
                     return
                 class_folder = os.path.join(output_path, class_name)
                 if not os.path.exists(class_folder):
                     os.makedirs(class_folder)
-                print(f"Saving frame for class {class_name}")
                 frame_path = f"{class_folder}/{class_name}.jpg"
                 cv2.imwrite(frame_path, frame)
                 if sync == False:
@@ -389,15 +392,13 @@ class YOLOv8:
                 angle_file_path = os.path.join(class_folder, 'angles.txt')
                 with open(angle_file_path, 'w') as file:
                     file.write(f'Class: {class_name}\n')
-                    for i, angle in enumerate(angles, 1):  # Fix here
-                        file.write(f'Angle {i}: {angle:.0f}\n')  # Assuming angles are simple float values
-                print(f"Saved class {class_name}")
-                if len(self.saved_classes) == len(self.shoot_classes):
-                    self.saved_classes.clear()
+                    for i, (keypoint_name, angle) in enumerate(angles, 1):
+                        file.write(f'{keypoint_name}: {angle:.0f}\n')
+                DEBUG.log(f"saved class {self.saved_classes}")
             else:
-                print(f"Class {class_name} already saved in the current cycle")
+                DEBUG.log(f"{class_name} already saved in the current cycle")
         else:
-            print(f"Class {class_name} not found in the class csv file")
+            DEBUG.log(f"{class_name} not found in the class csv file")
         if self.sync == True:
             self.sync = False
         return frame
@@ -408,12 +409,12 @@ class YOLOv8:
         # check if is an image or video
         file_type = check_fileType(self.capture_index)
         if file_type == 'image':
-            print(f"Processing image {self.capture_index}")
+            DEBUG.log(f"Processing image {self.capture_index}")
             frame = cv2.imread(self.capture_index)
             results = self.infer(frame, mode=['object'])
             self.plot_result(results, frame)
         elif file_type == 'video':
-            print(f"Processing video {self.capture_index}")
+            DEBUG.log(f"Processing video {self.capture_index}")
             cap = cv2.VideoCapture(self.capture_index)
             while cap.isOpened():
                 success, frame = cap.read()
@@ -421,13 +422,13 @@ class YOLOv8:
                     results = self.infer(frame, mode=['object'])
                     self.plot_result(results, frame)
                     if self.mode == 'show':
-                        cv2.imshow(window_name, frame)
+                        cv2.imshow(WINDOW_NAME, frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
                 else:
                     break
         else:
-            print(f"Processing camera index {self.capture_index}")
+            DEBUG.log(f"Processing camera index {self.capture_index}")
             cap = cv2.VideoCapture(self.capture_index)
             while cap.isOpened():
                 success, frame = cap.read()
@@ -435,13 +436,12 @@ class YOLOv8:
                     results = self.infer(frame, mode=['object'])
                     self.plot_result(results, frame)
                     if self.mode == 'show':
-                        cv2.imshow(window_name, frame)
+                        cv2.imshow(WINDOW_NAME, frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
                 else:
                     break
-        print("Finished processing")
-        print(f"Saved data to {self.saved_frames_data}")
+        DEBUG.log(f"Best data saved {self.saved_frames_data}")
         if file_type == 'video' and file_type != 'image':
             cap.release()
             cv2.destroyAllWindows()
