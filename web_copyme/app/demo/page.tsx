@@ -12,8 +12,13 @@ export default function DemoPage() {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 
 	const fetchAngleData = async () => {
+		if (!selectedFile) return;
 		try {
-			const response = await fetch('http://127.0.0.1:5000/latest-angle-collection');
+			const response = await fetch(
+				`http://127.0.0.1:5000/latest-angle-collection?video=${encodeURIComponent(
+					selectedFile?.name,
+				)}`,
+			);
 
 			if (!response.ok) {
 				throw new Error('Erreur lors de la récupération des données.');
@@ -52,6 +57,7 @@ export default function DemoPage() {
 			});
 
 			if (response.ok) {
+        fetchAngleData();
 				const blob = await response.blob();
 				const imageUrl = URL.createObjectURL(blob);
 				setUploadedImage(imageUrl);
@@ -68,10 +74,6 @@ export default function DemoPage() {
 	};
 
 	useEffect(() => {
-		fetchAngleData();
-	}, []);
-
-	useEffect(() => {
 		if (uploadedImage && canvasRef.current && angleData) {
 			const canvas = canvasRef.current;
 			const ctx = canvas.getContext('2d');
@@ -85,35 +87,37 @@ export default function DemoPage() {
 				ctx!.strokeStyle = 'blue';
 				ctx!.lineWidth = 2;
 
-				angleData.angles.forEach(({ start_point, end_point, third_point, angle }: any) => {
-					const start = angleData.keypoints_positions[start_point];
-					const end = angleData.keypoints_positions[end_point];
-					const third = angleData.keypoints_positions[third_point];
+				angleData.angles
+					.slice(0, 4)
+					.forEach(({ start_point, end_point, third_point, angle }: any) => {
+						const start = angleData.keypoints_positions[start_point];
+						const end = angleData.keypoints_positions[end_point];
+						const third = angleData.keypoints_positions[third_point];
 
-					if (start && end && third) {
-						ctx!.beginPath();
-						ctx!.fillStyle = 'rgba(255, 255, 0, 0.4)';
-						ctx!.moveTo(start[0], start[1]);
-						ctx!.lineTo(end[0], end[1]);
-						ctx!.lineTo(third[0], third[1]);
-						ctx!.closePath();
-						ctx!.fill();
-						ctx!.stroke();
+						if (start && end && third) {
+							ctx!.beginPath();
+							ctx!.fillStyle = 'rgba(255, 255, 0, 0.4)';
+							ctx!.moveTo(start[0], start[1]);
+							ctx!.lineTo(end[0], end[1]);
+							ctx!.lineTo(third[0], third[1]);
+							ctx!.closePath();
+							ctx!.fill();
+							ctx!.stroke();
 
-						const text = `${Math.round(angle)}°`;
-						ctx!.font = '16px Arial';
-						ctx!.textBaseline = 'top';
+							const text = `${Math.round(angle)}°`;
+							ctx!.font = '16px Arial';
+							ctx!.textBaseline = 'top';
 
-						const textWidth = ctx!.measureText(text).width;
-						const textHeight = 16;
+							const textWidth = ctx!.measureText(text).width;
+							const textHeight = 16;
 
-						ctx!.fillStyle = 'rgba(255, 255, 0, 0.8)';
-						ctx!.fillRect(end[0] + 8, end[1] - 20, textWidth + 6, textHeight + 4);
+							ctx!.fillStyle = 'rgba(255, 255, 0, 0.8)';
+							ctx!.fillRect(end[0] + 8, end[1] - 20, textWidth + 6, textHeight + 4);
 
-						ctx!.fillStyle = '#4B0082';
-						ctx!.fillText(text, end[0] + 10, end[1] - 18);
-					}
-				});
+							ctx!.fillStyle = '#4B0082';
+							ctx!.fillText(text, end[0] + 10, end[1] - 18);
+						}
+					});
 			};
 
 			img.src = uploadedImage;
