@@ -33,8 +33,8 @@ if not os.path.exists(CLASS_CSV):
 WINDOW_NAME='ShootAnalysis'
 DEFAULT_SAVE_PATH='feedback'
 DEFAULT_CAPTURE_INDEX="0"
-DEFAULT_MODEL_PATH='yolov8m.pt'
-DEFAULT_KEYPOINT_MODEL_PATH='yolov8l-pose.pt'
+DEFAULT_MODEL_PATH='model/yolov8m.pt'
+DEFAULT_KEYPOINT_MODEL_PATH='model/yolov8l-pose.pt'
 MIN_CONFIDENCE=0.6
 
 # out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), 10, (640, 480))

@@ -9,6 +9,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     yolo = YOLOv8(capture_index=args.input, save_path=args.output, mode=args.mode)
-    yolo.load_model('copyme_50.pt')
+    yolo.load_model('model/copyme.pt')
     yolo.load_keypoint_model()
     yolo.capture()

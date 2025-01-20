@@ -75,7 +75,7 @@ def demo():
         # Exécuter YOLOv8
         logging.info("Chargement du modèle YOLO...")
         yolo = YOLOv8(capture_index=file_path, save_path="feedback", mode="debug")
-        yolo.load_model('shotv1.pt')
+        yolo.load_model('model/copyme.pt')
         yolo.load_keypoint_model()
         yolo.capture()
         logging.info("Traitement YOLO terminé.")
