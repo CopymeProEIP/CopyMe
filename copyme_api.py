@@ -1,9 +1,43 @@
 import os
 from flask import Flask, request, jsonify, send_file
 from scripts.yolov8 import YOLOv8
+from scripts.recommendation_engine import analyze_phase
 from flask_cors import CORS
 from pymongo import MongoClient
 import logging
+
+reference_data = [
+    {
+        "gender": "men",
+        "phase": "shot_position",
+        "angles": {
+            "hip": {"ref": 158.89, "tolerance": 6.16},
+            "knee": {"ref": 116.7, "tolerance": 7.4},
+            "ankle": {"ref": 108.39, "tolerance": 10.58},
+            "elbow": {"ref": 90, "tolerance": 5},
+        },
+    },
+    {
+        "gender": "men",
+        "phase": "shot_realese",
+        "angles": {
+            "hip": {"ref": 158.89, "tolerance": 6.16},
+            "knee": {"ref": 116.7, "tolerance": 7.4},
+            "ankle": {"ref": 108.39, "tolerance": 10.58},
+            "elbow": {"ref": 90, "tolerance": 5},
+        },
+    },
+    {
+        "gender": "men",
+        "phase": "shot_followthrough",
+        "angles": {
+            "hip": {"ref": 158.89, "tolerance": 6.16},
+            "knee": {"ref": 116.7, "tolerance": 7.4},
+            "ankle": {"ref": 108.39, "tolerance": 10.58},
+            "elbow": {"ref": 90, "tolerance": 5},
+        },
+    }
+]
 
 
 app = Flask(__name__)
@@ -63,16 +97,48 @@ def latest_angle_collection():
         collection_name = "angles_collection"
         collection = db[collection_name]
 
-        # latest_data = collection.find_one( sort=[("_id", -1)])
+        # Recherche des données les plus récentes pour la vidéo spécifiée
         latest_data = collection.find_one({"video": f"./uploads/{video}"}, sort=[("_id", -1)])
         if not latest_data:
             return jsonify({"status": "error", "message": "Aucune donnée disponible pour cette vidéo."}), 404
+
         # Convertir l'ObjectId en chaîne de caractères
         latest_data["_id"] = str(latest_data["_id"])
+
+        # Vérifier si 'class_name' est présent dans les données
+        class_name = latest_data.get("class_name")
+        if not class_name:
+            return jsonify({"status": "error", "message": "'class_name' est absent des données."}), 400
+
+        # Récupérer la phase et les angles mesurés à partir des données les plus récentes
+        measured_angles = latest_data.get('angles')
+
+        # Trouver les données de référence associées à la phase actuelle
+        phase_data = None
+        if (class_name == 'shot_position'):
+            phase_data = reference_data[0]
+        elif (class_name == 'shot_realese'):
+            phase_data = reference_data[1]
+        else:
+            phase_data = reference_data[2]
+
+        print("conseil ", measured_angles[0]['angle'])
+        if phase_data:
+            # Analyser les angles mesurés par rapport aux données de référence
+            result_messages = analyze_phase({
+                "hip": int(measured_angles[0]['angle']),
+                "knee": int(measured_angles[1]['angle']),
+                "ankle": int(measured_angles[2]['angle']),
+                "elbow": int(measured_angles[3]['angle']),
+            }, phase_data)
+            latest_data['feedback'] = result_messages  # Ajouter le retour de l'analyse dans les données retournées
+
         return jsonify({"status": "success", "data": latest_data}), 200
+
     except Exception as e:
         logging.exception("Erreur dans /latest-angle-collection")
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 if __name__ == '__main__':
