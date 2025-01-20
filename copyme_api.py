@@ -1,6 +1,6 @@
 import os
 from flask import Flask, request, jsonify, send_file
-from yolov8 import YOLOv8
+from scripts.yolov8 import YOLOv8
 from flask_cors import CORS
 from pymongo import MongoClient
 import logging
@@ -55,13 +55,18 @@ def demo():
 @app.route('/latest-angle-collection', methods=['GET'])
 def latest_angle_collection():
     try:
+        video = request.args.get('video')
+        print(f"Video parameter: {video}")
+        if not video:
+            return jsonify({"status": "error", "message": "Le paramètre 'video' est requis."}), 400
+
         collection_name = "angles_collection"
         collection = db[collection_name]
 
-        latest_data = collection.find_one(sort=[("_id", -1)])
+        # latest_data = collection.find_one( sort=[("_id", -1)])
+        latest_data = collection.find_one({"video": f"./uploads/{video}"}, sort=[("_id", -1)])
         if not latest_data:
-            return jsonify({"status": "error", "message": "Aucune collection d'angles disponible."}), 404
-
+            return jsonify({"status": "error", "message": "Aucune donnée disponible pour cette vidéo."}), 404
         # Convertir l'ObjectId en chaîne de caractères
         latest_data["_id"] = str(latest_data["_id"])
         return jsonify({"status": "success", "data": latest_data}), 200

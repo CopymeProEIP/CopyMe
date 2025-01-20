@@ -1,7 +1,7 @@
 import csv
 
 import os
-from utils import load_labels, check_fileType
+from scripts.utils import load_labels, check_fileType
 from ultralytics import YOLO
 from pymongo import MongoClient
 import torch
@@ -150,7 +150,6 @@ class YOLOv8:
                 "keypoints_positions": keypoints_positions,
                 "angles": self.convert_numpy_to_python(angles),
             })
-            print(self.result)
             return True
 
         except Exception as e:
