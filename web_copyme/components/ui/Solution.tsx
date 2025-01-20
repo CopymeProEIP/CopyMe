@@ -1,7 +1,13 @@
 /** @format */
+'use client'
+
 import HeroVideoDialog from '@/components/ui/hero-video-dialog';
+import { Button } from './button';
+import { useRouter } from 'next/navigation';
 
 export function Solution() {
+	const router = useRouter();
+
 	return (
 		<section id='problematique' className='bg-gray-100'>
 			<div className='px-2 py-10 md:px-6 flex items-center justify-center flex-col'>
@@ -26,6 +32,13 @@ export function Solution() {
 						thumbnailAlt='Hero Video'
 					/>
 				</div>
+				<Button
+					className='my-10'
+					onClick={() => {
+						router.push('/demo');
+					}}>
+					Testez maintenant !
+				</Button>
 			</div>
 		</section>
 	);
