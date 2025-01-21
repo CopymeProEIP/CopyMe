@@ -26,9 +26,9 @@ export default function DemoPage() {
 				throw new Error('Erreur lors de la récupération des données.');
 			}
 			const data = await response.json();
-			console.log(data);
 
 			if (data?.data) {
+				console.log(data.data.frames);
 				setAngleData(data.data);
 			}
 		} catch (error) {
@@ -102,42 +102,54 @@ export default function DemoPage() {
 				ctx!.lineWidth = 2;
 
 				// Utilisation des angles mesurés du dernier document
-				const measuredAngles = angleData?.angles;
-				const keypointsPositions = angleData?.keypoints_positions;
+				angleData?.frames[0]?.data?.forEach((item: any) => {
+					const measuredAngles = item.angles;
+					const keypointsPositions = item.keypoints_positions;
+					console.log(measuredAngles, keypointsPositions);
 
-				if (measuredAngles && keypointsPositions) {
-					measuredAngles.forEach(({ start_point, end_point, third_point, angle }: any) => {
-						const start = keypointsPositions[start_point];
-						const end = keypointsPositions[end_point];
-						const third = keypointsPositions[third_point];
+					if (measuredAngles && keypointsPositions) {
+						measuredAngles.forEach(({ start_point, end_point, third_point, angle }: any) => {
+							const start = keypointsPositions[start_point];
+							const end = keypointsPositions[end_point];
+							const third = keypointsPositions[third_point];
 
-						if (start && end && third) {
-							ctx!.beginPath();
-							ctx!.fillStyle = 'rgba(255, 255, 0, 0.4)';
-							ctx!.moveTo(start[0], start[1]);
-							ctx!.lineTo(end[0], end[1]);
-							ctx!.lineTo(third[0], third[1]);
-							ctx!.closePath();
-							ctx!.fill();
-							ctx!.stroke();
+							if (
+								start &&
+								end &&
+								third &&
+								start[0] &&
+								end[0] &&
+								third[0] &&
+								start[1] &&
+								end[1] &&
+								third[1]
+							) {
+								ctx!.beginPath();
+								ctx!.fillStyle = 'rgba(255, 255, 0, 0.4)';
+								ctx!.moveTo(start[0], start[1]);
+								ctx!.lineTo(end[0], end[1]);
+								ctx!.lineTo(third[0], third[1]);
+								ctx!.closePath();
+								ctx!.fill();
+								ctx!.stroke();
 
-							const text = `${Math.round(angle)}°`;
-							ctx!.font = '16px Arial';
-							ctx!.textBaseline = 'top';
+								const text = `${Math.round(angle)}°`;
+								ctx!.font = '16px Arial';
+								ctx!.textBaseline = 'top';
 
-							const textWidth = ctx!.measureText(text).width;
-							const textHeight = 16;
+								const textWidth = ctx!.measureText(text).width;
+								const textHeight = 16;
 
-							ctx!.fillStyle = 'rgba(255, 255, 0, 0.8)';
-							ctx!.fillRect(end[0] + 8, end[1] - 20, textWidth + 6, textHeight + 4);
+								ctx!.fillStyle = 'rgba(255, 255, 0, 0.8)';
+								ctx!.fillRect(end[0] + 8, end[1] - 20, textWidth + 6, textHeight + 4);
 
-							ctx!.fillStyle = '#4B0082';
-							ctx!.fillText(text, end[0] + 10, end[1] - 18);
-						}
-					});
-				}
+								ctx!.fillStyle = '#4B0082';
+								ctx!.fillText(text, end[0] + 10, end[1] - 18);
+							}
+						});
+					}
+				});
 			};
-
 			img.src = uploadedImage;
 		}
 	}, [uploadedImage, angleData]);
@@ -145,11 +157,11 @@ export default function DemoPage() {
 	return (
 		<div className={cn('w-screen h-screen', uploadedImage ? 'grid grid-cols-2' : '')}>
 			<div className='h-full w-full flex flex-col items-center justify-center'>
-				{uploadedImage ? (
+				{uploadedImage && message ? (
 					<div>
 						<h1>Feedback</h1>
-						{angleData?.feedback ? (
-							angleData?.feedback.map((message: string, index: number) => {
+						{angleData?.frames[0]?.data[0].feedback ? (
+							angleData?.frames[0]?.data[0].feedback.map((message: string, index: number) => {
 								return <p key={index}>{message}</p>;
 							})
 						) : (
@@ -164,7 +176,7 @@ export default function DemoPage() {
 								<input type='file' accept='image/*' onChange={handleFileChange} />
 							</div>
 							<Button type='submit' disabled={loading}>
-								{loading ? 'Envoi en cours...' : 'Envoyer'}
+								{loading ? 'Traitement en cours...' : 'Envoyer'}
 							</Button>
 						</form>
 						{message && <p>{message}</p>}
@@ -172,10 +184,11 @@ export default function DemoPage() {
 				)}
 			</div>
 			<div>
-				{angleData && (
+				{angleData && angleData?.frames[0]?.data[0] && (
 					<div style={{ marginTop: '20px', position: 'relative' }}>
 						<h2>
-							Il est en <label className='text-red-500'>{angleData.class_name}</label>
+							Il est en{' '}
+							<label className='text-red-500'>{angleData.frames[0].data[0].class_name}</label>
 						</h2>
 						<canvas ref={canvasRef} style={{ width: '640px', height: 'auto' }} />
 					</div>
