@@ -5,6 +5,7 @@ from recommendation_engine import analyze_phase
 from flask_cors import CORS
 from pymongo import MongoClient
 import logging
+from bson import ObjectId
 
 reference_data = [
     {
@@ -80,11 +81,74 @@ def demo():
         yolo.capture()
         logging.info("Traitement YOLO terminé.")
 
+        collection_name = "processed_image"
+        collection = db[collection_name]
+
+        latest_data = collection.find_one({"url": f"./uploads/{filename}"}, sort=[("_id", -1)])
+
+        # Recherche du document correspondant à la vidéo spécifiée
+        if not latest_data:
+            logging.exception("Aucune donnée disponible pour cette vidéo.")
+            return jsonify({"status": "error", "message": "Aucune donnée disponible pour cette vidéo."}), 404
+
+        latest_data["_id"] = str(latest_data["_id"])
+
+        frames_entry = latest_data.get('frames', [])
+        if not frames_entry:
+            logging.exception("Aucune donnée dans frames.")
+            return jsonify({"status": "error", "message": "Aucune donnée dans frames."}), 404
+
+        # Mise à jour des frames avec les feedbacks
+        updated_frames = []
+
+        for frame in frames_entry:
+            data_entry = frame.get('data', [])
+            updated_data = []
+
+            if not data_entry:
+                continue  # Si 'data' est vide ou manquant dans ce frame, passer au suivant
+
+            for document in data_entry:
+                class_name = document.get("class_name")
+                measured_angles = document.get("angles")
+
+                if not class_name or not measured_angles:
+                    updated_data.append(document)  # Si class_name ou angles manquants, passer à l'élément suivant
+                    continue
+
+                phase_data = None
+                if class_name == 'shot_position':
+                    phase_data = reference_data[0]
+                elif class_name == 'shot_realese':
+                    phase_data = reference_data[1]
+                else:
+                    phase_data = reference_data[2]
+
+                if phase_data and len(measured_angles) >= 4:
+                    result_messages = analyze_phase({
+                        "hip": int(measured_angles[0]['angle']),
+                        "knee": int(measured_angles[1]['angle']),
+                        "ankle": int(measured_angles[2]['angle']),
+                        "elbow": int(measured_angles[3]['angle']),
+                    }, phase_data)
+
+                    document['feedback'] = result_messages  # Ajouter le retour de l'analyse dans le document
+                updated_data.append(document)
+
+            updated_frame = frame.copy()
+            updated_frame['data'] = updated_data
+            updated_frames.append(updated_frame)
+        # Mise à jour du document avec les frames modifiées
+        collection.update_one(
+            {"_id": ObjectId(latest_data["_id"])},
+            {"$set": {"frames": updated_frames}}  # Mise à jour avec les frames modifiées
+        )
+
         return jsonify({"status": "success", "message": "L'image a été traitée avec succès."}), 200
+
     except Exception as e:
         logging.exception("Erreur dans /demo")
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 
 @app.route('/image', methods=['GET'])
@@ -116,53 +180,17 @@ def latest_angle_collection():
         if not video:
             return jsonify({"status": "error", "message": "Le paramètre 'video' est requis."}), 400
 
-        collection_name = "processed_image"
-        collection = db[collection_name]
+        collection = db[ "processed_image"]
+
+        latest_data = collection.find_one({"url": f"./uploads/{video}"}, sort=[("_id", -1)])
 
         # Recherche du document correspondant à la vidéo spécifiée
-        latest_data = collection.find_one({"url": f"./uploads/{video}"}, sort=[("_id", -1)])
         if not latest_data:
             logging.exception("Aucune donnée disponible pour cette vidéo.")
             return jsonify({"status": "error", "message": "Aucune donnée disponible pour cette vidéo."}), 404
 
         # Convertir l'ObjectId en chaîne de caractères pour l'affichage
         latest_data["_id"] = str(latest_data["_id"])
-
-        # Accéder au tableau 'data' et récupérer le dernier document
-        data_entry = latest_data.get('data', [])
-        if not data_entry:
-            return jsonify({"status": "error", "message": "Aucune donnée d'angle trouvée."}), 404
-
-        # Récupérer le dernier document dans le tableau 'data'
-        document = data_entry[-1]  # Dernier document dans le tableau 'data'
-
-        # Extraire 'class_name' et les angles mesurés
-        class_name = document.get("class_name")
-        measured_angles = document.get("angles")
-
-        if not class_name or not measured_angles:
-            return jsonify({"status": "error", "message": "'class_name' ou 'angles' manquants dans les données."}), 400
-
-        # Trouver les données de référence associées à la phase actuelle
-        phase_data = None
-        if class_name == 'shot_position':
-            phase_data = reference_data[0]
-        elif class_name == 'shot_realese':
-            phase_data = reference_data[1]
-        else:
-            phase_data = reference_data[2]
-
-        if phase_data:
-            # Analyser les angles mesurés par rapport aux données de référence
-            result_messages = analyze_phase({
-                "hip": int(measured_angles[0]['angle']),
-                "knee": int(measured_angles[1]['angle']),
-                "ankle": int(measured_angles[2]['angle']),
-                "elbow": int(measured_angles[3]['angle']),
-            }, phase_data)
-            document['feedback'] = result_messages  # Ajouter le retour de l'analyse dans le document retourné
-
-        latest_data['data'] = document  # Mettre à jour 'data' avec le feedback
 
         return jsonify({"status": "success", "data": latest_data}), 200
 
