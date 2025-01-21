@@ -1,8 +1,0 @@
-torch ## for ultralytics
-torchvision ## for ultralytics
-torchaudio ## for ultralytics
-ultralytics==8.3.9 ## for YOLOv8
-opencv-python ## for image processing
-numpy ## for array processing
-roboflow ## for dataset annotation
-selenium ## for web scraping

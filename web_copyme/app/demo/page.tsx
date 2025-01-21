@@ -27,7 +27,10 @@ export default function DemoPage() {
 			}
 			const data = await response.json();
 			console.log(data);
-			setAngleData(data.data);
+
+			if (data?.data) {
+				setAngleData(data.data);
+			}
 		} catch (error) {
 			console.error('Erreur:', error);
 			setMessage('Une erreur est survenue lors de la récupération des données.');
@@ -60,10 +63,18 @@ export default function DemoPage() {
 
 			if (response.ok) {
 				fetchAngleData();
-				const blob = await response.blob();
-				const imageUrl = URL.createObjectURL(blob);
-				setUploadedImage(imageUrl);
-				setMessage('Image téléchargée avec succès !');
+
+				const imageResponse = await fetch(
+					`http://127.0.0.1:5000/image?filename=${encodeURIComponent(selectedFile.name)}`,
+				);
+
+				if (imageResponse.ok) {
+					const imageUrl = URL.createObjectURL(await imageResponse.blob());
+					setUploadedImage(imageUrl);
+					setMessage('Image téléchargée avec succès !');
+				} else {
+					setMessage("Erreur lors de l'affichage de l'image.");
+				}
 			} else {
 				setMessage("Erreur lors du téléchargement de l'image.");
 			}
@@ -86,38 +97,45 @@ export default function DemoPage() {
 				canvas.height = img.height;
 				ctx?.drawImage(img, 0, 0);
 
+				// Dessin des angles et des points sur le canvas
 				ctx!.strokeStyle = 'blue';
 				ctx!.lineWidth = 2;
 
-				angleData.angles.forEach(({ start_point, end_point, third_point, angle }: any) => {
-					const start = angleData.keypoints_positions[start_point];
-					const end = angleData.keypoints_positions[end_point];
-					const third = angleData.keypoints_positions[third_point];
+				// Utilisation des angles mesurés du dernier document
+				const measuredAngles = angleData?.angles;
+				const keypointsPositions = angleData?.keypoints_positions;
 
-					if (start && end && third) {
-						ctx!.beginPath();
-						ctx!.fillStyle = 'rgba(255, 255, 0, 0.4)';
-						ctx!.moveTo(start[0], start[1]);
-						ctx!.lineTo(end[0], end[1]);
-						ctx!.lineTo(third[0], third[1]);
-						ctx!.closePath();
-						ctx!.fill();
-						ctx!.stroke();
+				if (measuredAngles && keypointsPositions) {
+					measuredAngles.forEach(({ start_point, end_point, third_point, angle }: any) => {
+						const start = keypointsPositions[start_point];
+						const end = keypointsPositions[end_point];
+						const third = keypointsPositions[third_point];
 
-						const text = `${Math.round(angle)}°`;
-						ctx!.font = '16px Arial';
-						ctx!.textBaseline = 'top';
+						if (start && end && third) {
+							ctx!.beginPath();
+							ctx!.fillStyle = 'rgba(255, 255, 0, 0.4)';
+							ctx!.moveTo(start[0], start[1]);
+							ctx!.lineTo(end[0], end[1]);
+							ctx!.lineTo(third[0], third[1]);
+							ctx!.closePath();
+							ctx!.fill();
+							ctx!.stroke();
 
-						const textWidth = ctx!.measureText(text).width;
-						const textHeight = 16;
+							const text = `${Math.round(angle)}°`;
+							ctx!.font = '16px Arial';
+							ctx!.textBaseline = 'top';
 
-						ctx!.fillStyle = 'rgba(255, 255, 0, 0.8)';
-						ctx!.fillRect(end[0] + 8, end[1] - 20, textWidth + 6, textHeight + 4);
+							const textWidth = ctx!.measureText(text).width;
+							const textHeight = 16;
 
-						ctx!.fillStyle = '#4B0082';
-						ctx!.fillText(text, end[0] + 10, end[1] - 18);
-					}
-				});
+							ctx!.fillStyle = 'rgba(255, 255, 0, 0.8)';
+							ctx!.fillRect(end[0] + 8, end[1] - 20, textWidth + 6, textHeight + 4);
+
+							ctx!.fillStyle = '#4B0082';
+							ctx!.fillText(text, end[0] + 10, end[1] - 18);
+						}
+					});
+				}
 			};
 
 			img.src = uploadedImage;
@@ -131,7 +149,7 @@ export default function DemoPage() {
 					<div>
 						<h1>Feedback</h1>
 						{angleData?.feedback ? (
-							angleData?.feedback.map((message, index) => {
+							angleData?.feedback.map((message: string, index: number) => {
 								return <p key={index}>{message}</p>;
 							})
 						) : (
@@ -154,7 +172,7 @@ export default function DemoPage() {
 				)}
 			</div>
 			<div>
-				{uploadedImage && angleData && (
+				{angleData && (
 					<div style={{ marginTop: '20px', position: 'relative' }}>
 						<h2>
 							Il est en <label className='text-red-500'>{angleData.class_name}</label>

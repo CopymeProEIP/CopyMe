@@ -1,7 +1,7 @@
 import csv
 
 import os
-from scripts.utils import load_labels, check_fileType
+from utils import load_labels, check_fileType
 from ultralytics import YOLO
 from pymongo import MongoClient
 import torch
@@ -9,7 +9,7 @@ import cv2
 import os
 from ultralytics import YOLO
 from sys import platform
-from scripts.utils import (
+from utils import (
     load_labels,
     check_fileType,
     calculate_angle,
@@ -65,11 +65,12 @@ class YOLOv8:
         self.saved_classes = set()
         self.sync = False
         self.model = None  # Initialize model
-        self.keypoint_model = None  # Initialize keypoint_model
+        self.keypoint_model = None
 
         self.result = []
 
         self.db = None
+        self.collection = None
 
         print(f"Using YOLOv8 on {self.device}")
         print(f"Capture index: {self.capture_index}")
@@ -77,7 +78,7 @@ class YOLOv8:
             self.shoot_classes = load_labels(CLASS_CSV)
         else:
             self.shoot_classes = []
-        
+
         DEBUG.log(f"Using YOLOv8 on {self.device}")
         DEBUG.log(f"Input: {self.capture_index}")
         DEBUG.log(f"Avalaible classes: {self.shoot_classes}")
@@ -111,6 +112,15 @@ class YOLOv8:
         try:
             client = MongoClient(uri)
             self.db = client["CopyMe"]
+            self.collection = self.db["processed_image"]
+
+            self.collection.insert_one({
+                "url": self.capture_index,
+                "data": [],
+                "frames": [],
+                "version": 1,
+            })
+
             print("Successfully connected to the database: CopyMe")
             return self.db
         except Exception as e:
@@ -119,14 +129,11 @@ class YOLOv8:
 
 
     def get_latest_angle_collection(self):
-        collection_name = "angles_collection"
-        collection = self.db[collection_name]
-
-        latest_data = collection.find_one(sort=[("_id", -1)])
+        latest_data = self.collection.find_one(sort=[("_id", -1)])
         return latest_data
 
 
-    def save_angles_to_db(self, frame_id, class_name, angles, keypoints_positions):
+    def save_angles_to_db(self, class_name, angles, keypoints_positions):
         try:
             # Vérification : ne pas sauvegarder si les positions sont nulles
             if keypoints_positions.get('L shoulder', [0, 0])[0] == 0:
@@ -137,27 +144,26 @@ class YOLOv8:
                 key: value for key, value in keypoints_positions.items() if value != [0.0, 0.0]
             }
 
-            collection_name = "angles_collection"
-            collection = self.db[collection_name]
-            version = 1
-
             # Obtenez le nombre de documents existants
-            existing_count = collection.count_documents({"video": self.capture_index})
-            if existing_count > 0:
-                version = existing_count + 1
+            existing_count = self.collection.count_documents({"url": self.capture_index})
+            version = existing_count + 1
 
             # Préparez les données
             document = {
-                "video": self.capture_index,
-                "frame_id": frame_id,
                 "class_name": class_name,
                 "angles": self.convert_numpy_to_python(angles),
                 "keypoints_positions": keypoints_positions,
                 "created_at": datetime.combine(date.today(), datetime.min.time()),
-                "version": version,
             }
 
-            collection.insert_one(document)
+            # Ajouter au tableau 'data' d'un document existant
+            self.collection.update_one(
+                {"url": self.capture_index},
+                {
+                    "$push": {"data": document},
+                    "$set": {"version": version},
+                },
+            )
 
             # Append corrected structure
             self.result.append({
@@ -174,6 +180,7 @@ class YOLOv8:
 
     def get_results(self):
         return self.result
+
 
     # load given model with YOLO
     def load_model(self, model_path=DEFAULT_MODEL_PATH):
@@ -222,8 +229,9 @@ class YOLOv8:
             15: "L ankle", 16: "R ankle"
         }
 
-        angles_with_points = []  # List to store angles linked to points
-        keypoints_positions = {}  # Dictionary to store keypoint positions for all keypoints
+        angles_with_points = []
+        angles_tmp = []
+        keypoints_positions = {}
 
         for results in results_list:
             # Extract keypoints coordinates
@@ -259,9 +267,15 @@ class YOLOv8:
                             "third_point": third_point,
                             "angle": angle
                         })
-                if (confidence >= MIN_CONFIDENCE):
-                    frame_id = f"frame_{id(frame)}"
-                    self.save_angles_to_db(frame_id, class_name, angles_with_points, keypoints_positions)
+                        angles_tmp.append({
+                            "start_point": start_name,
+                            "end_point": end_name,
+                            "third_point": third_point,
+                            "angle": angle
+                        })
+                self.save_angles_to_db(class_name, angles_tmp, keypoints_positions)
+                angles_tmp.clear()
+                angles_tmp = []
 
 
         return frame, angles_with_points
