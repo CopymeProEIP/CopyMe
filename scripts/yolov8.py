@@ -68,6 +68,7 @@ class YOLOv8:
         self.keypoint_model = None
 
         self.result = []
+        self.version = 1
 
         self.db = None
         self.collection = None
@@ -114,11 +115,15 @@ class YOLOv8:
             self.db = client["CopyMe"]
             self.collection = self.db["processed_image"]
 
+            existing_count = self.collection.count_documents({"url": self.capture_index})
+            if existing_count > 0:
+                self.version = existing_count + 1
+
             self.collection.insert_one({
                 "url": self.capture_index,
-                "data": [],
                 "frames": [],
-                "version": 1,
+                "created_at": datetime.combine(date.today(), datetime.min.time()),
+                "version": self.version,
             })
 
             print("Successfully connected to the database: CopyMe")
@@ -131,51 +136,6 @@ class YOLOv8:
     def get_latest_angle_collection(self):
         latest_data = self.collection.find_one(sort=[("_id", -1)])
         return latest_data
-
-
-    def save_angles_to_db(self, class_name, angles, keypoints_positions):
-        try:
-            # Vérification : ne pas sauvegarder si les positions sont nulles
-            if keypoints_positions.get('L shoulder', [0, 0])[0] == 0:
-                return
-
-            # Nettoyage des positions nulles
-            keypoints_positions = {
-                key: value for key, value in keypoints_positions.items() if value != [0.0, 0.0]
-            }
-
-            # Obtenez le nombre de documents existants
-            existing_count = self.collection.count_documents({"url": self.capture_index})
-            version = existing_count + 1
-
-            # Préparez les données
-            document = {
-                "class_name": class_name,
-                "angles": self.convert_numpy_to_python(angles),
-                "keypoints_positions": keypoints_positions,
-                "created_at": datetime.combine(date.today(), datetime.min.time()),
-            }
-
-            # Ajouter au tableau 'data' d'un document existant
-            self.collection.update_one(
-                {"url": self.capture_index},
-                {
-                    "$push": {"data": document},
-                    "$set": {"version": version},
-                },
-            )
-
-            # Append corrected structure
-            self.result.append({
-                "class_name": class_name,
-                "keypoints_positions": keypoints_positions,
-                "angles": self.convert_numpy_to_python(angles),
-            })
-            return True
-
-        except Exception as e:
-            print(f"Erreur lors de la sauvegarde dans MongoDB : {e}")
-            return False
 
 
     def get_results(self):
@@ -268,12 +228,17 @@ class YOLOv8:
                             "angle": angle
                         })
                         angles_tmp.append({
-                            "start_point": start_name,
-                            "end_point": end_name,
+                            "start_point": start,
+                            "end_point": end,
                             "third_point": third_point,
                             "angle": angle
                         })
-                self.save_angles_to_db(class_name, angles_tmp, keypoints_positions)
+
+                self.result.append({
+                    "class_name": class_name,
+                    "keypoints_positions": self.convert_numpy_to_python(kp),
+                    "angles": self.convert_numpy_to_python(angles_tmp),
+                })
                 angles_tmp.clear()
                 angles_tmp = []
 
@@ -289,22 +254,22 @@ class YOLOv8:
 
         if x1 != 0 and y1 != 0 and x2 != 0 and y2 != 0:
             if start == 5 and end == 7 and len(kp) > 9:
-                third_point = keypoint_names[9]
+                third_point = 9
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[9][0]), int(kp[9][1])))
                 angle = calculate_angle(kp[start], kp[7], kp[9])
                 frame = self.draw_text(frame, f'{keypoint_names[7]}: {angle:.0f}', (x2, y2))
             elif start == 6 and end == 8 and len(kp) > 10:
-                third_point = keypoint_names[10]
+                third_point = 10
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[10][0]), int(kp[10][1])))
                 angle = calculate_angle(kp[start], kp[8], kp[10])
                 frame = self.draw_text(frame, f'{keypoint_names[8]}: {angle:.0f}', (x2, y2))
             elif start == 11 and end == 13 and len(kp) > 15:
-                third_point = keypoint_names[15]
+                third_point = 15
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[15][0]), int(kp[15][1])))
                 angle = calculate_angle(kp[start], kp[13], kp[15])
                 frame = self.draw_text(frame, f'{keypoint_names[13]}: {angle:.0f}', (x2, y2))
             elif start == 12 and end == 14 and len(kp) > 16:
-                third_point = keypoint_names[16]
+                third_point = 16
                 frame = self.draw_triangle(frame, (x1, y1), (x2, y2), (int(kp[16][0]), int(kp[16][1])))
                 angle = calculate_angle(kp[start], kp[14], kp[16])
                 frame = self.draw_text(frame, f'{keypoint_names[14]}: {angle:.0f}', (x2, y2))
@@ -421,6 +386,22 @@ class YOLOv8:
         return frame
 
 
+    def save_angle_in_bdd(self):
+        self.collection.update_one(
+            {"url": self.capture_index, "version": self.version},
+            {
+                "$push": {
+                    "frames": {
+                        "data": self.result,
+                    }
+                },
+            }
+        )
+        self.result.clear()
+        self.result = []
+        return
+
+
     # function that capture the image or video and process it
     def capture(self):
         # check if is an image or video
@@ -430,6 +411,7 @@ class YOLOv8:
             frame = cv2.imread(self.capture_index)
             results = self.infer(frame, mode=['object'])
             self.plot_result(results, frame)
+            self.save_angle_in_bdd()
         elif file_type == 'video':
             DEBUG.log(f"Processing video {self.capture_index}")
             cap = cv2.VideoCapture(self.capture_index)
@@ -438,6 +420,7 @@ class YOLOv8:
                 if success:
                     results = self.infer(frame, mode=['object'])
                     self.plot_result(results, frame)
+                    self.save_angle_in_bdd()
                     if self.mode == 'show':
                         cv2.imshow(WINDOW_NAME, frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
