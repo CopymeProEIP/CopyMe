@@ -83,7 +83,7 @@ export function Hero() {
 									href='#cta4'
 									className={cn(
 										// colors
-										'bg-primary  text-white shadow hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90',
+										'bg-primary  text-white shadow  dark:bg-white dark:text-black dark:hover:bg-white/90',
 
 										// layout
 										'group relative inline-flex h-9 w-full items-center justify-center gap-2 overflow-hidden whitespace-pre rounded-md px-4 py-2 text-base font-semibold tracking-tighter focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 md:flex',
