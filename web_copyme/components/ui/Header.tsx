@@ -16,7 +16,7 @@ export function BlurHeader() {
 			<div className='pointer-events-none absolute inset-0  z-[6] h-[20vh] backdrop-blur-[2px] [mask-image:linear-gradient(0deg,transparent_62.5%,#000_75%,#000_87.5%,transparent_100%)]'></div>
 			<div className='pointer-events-none absolute inset-0  z-[7] h-[20vh] backdrop-blur-[4px] [mask-image:linear-gradient(0deg,transparent_75%,#000_87.5%,#000_100%,transparent_112.5%)]'></div>
 			<div className='mx-auto flex w-full max-w-screen-xl items-center justify-between'>
-				<a className='z-[10]' href='#'>
+				<a className='z-[10]' href='/'>
 					Copyme
 				</a>
 				<div className='z-[10]'>
