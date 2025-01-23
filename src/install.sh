@@ -38,7 +38,17 @@ else
 
     # on linux and macos
     if [ $OS == "Linux" ] || [ $OS == "Mac" ]; then
-        python3 -m ensurepip --upgrade
+        # if we have ensurepip we can use it
+        if [ -z "$(command -v python3 -m ensurepip)" ]; then
+            echo "ensurepip not found"
+            echo "Installing pip using get-pip.py"
+            wget https://bootstrap.pypa.io/get-pip.py
+            python3 get-pip.py
+            rm get-pip.py
+        else
+            python3 -m ensurepip --upgrade
+        fi
+
     elif [ $OS == "Windows" ]; then # on windows
         py -m ensurepip --upgrade
     fi
