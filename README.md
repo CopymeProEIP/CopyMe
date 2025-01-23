@@ -12,7 +12,6 @@ This project focuses on detecting the different phases of a basketball shot usin
    </a>
  </p>
 
-
 ## Tools and Technologies
 
 - **Model**: YOLOv8 by Ultralytics ([link](https://docs.ultralytics.com/models/yolov8/))
@@ -23,7 +22,7 @@ This project focuses on detecting the different phases of a basketball shot usin
 - **Free Throws**: [How to Shoot Free Throws: Perfect Your Form & Shot](https://www.wikihow.com/Shoot-a-Free-Throw)
 - **Shoot Analysis**: [Basketball 101: Free Throws](https://youtu.be/TVNZrYdriTM?si=t3HkHX_j3dvFoV8A)
 
-***
+---
 
 ## Phases of a Basketball Shot
 
@@ -77,7 +76,7 @@ This project focuses on detecting the different phases of a basketball shot usin
 4. **Evaluation**: Evaluate the model's performance on a test dataset.
 5. **Deployment**: Deploy the model for real-time phase detection.
 
-***
+---
 
 ## References
 
