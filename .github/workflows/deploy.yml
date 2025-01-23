@@ -54,7 +54,7 @@ jobs:
           context: ./src/
           file: ./src/pre-prod.dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_BACKEND }}:${{ env.TAGIMAGE }}
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_BACKEND }}:${{ env.TAG }}
 #
       #- name: Build and push Docker company-service image
       #  uses: docker/build-push-action@v3
