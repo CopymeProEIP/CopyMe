@@ -14,7 +14,7 @@ from utils import (
     check_fileType,
     calculate_angle,
     Debugger,
-    DEBUGTYPE
+    DebugType
 )
 import numpy as np
 from datetime import date, datetime
@@ -27,7 +27,7 @@ DEBUG = Debugger(enabled=True)
 CLASS_CSV = 'config/shoot.csv'
 
 if not os.path.exists(CLASS_CSV):
-    DEBUG.log(f"Class csv file {CLASS_CSV} not found")
+    DEBUG.log(message=f"Class csv file {CLASS_CSV} not found")
     exit(1)
 
 # VARIABLES
@@ -126,7 +126,7 @@ class YOLOv8:
             DEBUG.log(message=f"Connected to MongoDB: {self.db}")
             return self.db
         except Exception as e:
-            DEBUG.log(type=DEBUGTYPE.WARNING, message=f"Failed to connect to MongoDB: {e}")
+            DEBUG.log(type=DebugType.WARNING, message=f"Failed to connect to MongoDB: {e}")
             return None
 
 

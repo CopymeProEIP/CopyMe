@@ -1,6 +1,7 @@
 import csv
 import os
 import numpy as np
+from enum import Enum
 
 #----------------------------------------------------------
 # load csv file that list all model's labels from the model
@@ -48,7 +49,7 @@ def check_fileType(file_path):
 
 #----------------------------------------------------------
 
-class DEBUGTYPE:
+class DebugType(Enum):
     DEBUG = 1
     INFO = 2
     WARNING = 3
@@ -57,11 +58,11 @@ class Debugger:
     def __init__(self, enabled=True):
         self.enabled = enabled
 
-    def log(self, type=DEBUGTYPE.DEBUG, message=""):
+    def log(self, type=DebugType.DEBUG, message=""):
         if self.enabled:
-            if type == DEBUGTYPE.DEBUG:
+            if type == DebugType.DEBUG:
                 print(f"[DEBUG]: {message}")
-            elif type == DEBUGTYPE.INFO:
+            elif type == DebugType.INFO:
                 print(f"[INFO]: {message}")
-            elif type == DEBUGTYPE.WARNING:
+            elif type == DebugType.WARNING:
                 print(f"[WARNING]: {message}")
