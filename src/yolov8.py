@@ -67,6 +67,7 @@ class YOLOv8:
         self.sync = False
         self.model = None  # Initialize model
         self.keypoint_model = None
+        DEBUG.enable(enabled=mode == 'debug')
 
         self.result = []
         self.version = 1

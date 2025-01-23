@@ -58,6 +58,9 @@ class Debugger:
     def __init__(self, enabled=True):
         self.enabled = enabled
 
+    def enable(self, enabled=True):
+        self.enabled = enabled
+
     def log(self, type=DebugType.DEBUG, message=""):
         if self.enabled:
             if type == DebugType.DEBUG:
