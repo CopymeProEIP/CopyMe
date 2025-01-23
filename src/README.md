@@ -1,7 +1,17 @@
-# Activate venv for Version sync
+## Activate venv
 
+```
 source copyme/bin/activate
+```
 
-## Run install
+## Install Dependences
 
-run > install.sh
+```
+./install.sh
+```
+
+## Run script
+
+```
+python3 local.py [ OPTIONS | -i | -o ] [ ARGS ]
+```
