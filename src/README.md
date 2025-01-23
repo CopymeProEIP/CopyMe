@@ -1,7 +1,21 @@
-# Activate venv for Version sync
+# How to run this project
 
+## Activate venv
+
+```
+cd src/
 source copyme/bin/activate
+```
 
-## Run install
+## Install Dependences
 
-run > install.sh
+```
+./install.sh
+```
+
+## Run script
+
+```
+python3 local.py [OPTIONS | -i | -o] [ARGS]
+```
+> To run local inference / a feeback directory will be created
