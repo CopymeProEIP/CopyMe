@@ -1,0 +1,89 @@
+name: CI
+
+on:
+    # Triggers the workflow on push events but only for the master branch
+    push:
+      branches:
+        - main
+        - deploy
+
+## Allows you to run this workflow manually from the Actions tab
+#workflow_dispatch:
+#  inputs:
+#    version:
+#      description: 'Image version'
+#      required: true
+
+env:
+  REGISTRY: ghcr.io
+  NAMESPACE: mpJunot/CopyMe
+  TAG: latest
+  IMAGE_BACKEND: copyme-backend-api
+
+jobs:
+  build_and_push:
+    name: Push Docker image to Docker Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      #- name: Create .env file
+      #  uses: SpicyPizza/create-envfile@v1
+      #  with:
+      #    envkey_MONGO_ROOT_PASSWORD: ${{ secrets.MONGO_ROOT_PASSWORD }}
+      #    envkey_MONGO_ROOT_USERNAME: ${{ secrets.MONGO_ROOT_USERNAME }}
+      #    file_name: .env
+
+      - name: Build and push Docker orchestrator-service image
+        uses: docker/build-push-action@v3
+        with:
+          context: ./src/
+          file: ./src/pre-prod.dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_BACKEND }}:${{ env.TAGIMAGE }}
+#
+      #- name: Build and push Docker company-service image
+      #  uses: docker/build-push-action@v3
+      #  with:
+      #    context: ./backend/services/company-service
+      #    file: ./backend/services/company-service/Dockerfile
+      #    push: true
+      #    tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_COMPANY_SERVICE }}:${{ env.TAGIMAGE }}
+#
+      #- name: Build and push Docker user-service image
+      #  uses: docker/build-push-action@v3
+      #  with:
+      #    context: ./backend/services/user-service
+      #    file: ./backend/services/user-service/Dockerfile
+      #    push: true
+      #    tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_USER_SERVICE }}:${{ env.TAGIMAGE }}
+#
+      #- name: Build and push Docker role-service image
+      #  uses: docker/build-push-action@v3
+      #  with:
+      #    context: ./backend/lucasmael/InternalProject/role-service
+      #    file: ./backend/lucasmael/InternalProject/role-service/Dockerfile
+      #    push: true
+      #    tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_ROLE_SERVICE }}:${{ env.TAGIMAGE }}
+#
+      #- name: Build and push Docker mail-service image
+      #  uses: docker/build-push-action@v3
+      #  with:
+      #    context: ./backend/services/mail-service
+      #    file: ./backend/services/mail-service/Dockerfile
+      #    push: true
+      #    tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_MAIL_SERVICE }}:${{ env.TAGIMAGE }}
