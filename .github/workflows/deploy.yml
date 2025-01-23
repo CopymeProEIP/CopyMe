@@ -28,6 +28,13 @@ jobs:
       - name: Checkout the repo
         uses: actions/checkout@v2
 
+      - name: Download copyme.pt from release
+        run: |
+          RELEASE_URL=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest \
+            | jq -r '.assets[] | select(.name == "copyme.pt") | .browser_download_url')
+          mkdir -p ./src/models/
+          curl -L "$RELEASE_URL" -o ./src/models/copyme.pt
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
