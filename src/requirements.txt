@@ -11,3 +11,6 @@ selenium ## for web scraping
 pymongo
 flask
 flask_cors
+
+# for production
+gunicorn

@@ -46,7 +46,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 app.config["CORS_HEADERS"] = "Content-Type"
 
 UPLOAD_FOLDER = './uploads'
-assert os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
@@ -197,8 +197,10 @@ def latest_angle_collection():
     except Exception as e:
         logging.exception("Error in /latest-angle-collection")
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
+    
+@app.route('/', methods=['GET'])
+def hello_world():
+    return jsonify({"status": "success", "data": "Hello World"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
