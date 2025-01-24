@@ -14,3 +14,6 @@ flask_cors
 
 # for production
 gunicorn
+pydantic>=2.10.6
+fastapi>=0.115.7
+pydantic-settings

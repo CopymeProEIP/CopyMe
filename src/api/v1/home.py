@@ -1,7 +1,8 @@
 from fastapi import APIRouter
+from fastapi.encoders import jsonable_encoder
 
 router = APIRouter(prefix="/home", tags=["home"])
 
 @router.get("/")
 def home():
-    return {"status": "success", "message": "Welcome to Copyme API."}
+    return jsonable_encoder({"status": "ok", "message": "Welcome to the home page"})
