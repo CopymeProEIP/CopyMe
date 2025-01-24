@@ -17,7 +17,7 @@ export default function DemoPage() {
 		if (!selectedFile) return;
 		try {
 			const response = await fetch(
-				`http://127.0.0.1:5000/latest-angle-collection?video=${encodeURIComponent(
+				`${process.env.NEXT_PUBLIC_BACKEND}/latest-angle-collection?video=${encodeURIComponent(
 					selectedFile?.name,
 				)}`,
 			);
@@ -56,7 +56,7 @@ export default function DemoPage() {
 
 		setLoading(true);
 		try {
-			const response = await fetch('http://127.0.0.1:5000/demo', {
+			const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/demo`, {
 				method: 'POST',
 				body: formData,
 			});
@@ -65,7 +65,7 @@ export default function DemoPage() {
 				fetchAngleData();
 
 				const imageResponse = await fetch(
-					`http://127.0.0.1:5000/image?filename=${encodeURIComponent(selectedFile.name)}`,
+					`${process.env.NEXT_PUBLIC_BACKEND}/image?filename=${encodeURIComponent(selectedFile.name)}`,
 				);
 
 				if (imageResponse.ok) {
