@@ -28,22 +28,22 @@ jobs:
       - name: Checkout the repo
         uses: actions/checkout@v2
 
-      - name: Download copyme.pt from release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RELEASE_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/releases/latest \
-            | jq -r '.assets[] | select(.name == "copyme.pt") | .browser_download_url')
-
-          if [ -z "$RELEASE_URL" ]; then
-            echo "Error: Could not find copyme.pt in the latest release assets."
-            exit 1
-          fi
-
-          mkdir -p ./src/models/
-          curl -L "$RELEASE_URL" -o ./src/models/copyme.pt
+      #- name: Download copyme.pt from release
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  run: |
+      #    RELEASE_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+      #      -H "Accept: application/vnd.github.v3+json" \
+      #      https://api.github.com/repos/${{ github.repository }}/releases/latest \
+      #      | jq -r '.assets[] | select(.name == "copyme.pt") | .browser_download_url')
+#
+      #    if [ -z "$RELEASE_URL" ]; then
+      #      echo "Error: Could not find copyme.pt in the latest release assets."
+      #      exit 1
+      #    fi
+#
+      #    mkdir -p ./src/model/
+      #    curl -L "$RELEASE_URL" -o ./src/models/copyme.pt
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -72,35 +72,3 @@ jobs:
           file: ./src/pre-prod.dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_BACKEND }}:${{ env.TAG }}
-#
-      #- name: Build and push Docker company-service image
-      #  uses: docker/build-push-action@v3
-      #  with:
-      #    context: ./backend/services/company-service
-      #    file: ./backend/services/company-service/Dockerfile
-      #    push: true
-      #    tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_COMPANY_SERVICE }}:${{ env.TAGIMAGE }}
-#
-      #- name: Build and push Docker user-service image
-      #  uses: docker/build-push-action@v3
-      #  with:
-      #    context: ./backend/services/user-service
-      #    file: ./backend/services/user-service/Dockerfile
-      #    push: true
-      #    tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_USER_SERVICE }}:${{ env.TAGIMAGE }}
-#
-      #- name: Build and push Docker role-service image
-      #  uses: docker/build-push-action@v3
-      #  with:
-      #    context: ./backend/lucasmael/InternalProject/role-service
-      #    file: ./backend/lucasmael/InternalProject/role-service/Dockerfile
-      #    push: true
-      #    tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_ROLE_SERVICE }}:${{ env.TAGIMAGE }}
-#
-      #- name: Build and push Docker mail-service image
-      #  uses: docker/build-push-action@v3
-      #  with:
-      #    context: ./backend/services/mail-service
-      #    file: ./backend/services/mail-service/Dockerfile
-      #    push: true
-      #    tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_MAIL_SERVICE }}:${{ env.TAGIMAGE }}
