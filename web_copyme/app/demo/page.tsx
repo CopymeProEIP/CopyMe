@@ -7,9 +7,11 @@ import { useState, useRef, useEffect } from 'react';
 
 export default function DemoPage() {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const [email, setEmail] = useState<string>('');
 	const [uploadedImage, setUploadedImage] = useState<string>('');
 	const [message, setMessage] = useState<string>('');
 	const [loading, setLoading] = useState<boolean>(false);
+	const [allowTraining, setAllowTraining] = useState<boolean>(true); // Checkbox pour entraîner l'IA
 	const [angleData, setAngleData] = useState<any | null>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -28,7 +30,6 @@ export default function DemoPage() {
 			const data = await response.json();
 
 			if (data?.data) {
-				console.log(data.data.frames);
 				setAngleData(data.data);
 			}
 		} catch (error) {
@@ -51,8 +52,15 @@ export default function DemoPage() {
 			return;
 		}
 
+		if (!email || !/\S+@\S+\.\S+/.test(email)) {
+			setMessage('Veuillez entrer une adresse email valide.');
+			return;
+		}
+
 		const formData = new FormData();
 		formData.append('image', selectedFile);
+		formData.append('email', email);
+		formData.append('allowTraining', allowTraining.toString());
 
 		setLoading(true);
 		try {
@@ -65,7 +73,9 @@ export default function DemoPage() {
 				fetchAngleData();
 
 				const imageResponse = await fetch(
-					`${process.env.NEXT_PUBLIC_BACKEND}/image?filename=${encodeURIComponent(selectedFile.name)}`,
+					`${process.env.NEXT_PUBLIC_BACKEND}/image?filename=${encodeURIComponent(
+						selectedFile.name,
+					)}`,
 				);
 
 				if (imageResponse.ok) {
@@ -158,37 +168,80 @@ export default function DemoPage() {
 		<div className={cn('w-screen h-screen', uploadedImage ? 'grid grid-cols-2' : '')}>
 			<div className='h-full w-full flex flex-col items-center justify-center'>
 				{uploadedImage && message ? (
-					<div>
-						<h1>Feedback</h1>
-						{angleData?.frames[0]?.data[0].feedback ? (
-							angleData?.frames[0]?.data[0].feedback.map((message: string, index: number) => {
-								return <p key={index}>{message}</p>;
-							})
-						) : (
-							<p>Aucun Feedback</p>
-						)}
+					<div className='w-4/5'>
+						<h2 className='text-lg font-bold mb-4'>Feedback</h2>
+						{angleData?.frames[0]?.data[0]?.feedback?.map((msg: string, idx: number) => (
+							<p key={idx}>{msg}</p>
+						)) || <p>Aucun Feedback</p>}
+						<Button
+							onClick={() => {
+								window.location.reload();
+							}}
+							className='my-4'>
+							Selectionner une autre image
+						</Button>
 					</div>
 				) : (
-					<div>
-						<h1>Télécharger une image</h1>
-						<form onSubmit={handleSubmit} className='flex flex-col items-center justify-center'>
-							<div style={{ marginBottom: '10px' }}>
-								<input type='file' accept='image/*' onChange={handleFileChange} />
-							</div>
-							<Button type='submit' disabled={loading}>
-								{loading ? 'Traitement en cours...' : 'Envoyer'}
-							</Button>
-						</form>
-						{message && <p>{message}</p>}
+					<div className='w-4/5 flex items-center justify-around'>
+						<div>
+							<h2 className='text-lg font-bold mb-4'>
+								Conseils pour obtenir de meilleurs résultats
+							</h2>
+							<ul className='list-disc pl-6 text-sm space-y-2'>
+								<li>Assurez-vous d&apos;être seul sur l&apos;image.</li>
+								<li>
+									Positionnez la caméra en diagonale par rapport au sujet pour un meilleur angle.
+								</li>
+								<li>
+									Notez que cette application est une version alpha et n&apos;est pas le produit
+									final.
+								</li>
+								{/* <li>
+									L&apos;image téléchargée pourra être utilisée pour entraîner le modèle, sous réserve
+									d&apos;acceptation.
+								</li> */}
+							</ul>
+						</div>
+						<div className='flex flex-col items-start justify-center'>
+							<h1 className='text-xl font-bold mb-4'>Analysez une image</h1>
+							<form onSubmit={handleSubmit} className='flex flex-col items-center'>
+								<div className='flex flex-col mb-4 w-full'>
+									<input
+										type='email'
+										placeholder='Votre email'
+										value={email}
+										onChange={(e) => setEmail(e.target.value)}
+										className='mb-4 p-2 border border-gray-300 rounded'
+									/>
+									<input type='file' accept='image/*' onChange={handleFileChange} />
+								</div>
+								<div className='mb-4 flex items-center'>
+									<input
+										type='checkbox'
+										checked={allowTraining}
+										onChange={(e) => setAllowTraining(e.target.checked)}
+										className='mr-2'
+									/>
+									<label>
+										J&apos;autorise l&apos;utilisation de cette image pour entraîner l&apos;IA
+										copyme.
+									</label>
+								</div>
+								<Button type='submit' disabled={loading}>
+									{loading ? 'Traitement en cours...' : 'Envoyer'}
+								</Button>
+							</form>
+							{message && <p className='text-red-500 mt-4'>{message}</p>}
+						</div>
 					</div>
 				)}
 			</div>
 			<div>
-				{angleData && angleData?.frames[0]?.data[0] && (
+				{angleData?.frames[0]?.data[0] && (
 					<div style={{ marginTop: '20px', position: 'relative' }}>
 						<h2>
-							Il est en{' '}
-							<label className='text-red-500'>{angleData.frames[0].data[0].class_name}</label>
+							Vous êtes en{' '}
+							<span className='text-red-500'>{angleData.frames[0].data[0].class_name}</span>
 						</h2>
 						<canvas ref={canvasRef} style={{ width: '640px', height: 'auto' }} />
 					</div>
