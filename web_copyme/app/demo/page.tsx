@@ -182,7 +182,7 @@ export default function DemoPage() {
 						</Button>
 					</div>
 				) : (
-					<div className='w-4/5 flex items-center justify-around'>
+					<div className='w-4/5 flex flex-col gap-10 md:flex-row items-center justify-around'>
 						<div>
 							<h2 className='text-lg font-bold mb-4'>
 								Conseils pour obtenir de meilleurs résultats
@@ -227,8 +227,8 @@ export default function DemoPage() {
 										copyme.
 									</label>
 								</div>
-								<Button type='submit' disabled={loading}>
-									{loading ? 'Traitement en cours...' : 'Envoyer'}
+								<Button type='submit' /*disabled={loading}*/ disabled>
+									{loading ? 'Traitement en cours...' : /*'Envoyer'*/ 'Bientôt disponible'}
 								</Button>
 							</form>
 							{message && <p className='text-red-500 mt-4'>{message}</p>}

@@ -17,8 +17,8 @@ export function Companies() {
             {/* <div className="grid grid-cols-2 place-items-center gap-2 md:grid-cols-4 xl:grid-cols-8 xl:gap-4"> */}
               {companies.map((logo, idx) => (
                 <Image
-                  width={40}
-                  height={10}
+                  width={250}
+                  height={50}
                   key={idx}
                   src={`/${logo}.png`}
                   className="px-2 dark:brightness-0 dark:invert"
