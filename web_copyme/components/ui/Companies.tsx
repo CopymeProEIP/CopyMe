@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const companies = [
   "eip",
 ];
@@ -14,10 +16,12 @@ export function Companies() {
             <div className="flex items-center justify-center">
             {/* <div className="grid grid-cols-2 place-items-center gap-2 md:grid-cols-4 xl:grid-cols-8 xl:gap-4"> */}
               {companies.map((logo, idx) => (
-                <img
+                <Image
+                  width={40}
+                  height={10}
                   key={idx}
                   src={`/${logo}.png`}
-                  className="h-10 w-40 px-2 dark:brightness-0 dark:invert"
+                  className="px-2 dark:brightness-0 dark:invert"
                   alt={logo}
                 />
               ))}
