@@ -4,6 +4,7 @@
 
 ```
 cd src/
+python3.10 -m venv copyme
 source copyme/bin/activate
 ```
 
