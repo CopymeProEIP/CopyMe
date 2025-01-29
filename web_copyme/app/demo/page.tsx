@@ -227,8 +227,8 @@ export default function DemoPage() {
 										copyme.
 									</label>
 								</div>
-								<Button type='submit' /*disabled={loading}*/ disabled>
-									{loading ? 'Traitement en cours...' : /*'Envoyer'*/ 'Bientôt disponible'}
+								<Button type='submit' disabled={loading} >
+									{loading ? 'Traitement en cours...' : 'Envoyer'}
 								</Button>
 							</form>
 							{message && <p className='text-red-500 mt-4'>{message}</p>}
