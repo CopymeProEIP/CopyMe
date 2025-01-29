@@ -1,7 +1,6 @@
 import csv
 
 import os
-from utils import load_labels, check_fileType
 from ultralytics import YOLO
 from pymongo import MongoClient
 import torch
@@ -9,7 +8,7 @@ import cv2
 import os
 from ultralytics import YOLO
 from sys import platform
-from utils import (
+from yolov8_basketball.utils import (
     load_labels,
     check_fileType,
     calculate_angle,

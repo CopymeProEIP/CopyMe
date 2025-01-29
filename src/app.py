@@ -1,6 +1,6 @@
 import os
 from flask import Flask, request, jsonify, send_file
-from yolov8 import YOLOv8
+from yolov8_basketball.yolov8 import YOLOv8
 from recommendation_engine import analyze_phase
 from flask_cors import CORS
 from pymongo import MongoClient

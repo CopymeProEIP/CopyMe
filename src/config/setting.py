@@ -1,6 +1,8 @@
 from pydantic_settings import BaseSettings
+from pydantic import BaseModel, ValidationError, field_validator
 from dotenv import load_dotenv
 import os
+from . import exception_class
 
 # This function will check if the .env file exists and return the name of the file
 def get_environment():
@@ -21,6 +23,10 @@ class Settings(BaseSettings):
     class Config:
         env_file = get_environment()
 
-
 def get_variables():
-    return Settings()
+    try:
+        settings = Settings()
+    except Exception as e:
+        raise exception_class.SettingsException("Errors: ENV variable not found !")
+
+    return settings
