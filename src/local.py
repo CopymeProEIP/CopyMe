@@ -1,4 +1,4 @@
-from yolov8 import YOLOv8
+from yolov8_basketball.yolov8 import YOLOv8
 import argparse
 
 if __name__ == "__main__":
