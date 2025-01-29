@@ -1,7 +1,6 @@
 import csv
 
 import os
-from utils import load_labels, check_fileType
 from ultralytics import YOLO
 from pymongo import MongoClient
 import torch
