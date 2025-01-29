@@ -20,15 +20,15 @@ export function Solution() {
 					<HeroVideoDialog
 						className='dark:hidden block'
 						animationStyle='from-center'
-						videoSrc='/video_pres.mp4'
-						thumbnailSrc='/screen.png'
+						videoSrc='/beta.mp4'
+						thumbnailSrc='/beta_preview.png'
 						thumbnailAlt='Hero Video'
 					/>
 					<HeroVideoDialog
 						className='hidden dark:block'
 						animationStyle='from-center'
-						videoSrc='/video_pres.mp4'
-						thumbnailSrc='/screen.png'
+						videoSrc='/beta.mp4'
+						thumbnailSrc='/beta_preview.png'
 						thumbnailAlt='Hero Video'
 					/>
 				</div>

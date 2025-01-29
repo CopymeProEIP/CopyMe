@@ -63,32 +63,42 @@ def demo():
             return jsonify({"status": "error", "message": "No image sent."}), 400
 
         file = request.files['image']
+        email = request.form.get('email')
+        allow_training = request.form.get('allowTraining', 'false').lower() == 'true'
+
+        if not email:
+            logging.error("Email is required.")
+            return jsonify({"status": "error", "message": "Email is required."}), 400
+
         if file.filename == '':
             logging.error("No file selected.")
             return jsonify({"status": "error", "message": "No file selected."}), 400
 
-        # Save the image
-        filename = file.filename
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        logging.info(f"Saving image to: {file_path}")
-        file.save(file_path)
+        # Save the original image
+        original_filename = file.filename
+        original_file_path = os.path.join(app.config['UPLOAD_FOLDER'], original_filename)
+        logging.info(f"Saving original image to: {original_file_path}")
+        file.save(original_file_path)
 
-        # Run YOLOv8
+        # Process the image
+        processed_filename = f"processed_{original_filename}"
+        processed_file_path = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
         logging.info("Loading YOLO model...")
-        yolo = YOLOv8(capture_index=file_path, save_path="feedback", mode="debug")
+
+        yolo = YOLOv8(capture_index=original_file_path, save_path="feedback", mode="debug")
         yolo.load_model('model/copyme.pt')
         yolo.load_keypoint_model()
-        yolo.capture()
+        yolo.capture()  # Assuming YOLO saves the processed image
         logging.info("YOLO processing completed.")
 
-        collection_name = "processed_image"
-        collection = db[collection_name]
+        # Save metadata to MongoDB
+        collection = db["processed_image"]
 
-        latest_data = collection.find_one({"url": f"./uploads/{filename}"}, sort=[("_id", -1)])
+        latest_data = collection.find_one({"url": f"{original_file_path}"}, sort=[("_id", -1)])
 
         # Search for the document corresponding to the specified video
         if not latest_data:
-            logging.exception("No data available for this video.")
+            logging.exception("No data available for " + original_file_path + " video.")
             return jsonify({"status": "error", "message": "No data available for this video."}), 404
 
         latest_data["_id"] = str(latest_data["_id"])
@@ -141,7 +151,11 @@ def demo():
         # Update the document with the modified frames
         collection.update_one(
             {"_id": ObjectId(latest_data["_id"])},
-            {"$set": {"frames": updated_frames}}  # Update with the modified frames
+            {"$set": {
+                "frames": updated_frames,
+                "email": email,
+                "allow_training": allow_training,
+            }}  # Update with the modified frames
         )
 
         return jsonify({"status": "success", "message": "Image processed successfully."}), 200
@@ -197,7 +211,7 @@ def latest_angle_collection():
     except Exception as e:
         logging.exception("Error in /latest-angle-collection")
         return jsonify({"status": "error", "message": str(e)}), 500
-    
+
 @app.route('/', methods=['GET'])
 def hello_world():
     return jsonify({"status": "success", "data": "Hello World"}), 200
