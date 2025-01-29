@@ -37,5 +37,5 @@ docker run -d -p 5000:5000 \
   -v /home/ubuntu/copyme/models:/app/model/:ro \
   -v /home/ubuntu/copyme/certs/server.crt:/etc/ssl/certs/server.crt:ro \
   -v /home/ubuntu/copyme/certs/server.key:/etc/ssl/private/server.key:ro \
-  --name my_backend_app my_image
+  --name my_app ghcr.io/mpjunot/copyme/copyme-backend-api:latest
 ```
