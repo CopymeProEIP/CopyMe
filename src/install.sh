@@ -52,6 +52,7 @@ else
     elif [ $OS == "Windows" ]; then # on windows
         py -m ensurepip --upgrade
     fi
+    pip install -r requirements.txt
 fi
 
 # Check if the installation was successful
