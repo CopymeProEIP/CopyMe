@@ -15,6 +15,7 @@ dependencies:
 
     # for back end api
     - pymongo
+    - motor
 
     # for production
     - gunicorn

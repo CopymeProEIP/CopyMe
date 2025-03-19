@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, File, UploadFile, Form, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from config.setting import get_variables
 from api import router as APIRouter
@@ -12,6 +12,10 @@ from pymongo import MongoClient, errors
 from contextlib import asynccontextmanager
 import logging
 from logging_setup import setup_logging
+from motor.motor_asyncio import AsyncIOMotorClient
+
+# Class Yolov8 model
+from yolov8_basketball.yolov8 import YOLOv8
 
 try:
     settings = get_variables()
@@ -39,10 +43,11 @@ async def startup_db_client(app):
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER"""
 
-        app.mongodb_client = MongoClient(settings.MONGO_URI)
-    except errors.ConnectionFailure as e:
-        logging.critical("The connection at the Mongodb database failed.")
-        sys.exit(84)
+        app.mongodb_client = AsyncIOMotorClient(settings.MONGO_URI)
+        app.db = app.mongodb_client["CopyMe"]
+        app.yolo = YOLOv8(capture_index=None, save_path="feedback", mode="debug")
+        app.yolo.load_model("model/copyme.pt")
+        app.yolo.load_keypoint_model()
     except Exception as e:
         logging.critical(e)
         sys.exit(84)
@@ -74,8 +79,6 @@ def create_application() -> FastAPI:
         return response
     
     return app
-
-
 
 # Set up logging
 setup_logging()

@@ -10,6 +10,10 @@ def setup_logging():
     # Set the log level (can be changed to DEBUG, INFO, etc.)
     logger.setLevel(logging.DEBUG)
 
+    # Disable logs to WARNINGS
+    logging.getLogger("pymongo").setLevel(logging.INFO)
+    #logging.getLogger("motor").setLevel(logging.WARNING)
+
     # Create handlers
     console_handler  = colorlog.StreamHandler(stream=sys.stdout)
     file_handler = RotatingFileHandler('app.log', maxBytes=5*1024*1024, backupCount=3)  # Rotate logs after 5 MB

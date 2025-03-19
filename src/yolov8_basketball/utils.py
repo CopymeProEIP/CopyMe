@@ -2,7 +2,14 @@ import csv
 import os
 import numpy as np
 from enum import Enum
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request, Depends
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .yolov8 import YOLOv8
 #----------------------------------------------------------
 # load csv file that list all model's labels from the model
 
@@ -69,3 +76,9 @@ class Debugger:
                 print(f"[INFO]: {message}")
             elif type == DebugType.WARNING:
                 print(f"[WARNING]: {message}")
+
+def get_database(request: Request) -> AsyncIOMotorDatabase:
+    return request.app.db
+
+def get_yolomodel(request: Request) -> 'YOLOv8':
+    return request.app.yolo
