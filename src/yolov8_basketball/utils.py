@@ -4,6 +4,7 @@ import numpy as np
 from enum import Enum
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from config.db_models import DatabaseManager
 
 
 from typing import TYPE_CHECKING
@@ -46,7 +47,7 @@ def load_labels(file_path):
 
 # check if the file is an image or video
  
-def check_fileType(file_path):
+def check_fileType(file_path: str):
     if file_path.split('.')[-1] in ['jpg', 'png', 'jpeg', 'bmp', 'webp']:
         return 'image'
     elif file_path.split('.')[-1] in ['mp4', 'avi', 'mov']:
@@ -77,7 +78,7 @@ class Debugger:
             elif type == DebugType.WARNING:
                 print(f"[WARNING]: {message}")
 
-def get_database(request: Request) -> AsyncIOMotorDatabase:
+def get_database(request: Request) -> DatabaseManager:
     return request.app.db
 
 def get_yolomodel(request: Request) -> 'YOLOv8':

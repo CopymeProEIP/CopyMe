@@ -7,6 +7,7 @@ import os
 import uvicorn
 import sys
 from config.exception_class import  SettingsException
+from config.db_models import DatabaseManager
 from pymongo import MongoClient, errors
 # import for fast api lifespan
 from contextlib import asynccontextmanager
@@ -44,10 +45,13 @@ async def startup_db_client(app):
         app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER"""
 
         app.mongodb_client = AsyncIOMotorClient(settings.MONGO_URI)
-        app.db = app.mongodb_client["CopyMe"]
+        app.db = DatabaseManager(app.mongodb_client["CopyMe"])
+        logging.info("Logged successful to the mongodb database")
+
         app.yolo = YOLOv8(capture_index=None, save_path="feedback", mode="debug")
         app.yolo.load_model("model/copyme.pt")
         app.yolo.load_keypoint_model()
+        logging.info("Load our yolo model")
     except Exception as e:
         logging.critical(e)
         sys.exit(84)

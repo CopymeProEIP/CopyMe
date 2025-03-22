@@ -17,6 +17,11 @@ from .utils import (
 )
 import numpy as np
 from datetime import date, datetime
+import json
+from pydantic import BaseModel, EmailStr, Field
+from typing import List, Optional, Dict, Tuple, Hashable, Any
+from enum import Enum
+import logging
 
 DEBUG = Debugger(enabled=True)
 
@@ -40,6 +45,58 @@ MIN_CONFIDENCE=0.6
 # out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), 10, (640, 480))
 #----------------------------------------------------
 
+class Direction(Enum):
+    UNKNOWN = 0
+    LEFT = 1
+    RIGHT = 2
+    UP = 3
+    DOWN = 4
+
+# Template to store detected angles
+class AngleData(BaseModel):
+    start_point: int
+    end_point: int
+    third_point: int
+    angle: float
+    angle_name: Tuple[str, Direction]
+
+# Model to represent a frame (analyzed image)
+class FrameData(BaseModel):
+    class_name: str
+    keypoints_positions: List[List[float]]  # List of keypoint positions [x, y]
+    angles: List[AngleData]
+    feedback: Optional[Dict] = None
+
+reference_data = {
+    "shot_position": {
+        "gender": "men",
+        "angles": {
+            "hip": {"ref": 158.89, "tolerance": 6.16},
+            "knee": {"ref": 116.7, "tolerance": 7.4},
+            "ankle": {"ref": 108.39, "tolerance": 10.58},
+            "elbow": {"ref": 90, "tolerance": 5},
+        },
+    },
+    "shot_realese": {
+        "gender": "men",
+        "phase": "shot_realese",
+        "angles": {
+            "hip": {"ref": 158.89, "tolerance": 6.16},
+            "knee": {"ref": 116.7, "tolerance": 7.4},
+            "ankle": {"ref": 108.39, "tolerance": 10.58},
+            "elbow": {"ref": 90, "tolerance": 5},
+        },
+    },
+    "shot_followthrough": {
+        "gender": "men",
+        "angles": {
+            "hip": {"ref": 158.89, "tolerance": 6.16},
+            "knee": {"ref": 116.7, "tolerance": 7.4},
+            "ankle": {"ref": 108.39, "tolerance": 10.58},
+            "elbow": {"ref": 90, "tolerance": 5},
+        },
+    }
+}
 
 #----------------------------------------------------
 # YOLOv8 class to train, validate and infer the model
@@ -49,7 +106,10 @@ class YOLOv8:
     # Class mode
     MODES = ['debug', 'show']
 
-    def __init__(self, capture_index=DEFAULT_CAPTURE_INDEX, save_path=DEFAULT_SAVE_PATH, load_labels_flag=True, mode=MODES[0]):
+    def __init__(self, capture_index: str = DEFAULT_CAPTURE_INDEX,
+                save_path: str = DEFAULT_SAVE_PATH,
+                load_labels_flag: bool = True,
+                mode: str = MODES[0]):
         # check the device if cuda is available use it otherwise use cpu
         # check the platform and use mps to improve performance on mac
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -68,7 +128,7 @@ class YOLOv8:
         self.keypoint_model = None
         DEBUG.enable(enabled=mode == 'debug')
 
-        self.result = []
+        self.result: Dict
         self.version = 1
 
         self.db = None
@@ -83,9 +143,21 @@ class YOLOv8:
         DEBUG.log(message=f"Input: {self.capture_index}")
         DEBUG.log(message=f"Avalaible classes: {self.shoot_classes}")
 
-        MONGODB_URI = "mongodb+srv://copyme:dgg5kQCAVmGoJ4qD@cluster0.iea0zmj.mongodb.net/CopyMe?retryWrites=true&w=majority&appName=Cluster0"
-        self.connect_to_bdd(MONGODB_URI)
+        #MONGODB_URI = "mongodb+srv://copyme:dgg5kQCAVmGoJ4qD@cluster0.iea0zmj.mongodb.net/CopyMe?retryWrites=true&w=majority&appName=Cluster0"
+        #self.connect_to_bdd(MONGODB_URI)
 
+    def __str__(self):
+        data = {
+            "device": self.device,
+            "capture_index": self.capture_index,
+            "mode": self.mode,
+            "model_loaded": self.is_model_loaded,
+            "keypoint_model_loaded": self.is_keypoint_model_loaded,
+            "available_classes": self.shoot_classes,
+            "version": self.version,
+            "saved_frames_count": len(self.saved_frames_data),
+        }
+        return json.dumps(data, indent=4)
 
     def convert_numpy_to_python(self, data):
         """
@@ -186,6 +258,15 @@ class YOLOv8:
             15: "L ankle", 16: "R ankle"
         }
 
+        angle_names = {
+            (5, 7, 9): ("elbow", Direction.LEFT),
+            (6, 8, 10): ("elbow", Direction.RIGHT),
+            (5, 11, 13): ("hip", Direction.LEFT),
+            (6, 12, 14): ("hip", Direction.RIGHT),
+            (11, 13, 15): ("knee", Direction.LEFT),
+            (12, 14, 16): ("knee", Direction.RIGHT),
+        }
+
         angles_with_points = []
         angles_tmp = []
         keypoints_positions = {}
@@ -217,25 +298,30 @@ class YOLOv8:
                         start_name = keypoint_names.get(start, f"Keypoint {start}")
                         end_name = keypoint_names.get(end, f"Keypoint {end}")
 
+                        angle_name = angle_names.get((start, end, third_point), ("Unknown angle", Direction.UNKNOWN))
+
                         # Append angle and linked points
                         angles_with_points.append({
                             "start_point": start_name,
                             "end_point": end_name,
                             "third_point": third_point,
-                            "angle": angle
+                            "angle": angle,
+                            "angle_name": angle_name
                         })
                         angles_tmp.append({
                             "start_point": start,
                             "end_point": end,
                             "third_point": third_point,
-                            "angle": angle
+                            "angle": angle,
+                            "angle_name": angle_name
                         })
 
-                self.result.append({
+                self.result = {
                     "class_name": class_name,
                     "keypoints_positions": self.convert_numpy_to_python(kp),
                     "angles": self.convert_numpy_to_python(angles_tmp),
-                })
+                }
+
                 angles_tmp.clear()
                 angles_tmp = []
 
@@ -349,8 +435,6 @@ class YOLOv8:
             self.save_frame(best_frame, self.save_path, best_class_name, best_angles, sync=self.sync)
         return frame
 
-
-
     def save_frame(self, frame, output_path, class_name, angles, sync=False):
         if class_name in self.shoot_classes:
             if class_name not in self.saved_classes or class_name in self.saved_classes and sync == True:
@@ -383,31 +467,99 @@ class YOLOv8:
 
 
     def save_angle_in_bdd(self):
-        self.collection.update_one(
-            {"url": self.capture_index, "version": self.version},
-            {
-                "$push": {
-                    "frames": {
-                        "data": self.result,
-                    }
-                },
-            }
-        )
+        DEBUG.log(message=f"result : {self.result}")
+        #self.collection.update_one(
+        #    {"url": self.capture_index, "version": self.version},
+        #    {
+        #        "$push": {
+        #            "frames": {
+        #                "data": self.result,
+        #            }
+        #        },
+        #    }
+        #)
         self.result.clear()
         self.result = []
         return
 
+    def __check_alignment(self, angle_name: str, measured_angle: float, reference_entry: Dict) -> Tuple[bool, float]:
+
+        angle_ref = reference_entry["angles"].get(angle_name)
+
+        if angle_ref is None or angle_ref["ref"] is None or angle_ref["tolerance"] is None:
+            return False, None
+
+        min_angle = angle_ref["ref"] - angle_ref["tolerance"]
+        max_angle = angle_ref["ref"] + angle_ref["tolerance"]
+
+        is_correct = min_angle <= measured_angle <= max_angle
+
+        error = measured_angle - angle_ref["ref"]
+
+        return is_correct, error
+
+    def __generate_feedback(self, angle_name: str, error: float):
+
+        if angle_name == "hip":
+            action = "réduire l'extension" if error > 0 else "augmenter l'extension"
+            return f"Veuillez {action} de la hanche de {abs(error):.1f}° pour améliorer votre stabilité pendant le tir."
+
+        elif angle_name == "knee":
+            action = "augmenter la flexion" if error < 0 else "réduire la flexion"
+            return f"Veuillez {action} au niveau du genou de {abs(error):.1f}° pour adopter une meilleure position de tir."
+
+        elif angle_name == "ankle":
+            action = "augmenter la flexion plantaire" if error < 0 else "réduire la flexion plantaire"
+            return f"Veuillez {action} de la cheville de {abs(error):.1f}° pour ajuster votre équilibre pendant le tir."
+
+        elif angle_name == "elbow":
+            action = "augmenter la flexion" if error < 0 else "réduire la flexion"
+            return f"Veuillez {action} au niveau du coude de {abs(error):.1f}° pour un meilleur alignement lors de la poussée du ballon."
+
+        else:
+            return f"L'angle '{angle_name}' présente un écart de {abs(error):.1f}°, mais aucun conseil spécifique n'est disponible."
+        
+    def __feedback_key_tuple_to_str(self, key: Tuple[str, Direction]) -> str:
+        return f"{key[0]}|{key[1].name}"
+
+    def __feedback_key_str_to_tuple(self, key: str) -> Tuple[str, Direction]:
+        part1, part2 = key.split("|")
+        return part1, Direction[part2]
+
+    def analyze_phase(self, measured_angles: List[AngleData], phase_name: str) -> Dict:
+        messages = {}
+        for angle_data in measured_angles:
+            angle_name = angle_data.angle_name[0]
+            feedback_key = self.__feedback_key_tuple_to_str(angle_data.angle_name)
+            is_correct, error = self.__check_alignment(angle_name, angle_data.angle, reference_data[phase_name])
+            if is_correct:
+                messages[f'{feedback_key}'] = f"L'angle '{angle_name}' est correct ({angle_data.angle}°). Bon mouvement !"
+            else:
+                if error is not None:
+                    feedback = self.__generate_feedback(angle_name, error)
+                    messages[f'{feedback_key}'] = feedback
+                else:
+                    messages[f'{feedback_key}'] = f"L'angle '{angle_name}' n'est pas défini dans les données de référence."
+        return messages
 
     # function that capture the image or video and process it
-    def capture(self):
-        # check if is an image or video
+    def capture(self, filename: str = None) -> List[FrameData]:
+        self.capture_index = filename if filename else self.capture_index
+        # check i # Liste des positions des keypoints [x, y]f is an image or video
+        results_database: List[FrameData] = []
         file_type = check_fileType(self.capture_index)
+
         if file_type == 'image':
             DEBUG.log(message=f"Processing image {self.capture_index}")
             frame = cv2.imread(self.capture_index)
             results = self.infer(frame, mode=['object'])
             self.plot_result(results, frame)
-            self.save_angle_in_bdd()
+            results_database.append(FrameData.model_validate(self.result))
+
+            if len(results_database) > 0:
+                feedback = self.analyze_phase(results_database[0].angles, results_database[0].class_name)
+                results_database[0].feedback = feedback
+                logging.debug(f"advice for the users: {results_database[0].feedback}")
         elif file_type == 'video':
             DEBUG.log(message=f"Processing video {self.capture_index}")
             cap = cv2.VideoCapture(self.capture_index)
@@ -441,6 +593,8 @@ class YOLOv8:
         if file_type == 'video' and file_type != 'image':
             cap.release()
             cv2.destroyAllWindows()
+
+        return results_database
 
 #------------------------------------------------
 

@@ -1,51 +1,32 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request, Depends, APIRouter
-from typing import Optional
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request, Depends, APIRouter, Body
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, Annotated, List, Dict
+from yolov8_basketball.utils import get_database, get_yolomodel
+from yolov8_basketball.yolov8 import YOLOv8, FrameData, AngleData
+from recommendation_engine import analyze_phase
+import logging
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-reference_data = [
-    {
-        "gender": "men",
-        "phase": "shot_position",
-        "angles": {
-            "hip": {"ref": 158.89, "tolerance": 6.16},
-            "knee": {"ref": 116.7, "tolerance": 7.4},
-            "ankle": {"ref": 108.39, "tolerance": 10.58},
-            "elbow": {"ref": 90, "tolerance": 5},
-        },
-    },
-    {
-        "gender": "men",
-        "phase": "shot_realese",
-        "angles": {
-            "hip": {"ref": 158.89, "tolerance": 6.16},
-            "knee": {"ref": 116.7, "tolerance": 7.4},
-            "ankle": {"ref": 108.39, "tolerance": 10.58},
-            "elbow": {"ref": 90, "tolerance": 5},
-        },
-    },
-    {
-        "gender": "men",
-        "phase": "shot_followthrough",
-        "angles": {
-            "hip": {"ref": 158.89, "tolerance": 6.16},
-            "knee": {"ref": 116.7, "tolerance": 7.4},
-            "ankle": {"ref": 108.39, "tolerance": 10.58},
-            "elbow": {"ref": 90, "tolerance": 5},
-        },
-    }
-]
+class DemoRequest(BaseModel):
+    email: EmailStr = Field(..., examples=["email@exemple.com"])
+    allow_training: Optional[bool] = False
 
 @router.post("/demo")
 def demo(request: Request,
-    file: UploadFile = File(...),
-    email: str = Form(...),
-    allow_training: Optional[bool] = Form(False)):
+    form_data: DemoRequest = Depends(),
+    files: UploadFile = File(...),
+    ):
 
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required.")
+    yolo_basket: YOLOv8 = get_yolomodel(request)
+    logging.debug(f"YOLOv8 object : {yolo_basket}")
+
+    results: List[FrameData] = yolo_basket.capture()  # Assuming YOLO saves the processed image
+    logging.info("YOLO processing completed.")
+
+    logging
+
     return {"status": "success", "message": "Image processed successfully."}
-
 
 @router.get("/image")
 def serve_image_with_param():

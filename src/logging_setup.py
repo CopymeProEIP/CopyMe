@@ -12,6 +12,8 @@ def setup_logging():
 
     # Disable logs to WARNINGS
     logging.getLogger("pymongo").setLevel(logging.INFO)
+    logging.getLogger("multipart").setLevel(logging.WARNING)
+    logging.getLogger("python_multipart").setLevel(logging.WARNING)
     #logging.getLogger("motor").setLevel(logging.WARNING)
 
     # Create handlers
