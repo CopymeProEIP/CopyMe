@@ -61,16 +61,16 @@ const styles = StyleSheet.create({
 	containerBody: {
 		width: 80,
 		height: 80,
+		display: 'flex',
+		justifyContent: 'center',
+		alignItems: 'center',
 		position: 'relative',
 	},
 	progressCircle: {
 		height: '100%',
 		width: '100%',
+		position: 'absolute',
 	},
 	percentageText: {
-		position: 'absolute',
-		top: '48%',
-		left: '54%',
-		transform: [{ translateX: -20 }, { translateY: -10 }],
 	},
 });

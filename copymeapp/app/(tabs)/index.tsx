@@ -8,6 +8,28 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { StatsBox } from '@/components/StatsBox';
 import { Trophy } from 'lucide-react-native';
+import { ReviewsList } from '@/components/ReviewsList';
+
+const reviews = [
+	{
+		id: '1',
+		title: 'Shooting',
+		score: 100,
+		date: new Date(),
+	},
+	{
+		id: '2',
+		title: 'Free Throw',
+		score: 80,
+		date: new Date(),
+	},
+	{
+		id: '3',
+		title: 'Shooting',
+		score: 20,
+		date: new Date(),
+	},
+];
 
 export default function HomeScreen() {
 	return (
@@ -23,11 +45,8 @@ export default function HomeScreen() {
 				<ThemedText type='title'>Dashboard</ThemedText>
 				<HelloWave />
 			</ThemedView>
-			<StatsBox
-				title='Best Score'
-				value='Three-point shoot'
-				icon={Trophy}
-			/>
+			<StatsBox title='Best Score' value='Three-point shoot' icon={Trophy} />
+			<ReviewsList reviews={reviews} onSeeAllPress={() => console.log('See all reviews')} />
 		</ParallaxScrollView>
 	);
 }
