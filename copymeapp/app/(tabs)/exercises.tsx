@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		padding: 16,
 		paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    marginBottom: 70,
 	},
 	header: {
 		marginBottom: 16,
