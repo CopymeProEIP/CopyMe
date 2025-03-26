@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 import logging
 from logging_setup import setup_logging
 from motor.motor_asyncio import AsyncIOMotorClient
+from bson.binary import Binary, UuidRepresentation
 
 # Class Yolov8 model
 from yolov8_basketball.yolov8 import YOLOv8
@@ -44,7 +45,7 @@ async def startup_db_client(app):
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER"""
 
-        app.mongodb_client = AsyncIOMotorClient(settings.MONGO_URI)
+        app.mongodb_client = AsyncIOMotorClient(settings.MONGO_URI, uuidRepresentation='standard')
         app.db = DatabaseManager(app.mongodb_client["CopyMe"])
         logging.info("Logged successful to the mongodb database")
 

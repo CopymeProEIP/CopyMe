@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     MONGO_HOST: str
     MONGO_ARGS: str
     MONGO_URI: str
+    UPLOAD_DIR: str
 
     class Config:
         env_file = get_environment()
