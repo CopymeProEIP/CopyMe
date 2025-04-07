@@ -1,248 +1,314 @@
 /** @format */
 
-import React, { useState } from 'react';
-import {
-  StyleSheet,
-  Platform,
-  View,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, FlatList, TouchableOpacity, Image, View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
-import { Video } from 'expo-av';
+import { useRouter } from 'expo-router';
+import { FilterChips, FilterOption } from '@/components/FilterChips';
+import { DatePicker } from '@/components/DatePicker';
+import { Activity } from 'lucide-react-native';
 
-interface StatItem {
-  title: string;
-  progress: number;
+// Type pour les éléments d'analyse
+interface AnalysisItem {
+	id: string;
+	title: string;
+	date: Date;
+	exerciseName: string;
+	thumbnailUrl: string;
+	progress: number;
 }
 
-const shotStats: StatItem[] = [
-  {
-    title: 'Elbow Alignment',
-    progress: 85,
-  },
-  {
-    title: 'Follow Through',
-    progress: 70,
-  },
-  {
-    title: 'Release Timing',
-    progress: 92,
-  },
-  {
-    title: 'Balance',
-    progress: 65,
-  },
+// Données factices pour les analyses
+const analysisData: AnalysisItem[] = [
+	{
+		id: '1',
+		title: 'Free Throw Analysis',
+		date: new Date(2023, 5, 10),
+		exerciseName: 'Free Throw',
+		thumbnailUrl: 'https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?q=80&w=200',
+		progress: 75,
+	},
+	{
+		id: '2',
+		title: 'Jump Shot Analysis',
+		date: new Date(2023, 5, 15),
+		exerciseName: 'Three-Point Shot',
+		thumbnailUrl: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=200',
+		progress: 62,
+	},
+	{
+		id: '3',
+		title: 'Layup Analysis',
+		date: new Date(2023, 6, 2),
+		exerciseName: 'Layup Drill',
+		thumbnailUrl: 'https://images.unsplash.com/photo-1608245449230-4ac19066d2d0?q=80&w=200',
+		progress: 88,
+	},
+	{
+		id: '4',
+		title: 'Recent Free Throw',
+		date: new Date(2023, 10, 20), // Plus récent
+		exerciseName: 'Free Throw',
+		thumbnailUrl: 'https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?q=80&w=200',
+		progress: 82,
+	},
+	{
+		id: '5',
+		title: 'Recent Jump Shot',
+		date: new Date(2023, 10, 25), // Plus récent
+		exerciseName: 'Three-Point Shot',
+		thumbnailUrl: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=200',
+		progress: 68,
+	},
 ];
 
-const improvementTips = [
-  'Keep your elbow tucked closer to your body',
-  'Release the ball at the peak of your jump',
-  'Maintain follow-through until ball reaches basket',
+// Filtres de date
+const dateFilters: FilterOption[] = [
+	{ id: 'all', label: 'All Time' },
+	{ id: 'recent', label: 'Recent (30 days)' },
+	{ id: 'older', label: 'Older' },
 ];
 
-export default function ShotAnalysisScreen() {
-  const video = React.useRef(null);
-  const [videoMode, setVideoMode] = useState<'your' | 'pro'>('your');
+export default function ShotAnalysisListScreen() {
+	const router = useRouter();
+	const [selectedDateFilters, setSelectedDateFilters] = useState<string[]>(['all']);
+	const [customDate, setCustomDate] = useState(new Date());
+	const [showDatePicker, setShowDatePicker] = useState(false);
 
-  return (
-    <ScrollView style={styles.container}>
-      <ThemedView style={styles.videoContainer}>
-        <Video
-          ref={video}
-          style={styles.video}
-          source={
-            videoMode === 'your'
-              ? require('@/assets/videos/your_shot.mp4')
-              : require('@/assets/videos/pro_shot.mp4')
-          }
-          useNativeControls
-          shouldPlay={false}
-          isLooping
-        />
-      </ThemedView>
+	const handleDateFilterToggle = (id: string) => {
+		if (id === 'custom') {
+			setShowDatePicker(true);
+		}
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, videoMode === 'your' && styles.activeButton]}
-          onPress={() => setVideoMode('your')}
-        >
-          <ThemedText
-            type='defaultSemiBold'
-            style={videoMode === 'your' ? styles.activeButtonText : {}}
-          >
-            Your Shot
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, videoMode === 'pro' && styles.activeButton]}
-          onPress={() => setVideoMode('pro')}
-        >
-          <ThemedText
-            type='defaultSemiBold'
-            style={videoMode === 'pro' ? styles.activeButtonText : {}}
-          >
-            Pro Shot
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
+		if (id === 'all') {
+			setSelectedDateFilters(['all']);
+			setShowDatePicker(false);
+		} else {
+			const newFilters = selectedDateFilters.filter((f) => f !== 'all');
 
-      {/* Statistics Section */}
-      <ThemedText type='subtitle' style={styles.sectionTitle}>
-        Statistics
-      </ThemedText>
+			if (selectedDateFilters.includes(id)) {
+				const updatedFilters = newFilters.filter((f) => f !== id);
+				setSelectedDateFilters(updatedFilters.length ? updatedFilters : ['all']);
 
-      <View style={styles.statsContainer}>
-        {shotStats.map((stat, index) => (
-          <StatBox key={index} title={stat.title} progress={stat.progress} />
-        ))}
-      </View>
+				if (id === 'custom') {
+					setShowDatePicker(false);
+				}
+			} else {
+				setSelectedDateFilters([...newFilters, id]);
+			}
+		}
+	};
 
-      {/* Improvement Tips */}
-      <ThemedText type='subtitle' style={styles.sectionTitle}>
-        Improvement Tips
-      </ThemedText>
+	const filteredAnalysisData = useMemo(() => {
+		const now = new Date();
+		const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 jours en millisecondes
 
-      <Card style={styles.tipsCard}>
-        <ThemedView style={styles.tipsContainer}>
-          {improvementTips.map((tip, index) => (
-            <ThemedView key={index} style={styles.tipItem}>
-              <ThemedText type='defaultSemiBold' style={styles.tipBullet}>
-                •
-              </ThemedText>
-              <ThemedText type='description' style={styles.tipText}>
-                {tip}
-              </ThemedText>
-            </ThemedView>
-          ))}
-        </ThemedView>
-      </Card>
-    </ScrollView>
-  );
-}
+		return analysisData.filter((item) => {
+			// Filtre de date
+			let matchesDateFilter = false;
+			if (selectedDateFilters.includes('all')) {
+				matchesDateFilter = true;
+			} else {
+				if (selectedDateFilters.includes('recent') && item.date >= thirtyDaysAgo) {
+					matchesDateFilter = true;
+				}
+				if (selectedDateFilters.includes('older') && item.date < thirtyDaysAgo) {
+					matchesDateFilter = true;
+				}
+				if (selectedDateFilters.includes('custom')) {
+					// Compare seulement année, mois, jour
+					const itemDate = new Date(item.date);
+					const filterDate = new Date(customDate);
 
-function StatBox({ title, progress }: { title: string; progress: number }) {
-  return (
-    <Card style={styles.statBox}>
-      <ThemedText type='default' style={styles.statTitle}>
-        {title}
-      </ThemedText>
+					if (
+						itemDate.getFullYear() === filterDate.getFullYear() &&
+						itemDate.getMonth() === filterDate.getMonth() &&
+						itemDate.getDate() === filterDate.getDate()
+					) {
+						matchesDateFilter = true;
+					}
+				}
+			}
 
-      <ThemedView style={styles.progressContainer}>
-        <ThemedView style={styles.progressBarContainer}>
-          <View
-            style={[
-              styles.progressBar,
-              {
-                width: `${progress}%`,
-                backgroundColor: getProgressColor(progress),
-              },
-            ]}
-          />
-        </ThemedView>
-        <ThemedText type='defaultSemiBold' style={styles.progressText}>
-          {progress}%
-        </ThemedText>
-      </ThemedView>
-    </Card>
-  );
+			return matchesDateFilter;
+		});
+	}, [selectedDateFilters, customDate]);
+
+	const handleAnalysisPress = (analysis: AnalysisItem) => {
+		router.push({
+			pathname: '/analysis/[id]',
+			params: {
+				id: analysis.id,
+				title: analysis.title,
+				exerciseName: analysis.exerciseName,
+			},
+		});
+	};
+
+	const renderAnalysisItem = ({ item }: { item: AnalysisItem }) => (
+		<TouchableOpacity
+			style={styles.itemContainer}
+			onPress={() => handleAnalysisPress(item)}
+			activeOpacity={0.8}>
+			<Card style={styles.card}>
+				<Image
+					source={{ uri: item.thumbnailUrl }}
+					style={styles.thumbnail}
+					defaultSource={require('@/assets/images/placeholder.png')}
+				/>
+
+				<ThemedView style={styles.contentContainer}>
+					<ThemedView style={styles.headerContainer}>
+						<ThemedText type='defaultSemiBold'>{item.title}</ThemedText>
+						<ThemedText type='small' style={styles.date}>
+							{item.date.toLocaleDateString()}
+						</ThemedText>
+					</ThemedView>
+
+					<ThemedText type='default' style={styles.exerciseName}>
+						{item.exerciseName}
+					</ThemedText>
+
+					<ThemedView style={styles.progressContainer}>
+						<ThemedView style={styles.progressBarContainer}>
+							<ThemedView
+								style={[
+									styles.progressBar,
+									{ width: `${item.progress}%`, backgroundColor: getProgressColor(item.progress) },
+								]}
+							/>
+						</ThemedView>
+						<ThemedText type='small' style={styles.progressText}>
+							{item.progress}%
+						</ThemedText>
+					</ThemedView>
+				</ThemedView>
+			</Card>
+		</TouchableOpacity>
+	);
+
+	return (
+		<ThemedView style={styles.container}>
+			{/* <DatePicker value={customDate} onChange={setCustomDate} label='Filter by specific date' /> */}
+			<ThemedView>
+				<FilterChips
+					options={dateFilters}
+					selectedIds={selectedDateFilters}
+					onToggle={handleDateFilterToggle}
+				/>
+			</ThemedView>
+
+			{filteredAnalysisData.length > 0 ? (
+				<FlatList
+					data={filteredAnalysisData}
+					renderItem={renderAnalysisItem}
+					keyExtractor={(item) => item.id}
+					contentContainerStyle={styles.listContent}
+					showsVerticalScrollIndicator={false}
+				/>
+			) : (
+				<ThemedView style={styles.emptyStateContainer}>
+					<Activity size={60} color='gold' style={styles.emptyStateIcon} />
+					<ThemedText type='subtitle'>No Analyses Found</ThemedText>
+					<ThemedText type='default' style={styles.emptyStateText}>
+						No shot analyses match your current filters. Try adjusting your search criteria or date
+						filters.
+					</ThemedText>
+				</ThemedView>
+			)}
+		</ThemedView>
+	);
 }
 
 // Helper function to determine progress bar color based on percentage
 function getProgressColor(progress: number): string {
-  if (progress >= 80) return 'gold';
-  if (progress >= 60) return '#36A2EB';
-  return '#FF6384';
+	if (progress >= 80) return 'gold';
+	if (progress >= 60) return '#36A2EB';
+	return '#FF6384';
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    // paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    marginBottom: 70,
-  },
-  videoContainer: {
-    height: 220,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
-    marginBottom: 24,
-  },
-  button: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  activeButton: {
-    backgroundColor: 'gold',
-    borderColor: 'gold',
-  },
-  activeButtonText: {
-    color: '#000',
-  },
-  sectionTitle: {
-    marginBottom: 16,
-  },
-  statsContainer: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  statBox: {
-    padding: 16,
-  },
-  statTitle: {
-    marginBottom: 8,
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  progressBarContainer: {
-    flex: 1,
-    height: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 5,
-  },
-  progressText: {
-    minWidth: 40,
-    textAlign: 'right',
-  },
-  tipsCard: {
-    marginBottom: 24,
-  },
-  tipsContainer: {
-    gap: 12,
-  },
-  tipItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  tipBullet: {
-    marginRight: 8,
-    color: 'gold',
-    fontSize: 18,
-  },
-  tipText: {
-    flex: 1,
-  },
+	container: {
+		flex: 1,
+		padding: 8,
+		marginBottom: 70,
+	},
+	header: {
+		marginBottom: 16,
+	},
+	listContent: {
+		paddingBottom: 20,
+		marginVertical: 8,
+	},
+	itemContainer: {
+		marginVertical: 8,
+		paddingHorizontal: 16,
+		marginBottom: 12,
+	},
+	card: {
+		flexDirection: 'row',
+		padding: 12,
+	},
+	thumbnail: {
+		width: 80,
+		height: 80,
+		borderRadius: 8,
+	},
+	contentContainer: {
+		flex: 1,
+		marginLeft: 12,
+		justifyContent: 'space-between',
+	},
+	headerContainer: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+	},
+	date: {
+		opacity: 0.6,
+	},
+	exerciseName: {
+		marginVertical: 4,
+		fontSize: 14,
+	},
+	progressContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+		marginTop: 4,
+	},
+	progressBarContainer: {
+		flex: 1,
+		height: 6,
+		backgroundColor: 'rgba(255,255,255,0.1)',
+		borderRadius: 3,
+		overflow: 'hidden',
+	},
+	progressBar: {
+		height: '100%',
+		borderRadius: 3,
+	},
+	progressText: {
+		minWidth: 32,
+		textAlign: 'right',
+	},
+	emptyStateContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		height: '100%',
+		padding: 24,
+	},
+	emptyStateIcon: {
+		marginBottom: 16,
+		opacity: 0.7,
+	},
+	emptyStateText: {
+		textAlign: 'center',
+		marginTop: 8,
+		opacity: 0.7,
+		maxWidth: '80%',
+	},
 });

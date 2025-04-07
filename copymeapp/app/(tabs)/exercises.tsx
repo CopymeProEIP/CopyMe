@@ -128,12 +128,14 @@ export default function ExercisesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    padding: 8,
     // paddingTop: Platform.OS === 'ios' ? 50 : 30,
     marginBottom: 70,
   },
   listContent: {
     paddingBottom: 20,
+    paddingHorizontal: 8,
+    marginVertical: 16,
   },
   emptyState: {
     flex: 1,

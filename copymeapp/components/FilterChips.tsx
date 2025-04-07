@@ -67,7 +67,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 8,
     gap: 8,
-    marginBottom: 16,
   },
   chip: {
     paddingVertical: 8,
