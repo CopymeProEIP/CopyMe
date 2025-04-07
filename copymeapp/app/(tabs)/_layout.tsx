@@ -8,53 +8,49 @@ import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { Activity, ChevronLeft } from 'lucide-react-native';
+import { Activity } from 'lucide-react-native';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
 
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].accent,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}
-    >
-      <Tabs.Screen
-        name='index'
-        options={{
-          title: 'Home',
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name='house.fill' color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name='exercises'
-        options={{
-          title: 'Exercises',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name='basketball' color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name='shot-analysis'
-        options={{
-          title: 'Shot Analysis',
-          tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+	return (
+		<Tabs
+			screenOptions={{
+				tabBarActiveTintColor: 'gold',
+				tabBarInactiveTintColor: Colors.light.tabIconDefault,
+				tabBarButton: HapticTab,
+				tabBarStyle: {
+					borderTopColor: '#E5E5E5',
+					borderTopWidth: 1,
+					...Platform.select({
+						ios: {
+							position: 'absolute',
+						},
+						default: {},
+					}),
+				},
+			}}>
+			<Tabs.Screen
+				name='index'
+				options={{
+					title: 'Home',
+					headerShown: false,
+					tabBarIcon: ({ color }) => <IconSymbol size={28} name='house.fill' color={color} />,
+				}}
+			/>
+			<Tabs.Screen
+				name='exercises'
+				options={{
+					title: 'Exercises',
+					tabBarIcon: ({ color }) => <IconSymbol size={28} name='basketball' color={color} />,
+				}}
+			/>
+			<Tabs.Screen
+				name='shot-analysis'
+				options={{
+					title: 'Shot Analysis',
+					tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
+				}}
+			/>
+		</Tabs>
+	);
 }

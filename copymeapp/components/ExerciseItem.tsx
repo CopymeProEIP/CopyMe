@@ -6,6 +6,7 @@ import { ThemedView } from './ThemedView';
 import { Card } from './Card';
 import { useTheme } from '@react-navigation/native';
 import { useMemo } from 'react';
+import { Colors } from '@/constants/Colors';
 
 const exerciseImageUrls = [
   'https://images.unsplash.com/photo-1546519638-68e109acd618?q=80&w=200',
