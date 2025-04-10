@@ -1,17 +1,17 @@
 /** @format */
 
-import { Stack } from 'expo-router';
 import { RouteProp } from '@react-navigation/native';
+import { Stack } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { TouchableOpacity } from 'react-native';
 
-export default function AnalysisLayout() {
+export default function ExerciseResultsLayout() {
 	return (
 		<Stack
 			screenOptions={({ navigation }) => ({
 				headerStyle: {
 					backgroundColor: '#FFFFFF',
-          paddingBottom: 10,
+					paddingBottom: 10,
 				},
 				headerTintColor: '#000000',
 				headerTitleStyle: {

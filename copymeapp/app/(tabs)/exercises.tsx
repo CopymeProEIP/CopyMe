@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
 import { ExerciseItem, Exercise } from '@/components/ExerciseItem';
+import { useRouter } from 'expo-router';
 
 const exercisesData: Exercise[] = [
   {
@@ -54,6 +55,7 @@ const levelFilters: FilterOption[] = [
 ];
 
 export default function ExercisesScreen() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<string[]>(['all']);
 
@@ -87,12 +89,21 @@ export default function ExercisesScreen() {
   }, [searchQuery, selectedFilters]);
 
   const handleExercisePress = (exercise: Exercise) => {
-    console.log('Exercise selected:', exercise);
+    router.push({
+      pathname: '/exercise/[id]',
+      params: {
+        id: exercise.id,
+        title: exercise.title,
+        level: exercise.level,
+        description: exercise.description,
+        completed: exercise.completed,
+      }
+    });
   };
 
   return (
     <ThemedView style={styles.container}>
-      <SearchBar onSearch={setSearchQuery} />
+      {/* <SearchBar onSearch={setSearchQuery} /> */}
       <FilterChips
         options={levelFilters}
         selectedIds={selectedFilters}

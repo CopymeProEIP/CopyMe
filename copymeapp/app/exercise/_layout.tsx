@@ -5,13 +5,13 @@ import { RouteProp } from '@react-navigation/native';
 import { ChevronLeft } from 'lucide-react-native';
 import { TouchableOpacity } from 'react-native';
 
-export default function AnalysisLayout() {
+export default function ExerciseLayout() {
 	return (
 		<Stack
 			screenOptions={({ navigation }) => ({
 				headerStyle: {
 					backgroundColor: '#FFFFFF',
-          paddingBottom: 10,
+					paddingBottom: 10,
 				},
 				headerTintColor: '#000000',
 				headerTitleStyle: {
@@ -33,7 +33,7 @@ export default function AnalysisLayout() {
 			<Stack.Screen
 				name='[id]'
 				options={({ route }: { route: RouteProp<any, string> }) => ({
-					headerTitle: route.params?.title || 'Shot Analysis',
+					headerTitle: 'Exercise Details',
 				})}
 			/>
 		</Stack>
