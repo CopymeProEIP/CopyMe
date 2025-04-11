@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
 import { DatePicker } from '@/components/DatePicker';
 import { Activity } from 'lucide-react-native';
+import { SearchBar } from '@/components/SearchBar';
 
 // Type pour les éléments d'analyse
 interface AnalysisItem {
@@ -73,6 +74,7 @@ const dateFilters: FilterOption[] = [
 
 export default function ShotAnalysisListScreen() {
 	const router = useRouter();
+	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedDateFilters, setSelectedDateFilters] = useState<string[]>(['all']);
 	const [customDate, setCustomDate] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
@@ -149,7 +151,6 @@ export default function ShotAnalysisListScreen() {
 
 	const renderAnalysisItem = ({ item }: { item: AnalysisItem }) => (
 		<TouchableOpacity
-			style={styles.itemContainer}
 			onPress={() => handleAnalysisPress(item)}
 			activeOpacity={0.8}>
 			<Card style={styles.card}>
@@ -191,14 +192,11 @@ export default function ShotAnalysisListScreen() {
 
 	return (
 		<ThemedView style={styles.container}>
-			{/* <DatePicker value={customDate} onChange={setCustomDate} label='Filter by specific date' /> */}
-			<ThemedView>
-				<FilterChips
-					options={dateFilters}
-					selectedIds={selectedDateFilters}
-					onToggle={handleDateFilterToggle}
-				/>
-			</ThemedView>
+			<FilterChips
+				options={dateFilters}
+				selectedIds={selectedDateFilters}
+				onToggle={handleDateFilterToggle}
+			/>
 
 			{filteredAnalysisData.length > 0 ? (
 				<FlatList
@@ -213,8 +211,7 @@ export default function ShotAnalysisListScreen() {
 					<Activity size={60} color='gold' style={styles.emptyStateIcon} />
 					<ThemedText type='subtitle'>No Analyses Found</ThemedText>
 					<ThemedText type='default' style={styles.emptyStateText}>
-						No shot analyses match your current filters. Try adjusting your search criteria or date
-						filters.
+						No shot analyses match your current filters. Try adjusting your date filters.
 					</ThemedText>
 				</ThemedView>
 			)}
@@ -235,21 +232,18 @@ const styles = StyleSheet.create({
 		padding: 8,
 		marginBottom: 70,
 	},
-	header: {
-		marginBottom: 16,
-	},
 	listContent: {
+		height: '100%',
+    gap: 8,
+    paddingTop: 8,
 		paddingBottom: 20,
-		marginVertical: 8,
 	},
 	itemContainer: {
 		marginVertical: 8,
-		paddingHorizontal: 16,
-		marginBottom: 12,
 	},
 	card: {
 		flexDirection: 'row',
-		padding: 12,
+    marginHorizontal: 8,
 	},
 	thumbnail: {
 		width: 80,

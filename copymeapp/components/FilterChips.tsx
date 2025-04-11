@@ -64,6 +64,7 @@ export function FilterChips({
 const styles = StyleSheet.create({
   container: {
     height: 70,
+    width: '100%',
     flexDirection: 'row',
     paddingVertical: 8,
     gap: 8,

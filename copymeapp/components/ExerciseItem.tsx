@@ -30,9 +30,6 @@ interface ExerciseItemProps {
 }
 
 export function ExerciseItem({ exercise, onPress }: ExerciseItemProps) {
-  const { colors } = useTheme();
-  const progress = exercise.completed / 100;
-
   const imageIndex = useMemo(() => {
     const numericId = parseInt(exercise.id.replace(/\D/g, '') || '0');
     return numericId % exerciseImageUrls.length;
@@ -96,7 +93,7 @@ export function ExerciseItem({ exercise, onPress }: ExerciseItemProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 12,
+    marginHorizontal: 8,
   },
   content: {
     flexDirection: 'row',
