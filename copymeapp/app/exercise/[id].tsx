@@ -1,6 +1,6 @@
 /** @format */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, ScrollView, Image, View, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -41,6 +41,19 @@ export default function ExerciseDetailScreen() {
 	const router = useRouter();
 	const { id, title, level, description, completed } = params;
 
+	// Calculer le score moyen des précédentes sessions
+	const averageScore = useMemo(() => {
+		if (reviews.length === 0) return 0;
+		const sum = reviews.reduce((acc, review) => acc + review.score, 0);
+		return Math.round(sum / reviews.length);
+	}, []);
+
+	// Trouver le meilleur score
+	const bestScore = useMemo(() => {
+		if (reviews.length === 0) return 0;
+		return Math.max(...reviews.map((review) => review.score));
+	}, []);
+
 	// Sélectionner l'image en fonction du niveau
 	const imageUrl =
 		level && typeof level === 'string'
@@ -78,12 +91,12 @@ export default function ExerciseDetailScreen() {
 					<ThemedView style={styles.statsRow}>
 						<ThemedView style={styles.statItem}>
 							<ThemedText type='defaultSemiBold'>Completion</ThemedText>
-							<ThemedText type='subtitle'>{completed as string}%</ThemedText>
+							<ThemedText type='subtitle'>{averageScore}%</ThemedText>
 						</ThemedView>
 						<View style={styles.divider} />
 						<ThemedView style={styles.statItem}>
-							<ThemedText type='defaultSemiBold'>Exercise ID</ThemedText>
-							<ThemedText type='subtitle'>#{id as string}</ThemedText>
+							<ThemedText type='defaultSemiBold'>Best Score</ThemedText>
+							<ThemedText type='subtitle'>{bestScore}%</ThemedText>
 						</ThemedView>
 					</ThemedView>
 				</Card>

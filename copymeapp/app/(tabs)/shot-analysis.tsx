@@ -1,15 +1,15 @@
 /** @format */
 
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, FlatList, TouchableOpacity, Image, View } from 'react-native';
+import { FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useRouter } from 'expo-router';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
-import { DatePicker } from '@/components/DatePicker';
 import { Activity } from 'lucide-react-native';
 import { SearchBar } from '@/components/SearchBar';
+import { getProgressColor } from '@/styles/theme';
 
 // Type pour les éléments d'analyse
 interface AnalysisItem {
@@ -74,7 +74,6 @@ const dateFilters: FilterOption[] = [
 
 export default function ShotAnalysisListScreen() {
 	const router = useRouter();
-	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedDateFilters, setSelectedDateFilters] = useState<string[]>(['all']);
 	const [customDate, setCustomDate] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
@@ -150,9 +149,7 @@ export default function ShotAnalysisListScreen() {
 	};
 
 	const renderAnalysisItem = ({ item }: { item: AnalysisItem }) => (
-		<TouchableOpacity
-			onPress={() => handleAnalysisPress(item)}
-			activeOpacity={0.8}>
+		<TouchableOpacity onPress={() => handleAnalysisPress(item)} activeOpacity={0.8}>
 			<Card style={styles.card}>
 				<Image
 					source={{ uri: item.thumbnailUrl }}
@@ -192,6 +189,7 @@ export default function ShotAnalysisListScreen() {
 
 	return (
 		<ThemedView style={styles.container}>
+
 			<FilterChips
 				options={dateFilters}
 				selectedIds={selectedDateFilters}
@@ -219,31 +217,21 @@ export default function ShotAnalysisListScreen() {
 	);
 }
 
-// Helper function to determine progress bar color based on percentage
-function getProgressColor(progress: number): string {
-	if (progress >= 80) return 'gold';
-	if (progress >= 60) return '#36A2EB';
-	return '#FF6384';
-}
-
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		padding: 8,
+		padding: 16,
 		marginBottom: 70,
 	},
 	listContent: {
 		height: '100%',
-    gap: 8,
-    paddingTop: 8,
+		gap: 8,
+		paddingTop: 8,
 		paddingBottom: 20,
-	},
-	itemContainer: {
-		marginVertical: 8,
 	},
 	card: {
 		flexDirection: 'row',
-    marginHorizontal: 8,
+		marginVertical: 8,
 	},
 	thumbnail: {
 		width: 80,
