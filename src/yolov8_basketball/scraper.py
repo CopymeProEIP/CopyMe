@@ -36,7 +36,7 @@ class ImageScraper:
             driver.maximize_window();
             # sleep for visibility of change
             time.sleep(2);
-            # scroll to the bottom 
+            # scroll to the bottom
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)");
             time.sleep(2);
             images = driver.find_elements(By.TAG_NAME, 'img')
@@ -60,5 +60,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     scraper = ImageScraper(urls_file=args.urls_file, download_path=args.download_path)
-    
+
     scraper.scrape_images()
