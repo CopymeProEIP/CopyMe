@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://admin:password@mongo:27018/copymedb?authSource=admin
+      - JWT_SECRET=changez_ce_secret_en_production
+      - JWT_EXPIRES_IN=7d
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27018:27018"
+    command: ["mongod", "--port", "27018"]
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - copy-me_backend:/data/db
+    restart: unless-stopped
+
+volumes:
+  copy-me_backend: {}
