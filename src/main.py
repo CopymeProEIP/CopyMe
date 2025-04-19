@@ -7,12 +7,14 @@ import os
 import uvicorn
 import sys
 from config.exception_class import  SettingsException
+from config.db_models import DatabaseManager
 from pymongo import MongoClient, errors
 # import for fast api lifespan
 from contextlib import asynccontextmanager
 import logging
 from logging_setup import setup_logging
 from motor.motor_asyncio import AsyncIOMotorClient
+from bson.binary import Binary, UuidRepresentation
 
 # Class Yolov8 model
 from yolov8_basketball.yolov8 import YOLOv8
@@ -43,11 +45,14 @@ async def startup_db_client(app):
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER"""
 
-        app.mongodb_client = AsyncIOMotorClient(settings.MONGO_URI)
-        app.db = app.mongodb_client["CopyMe"]
+        app.mongodb_client = AsyncIOMotorClient(settings.MONGO_URI, uuidRepresentation='standard')
+        app.db = DatabaseManager(app.mongodb_client["CopyMe"])
+        logging.info("Logged successful to the mongodb database")
+
         app.yolo = YOLOv8(capture_index=None, save_path="feedback", mode="debug")
         app.yolo.load_model("model/copyme.pt")
         app.yolo.load_keypoint_model()
+        logging.info("Load our yolo model")
     except Exception as e:
         logging.critical(e)
         sys.exit(84)

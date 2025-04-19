@@ -1,7 +1,9 @@
-reference_data = [
-    {
+#!/usr/bin/env python3
+from typing import List, Dict, Tuple, Any, Hashable
+
+reference_data = {
+    "shot_position": {
         "gender": "men",
-        "phase": "shot_position",
         "angles": {
             "hip": {"ref": 158.89, "tolerance": 6.16},
             "knee": {"ref": 116.7, "tolerance": 7.4},
@@ -9,7 +11,7 @@ reference_data = [
             "elbow": {"ref": 90, "tolerance": 5},
         },
     },
-    {
+    "shot_realese": {
         "gender": "men",
         "phase": "shot_realese",
         "angles": {
@@ -19,9 +21,8 @@ reference_data = [
             "elbow": {"ref": 90, "tolerance": 5},
         },
     },
-    {
+    "shot_followthrough": {
         "gender": "men",
-        "phase": "shot_followthrough",
         "angles": {
             "hip": {"ref": 158.89, "tolerance": 6.16},
             "knee": {"ref": 116.7, "tolerance": 7.4},
@@ -29,9 +30,9 @@ reference_data = [
             "elbow": {"ref": 90, "tolerance": 5},
         },
     }
-]
+}
 
-def check_alignment(angle_name, measured_angle, reference_entry):
+def check_alignment(angle_name: str, measured_angle: float, reference_entry: Dict) -> Tuple[bool, float]:
 
     angle_ref = reference_entry["angles"].get(angle_name)
 
@@ -47,7 +48,7 @@ def check_alignment(angle_name, measured_angle, reference_entry):
 
     return is_correct, error
 
-def generate_feedback(angle_name, error):
+def generate_feedback(angle_name: str, error: float):
 
     if angle_name == "hip":
         action = "réduire l'extension" if error > 0 else "augmenter l'extension"
@@ -68,18 +69,18 @@ def generate_feedback(angle_name, error):
     else:
         return f"L'angle '{angle_name}' présente un écart de {abs(error):.1f}°, mais aucun conseil spécifique n'est disponible."
 
-def analyze_phase(measured_angles, phase_data):
-    messages = []
+def analyze_phase(measured_angles: Dict[Hashable, float], phase_name: str) -> Dict:
+    messages = {}
     for angle_name, measured_angle in measured_angles.items():
-        is_correct, error = check_alignment(angle_name, measured_angle, phase_data)
+        is_correct, error = check_alignment(angle_name, measured_angle, reference_data[phase_name])
         if is_correct:
-            messages.append(f"L'angle '{angle_name}' est correct ({measured_angle}°). Bon mouvement !")
+            messages[f'{angle_name}'] = f"L'angle '{angle_name}' est correct ({measured_angle}°). Bon mouvement !"
         else:
             if error is not None:
                 feedback = generate_feedback(angle_name, error)
-                messages.append(feedback)
+                messages[f'{angle_name}'] = feedback
             else:
-                messages.append(f"L'angle '{angle_name}' n'est pas défini dans les données de référence.")
+                messages[f'{angle_name}'] = f"L'angle '{angle_name}' n'est pas défini dans les données de référence."
     return messages
 
 if __name__ == "__main__":
@@ -89,7 +90,5 @@ if __name__ == "__main__":
         "ankle": 95,
         "elbow": 85,
     }
-    phase_data = reference_data[0]
-    result_messages = analyze_phase(measured_angles, phase_data)
-    for message in result_messages:
-        print(message)
+    result_messages = analyze_phase(measured_angles, "shot_position")
+    print(result_messages)
