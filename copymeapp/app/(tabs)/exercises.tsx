@@ -1,6 +1,6 @@
 /** @format */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { FlatList, StyleSheet, Platform } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -10,43 +10,43 @@ import { ExerciseItem, Exercise } from '@/components/ExerciseItem';
 import { useRouter } from 'expo-router';
 import { Activity } from 'lucide-react-native';
 
-const exercisesData: Exercise[] = [
-	{
-		id: '1',
-		title: 'Free Throw',
-		level: 'Beginner',
-		description: 'Improve accuracy with this fundamental shot',
-		completed: 80,
-	},
-	{
-		id: '2',
-		title: 'Three-Point Shot',
-		level: 'Intermediate',
-		description: 'Master long-range shooting with proper technique',
-		completed: 45,
-	},
-	{
-		id: '3',
-		title: 'Layup Drill',
-		level: 'Beginner',
-		description: 'Practice essential close-range scoring',
-		completed: 95,
-	},
-	{
-		id: '4',
-		title: 'Dribbling Course',
-		level: 'Advanced',
-		description: 'Advanced ball handling exercises to improve control',
-		completed: 30,
-	},
-	{
-		id: '5',
-		title: 'Defensive Stance',
-		level: 'Intermediate',
-		description: 'Learn proper defensive positioning and movement',
-		completed: 60,
-	},
-];
+// const exercisesData: Exercise[] = [
+// 	{
+// 		id: '1',
+// 		title: 'Free Throw',
+// 		level: 'Beginner',
+// 		description: 'Improve accuracy with this fundamental shot',
+// 		completed: 80,
+// 	},
+// 	{
+// 		id: '2',
+// 		title: 'Three-Point Shot',
+// 		level: 'Intermediate',
+// 		description: 'Master long-range shooting with proper technique',
+// 		completed: 45,
+// 	},
+// 	{
+// 		id: '3',
+// 		title: 'Layup Drill',
+// 		level: 'Beginner',
+// 		description: 'Practice essential close-range scoring',
+// 		completed: 95,
+// 	},
+// 	{
+// 		id: '4',
+// 		title: 'Dribbling Course',
+// 		level: 'Advanced',
+// 		description: 'Advanced ball handling exercises to improve control',
+// 		completed: 30,
+// 	},
+// 	{
+// 		id: '5',
+// 		title: 'Defensive Stance',
+// 		level: 'Intermediate',
+// 		description: 'Learn proper defensive positioning and movement',
+// 		completed: 60,
+// 	},
+// ];
 
 const levelFilters: FilterOption[] = [
 	{ id: 'all', label: 'All Levels' },
@@ -59,6 +59,26 @@ export default function ExercisesScreen() {
 	const router = useRouter();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedFilters, setSelectedFilters] = useState<string[]>(['all']);
+	const [exercisesData, setExercisesData] = useState<Exercise[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+
+	const getExercises = async () => {
+		try {
+			const res = await fetch('http://localhost:3000/api/exercises');
+			const data = await res.json();
+			if (!res.ok) {
+				throw new Error('Failed to fetch exercises');
+			}
+			setExercisesData(data.exercises);
+			setIsLoading(false);
+		} catch (error) {
+			console.error('Error fetching exercises:', error);
+		}
+	};
+
+	useEffect(() => {
+		getExercises();
+	});
 
 	const handleFilterToggle = (id: string) => {
 		if (id === 'all') {
@@ -110,7 +130,15 @@ export default function ExercisesScreen() {
 				onToggle={handleFilterToggle}
 			/>
 
-			{filteredExercises.length > 0 ? (
+				{isLoading ? (
+				<ThemedView style={styles.loadingContainer}>
+					<Activity size={60} color='gold' style={styles.loadingIcon} />
+					<ThemedText type='subtitle'>Loading Exercises...</ThemedText>
+					<ThemedText type='default' style={styles.loadingText}>
+						Loading your exercises, please wait a moment.
+					</ThemedText>
+				</ThemedView>
+			) : filteredExercises.length > 0 ? (
 				<FlatList
 					data={filteredExercises}
 					keyExtractor={(item) => item.id}
@@ -139,8 +167,8 @@ const styles = StyleSheet.create({
 	},
 	listContent: {
 		height: '100%',
-    gap: 8,
-    paddingTop: 8,
+		gap: 8,
+		paddingTop: 8,
 		paddingBottom: 20,
 	},
 	emptyStateContainer: {
@@ -155,6 +183,23 @@ const styles = StyleSheet.create({
 		opacity: 0.7,
 	},
 	emptyStateText: {
+		textAlign: 'center',
+		marginTop: 8,
+		opacity: 0.7,
+		maxWidth: '80%',
+	},
+	loadingContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		height: '100%',
+		padding: 24,
+	},
+	loadingIcon: {
+		marginBottom: 16,
+		opacity: 0.7,
+	},
+	loadingText: {
 		textAlign: 'center',
 		marginTop: 8,
 		opacity: 0.7,
