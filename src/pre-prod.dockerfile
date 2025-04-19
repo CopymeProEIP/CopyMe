@@ -26,7 +26,7 @@ COPY . /app
 
 EXPOSE 5000
 
-VOLUME ["/etc/ssl/certs", "/etc/ssl/private", "/app/model/"]
+VOLUME ["/etc/ssl/certs", "/etc/ssl/private", "/app/model"]
 
 # Start server
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--keyfile", "/etc/ssl/private/server.key", "--certfile", "/etc/ssl/certs/server.crt", "app:app"]
