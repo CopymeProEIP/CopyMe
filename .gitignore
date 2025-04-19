@@ -176,6 +176,7 @@ videos/
 .DS_Store
 BasketAnalysis-8/
 feedback/
+uploads/
 roboflow-python/
 datasets/
 shoot.jpg
