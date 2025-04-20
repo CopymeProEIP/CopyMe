@@ -22,18 +22,12 @@ DEFAULT_CAPTURE_INDEX = "0"
 DEFAULT_MODEL_PATH = 'model/yolov8m.pt'
 DEFAULT_KEYPOINT_MODEL_PATH = 'model/yolov8l-pose.pt'
 CONFIDENCE_THRESHOLD = 0.75
-IOU_THRESHOLD = 0.4
-
-
-class DetectionMode(Enum):
-    OBJECT = 'object'
-    POSE = 'pose'
-
 
 class PhaseDetection(YOLOv8Base):
     def __init__(self, input: str = DEFAULT_CAPTURE_INDEX,
                  model_path: str = DEFAULT_MODEL_PATH,
                  save_dir: str = DEFAULT_SAVE_PATH,
+                 display: bool = False,
                  kalman_filter: bool = False,
                  temporal_smoothing: bool = True,
                  conf_threshold: float = CONFIDENCE_THRESHOLD,
@@ -46,12 +40,17 @@ class PhaseDetection(YOLOv8Base):
         self.temporal_smoothing_enabled = temporal_smoothing
         self.conf_threshold = conf_threshold
         self.input = input
+        self.display = display
         self.frame_count = 0
+        self.saved_frames_data = {}
+        self.sync = False
+        self.saved_classes = set()
         self.history = deque(maxlen=5)
         self.phases = load_phases('config/shoot.csv')
         self.kalman_filter = self._initialize_kalman_filter()
         self.last_frame_hash = None
         self.last_saved_frame = None
+        self.best_frames = {}
         self._setup_workdir()
 
     # -------------------- Initialization Helpers --------------------
@@ -82,20 +81,30 @@ class PhaseDetection(YOLOv8Base):
     def _calculate_frame_hash(self, frame: Any) -> str:
         return hashlib.md5(frame.tobytes()).hexdigest()
 
-    def _save_frame(self, frame: Any, current_phase: str) -> str:
-        phase_dir = os.path.join(self.save_dir, current_phase)
-        filename_save = f"{current_phase}_{uuid.uuid4()}.jpg"
-        frame_path = os.path.join(phase_dir, filename_save)
-        cv2.imwrite(frame_path, frame)
-        logging.debug(f"Saved frame {self.frame_count} to {frame_path}")
-        self.last_saved_frame = current_phase
-        return frame_path
+    def _save_best_frame(self, frame: Any, result_frame: Dict, current_phase: str, confidence: float, timestamp: float):
+        """Update the best frame for a phase if it has the highest confidence."""
+        if current_phase not in self.best_frames or confidence > self.best_frames[current_phase]['confidence']:
+            self.best_frames[current_phase] = {
+                'frame_number': self.frame_count,
+                'timestamp': timestamp,
+                'frame': frame,
+                'results': result_frame,
+                'confidence': confidence
+            }
+            logging.debug(f"Updated best frame for phase '{current_phase}' with confidence {confidence:.2f}")
 
-    def _save_metadata(self, frame_number: int, current_phase: str, confidence: float, timestamp: float):
-        metadata_file = os.path.join(self.save_dir, 'metadata.csv')
-        with open(metadata_file, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([frame_number, current_phase, confidence, timestamp])
+    def _save_all_best_frames(self) -> List[Dict]:
+        """Save the best frames for each phase at the end and return their metadata."""
+        best_frames_metadata = []
+        for phase, data in self.best_frames.items():
+            phase_dir = os.path.join(self.save_dir, phase)
+            filename_save = f"{phase}_{uuid.uuid4()}.jpg"
+            frame_path = os.path.join(phase_dir, filename_save)
+            cv2.imwrite(frame_path, data['frame'])
+            data['results']['url_path_frame'] = frame_path
+            logging.debug(f"Saved best frame for phase '{phase}' to {frame_path}")
+            best_frames_metadata.append(data['results'])
+        return best_frames_metadata
 
     def _apply_temporal_smoothing(self, class_id: int) -> int:
         self.history.append(class_id)
@@ -110,9 +119,6 @@ class PhaseDetection(YOLOv8Base):
         logging.debug(f"Kalman-filtered class ID: {smoothed_class_id}")
         return smoothed_class_id
 
-    def _apply_nms(self, boxes: List, confidences: List[float]) -> List[int]:
-        return cv2.dnn.NMSBoxes(boxes, confidences, self.conf_threshold, IOU_THRESHOLD)
-
     def _is_frame_redundant(self, frame_hash: str) -> bool:
         return frame_hash == self.last_frame_hash
 
@@ -121,52 +127,41 @@ class PhaseDetection(YOLOv8Base):
         max_conf_index = np.argmax(detections.confidence)
         class_id = int(detections.class_id[max_conf_index])
         confidence = float(detections.confidence[max_conf_index])
-        logging.debug(f"Highest confidence detection: class_id={class_id}, confidence={confidence}")
+        logging.debug(f"Highest confidence detection: class_id={class_id}, confidence={confidence:.2f}")
         return class_id, confidence
 
-    def plot_result(self, results, frame, timestamp: float) -> Tuple[Any, Dict]:
-        """Process inference results and save only the last frame with the highest confidence for each phase."""
-        result_frame = {}
+    def plot_result(self, results, frame, timestamp: float) -> Any:
+        """Process inference results and update the best frame for each phase."""
         frame_hash = self._calculate_frame_hash(frame)
-
         if self._is_frame_redundant(frame_hash):
-            logging.debug("Frame is redundant, skipping processing.")
-            return frame, result_frame
-
+            return frame
         for result in results:
-            detections = sv.Detections.from_ultralytics(result).with_nms(
-                threshold=self.conf_threshold,
-            )
+            detections = sv.Detections.from_ultralytics(result).with_nms(threshold=self.conf_threshold)
             if not detections:
                 continue
             class_id, confidence = self._get_highest_confidence_detection(detections)
-            if confidence >= self.conf_threshold:
-                if self.kalman_filter_enabled:
-                    class_id = self._apply_kalman_filter(class_id)
-                if self.temporal_smoothing_enabled:
-                    class_id = self._apply_temporal_smoothing(class_id)
+            if self.kalman_filter_enabled:
+              class_id = self._apply_kalman_filter(detections.class_id[0])
+            if self.temporal_smoothing_enabled:
+              class_id = self._apply_temporal_smoothing(detections.class_id[0])
+            if confidence <= self.conf_threshold:
+                continue
+            current_phase = self.CLASS_NAMES_DICT[class_id]
+            keypoints = self.keypoint_model._infer(frame)
+            frame, _, result_frame = self.keypoint_model.pose_detector(frame, keypoints, current_phase, confidence)
+            self._save_best_frame(frame, result_frame, current_phase, confidence, timestamp)
 
-                current_phase = self.CLASS_NAMES_DICT[class_id]
-                if current_phase != self.last_saved_frame:
-                    keypoints = self.keypoint_model._infer(frame)
-                    processed_frame, _, result_frame = self.keypoint_model.pose_detector(
-                        frame, keypoints, current_phase, confidence
-                    )
-                    frame_path = self._save_frame(processed_frame, current_phase)
-                    result_frame['url_path_frame'] = frame_path
-                    self.last_saved_frame = current_phase
         self.last_frame_hash = frame_hash
-        return frame, result_frame
+        self.frame_count += 1
+        return frame
 
     # -------------------- Capture Methods --------------------
     def __capture_image(self) -> List[FrameData]:
         results_database: List[FrameData] = []
         frame = cv2.imread(self.input)
         results = self._infer(frame)
-        frame, result_frame = self.plot_result(results, frame, timestamp=0)
-        if result_frame:
-            self.frame_count += 1
-            results_database.append(FrameData.model_validate(result_frame))
+        self.plot_result(results, frame, timestamp=0)
+        results_database.extend(FrameData.model_validate(metadata) for metadata in self._save_all_best_frames())
         return results_database
 
     def __capture_video(self) -> List[FrameData]:
@@ -178,19 +173,17 @@ class PhaseDetection(YOLOv8Base):
                 break
             results = self._infer(frame)
             timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
-            frame, result_frame = self.plot_result(results, frame, timestamp)
-            if result_frame:
-                results_database.append(FrameData.model_validate(result_frame))
-                self.frame_count += 1
-                if self.verbose:
-                    cv2.imshow(WINDOW_NAME, frame)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
+            self.plot_result(results, frame, timestamp)
+            if self.display:
+                cv2.imshow(WINDOW_NAME, frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
         cap.release()
         cv2.destroyAllWindows()
+        results_database.extend(FrameData.model_validate(metadata) for metadata in self._save_all_best_frames())
         return results_database
 
-    def run(self, filename: str = None):
+    def run(self, filename: str = None) -> List[FrameData]:
         self.input = filename if filename else self.input
         file_type = check_fileType(self.input)
         if file_type == FileType.IMAGE:

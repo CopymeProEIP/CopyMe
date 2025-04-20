@@ -10,7 +10,7 @@ class PoseEstimation(YOLOv8Base):
         super().__init__(model_path=model_path, verbose=verbose)
 
     def pose_detector(self, frame, results_list, class_name, confidence) -> Tuple[Any, List, Dict]:
-        logging.debug(f"Pose Estimation: {class_name} with confidence {confidence}")
+        logging.debug(f"Pose Estimation: {class_name} with confidence {confidence:.2f}")
         skeleton = [
             (5, 6),  # Shoulders connection
             (5, 11), (6, 12),  # Shoulders to hips
