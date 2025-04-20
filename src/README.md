@@ -2,25 +2,27 @@
 
 ## Activate venv
 
-``` bash
+```bash
 cd src/
 python3.10 -m venv copyme
 source copyme/bin/activate
 ```
 
 ## If you want to use conda with config
-``` bash
+
+```bash
 conda env create -f environnement-conda.yml -y -v
 ```
 
 ## Update the conda environment
-``` bash
+
+```bash
 conda env update --file environnement-conda.yml --prune
 ```
 
 ## Install Dependences
 
-``` bash
+```bash
 ./install.sh
 ```
 
@@ -29,10 +31,12 @@ conda env update --file environnement-conda.yml --prune
 ```
 python3 local.py [OPTIONS | -i | -o] [ARGS]
 ```
+
 > To run local inference / a feeback directory will be created
 
 ## Run back-end docker in production
-``` bash
+
+```bash
 docker run -d -p 5000:5000 \
   -v /home/ubuntu/copyme/models:/app/model/:ro \
   -v /home/ubuntu/copyme/certs/server.crt:/etc/ssl/certs/server.crt:ro \

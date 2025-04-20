@@ -1,0 +1,201 @@
+from collections import deque
+import csv
+from typing import Any, Dict, Tuple, List
+import uuid
+import cv2
+import numpy as np
+from ultralytics import YOLO
+from .utils import check_fileType, load_phases, FileType
+import logging
+import os
+from enum import Enum
+from filterpy.kalman import KalmanFilter
+import hashlib
+from config.db_models import FrameData
+from .yolov8_base import YOLOv8Base
+from .pose_estimation import PoseEstimation
+import supervision as sv
+
+WINDOW_NAME = 'ShootAnalysis'
+DEFAULT_SAVE_PATH = 'feedback'
+DEFAULT_CAPTURE_INDEX = "0"
+DEFAULT_MODEL_PATH = 'model/yolov8m.pt'
+DEFAULT_KEYPOINT_MODEL_PATH = 'model/yolov8l-pose.pt'
+CONFIDENCE_THRESHOLD = 0.75
+IOU_THRESHOLD = 0.4
+
+
+class DetectionMode(Enum):
+    OBJECT = 'object'
+    POSE = 'pose'
+
+
+class PhaseDetection(YOLOv8Base):
+    def __init__(self, input: str = DEFAULT_CAPTURE_INDEX,
+                 model_path: str = DEFAULT_MODEL_PATH,
+                 save_dir: str = DEFAULT_SAVE_PATH,
+                 kalman_filter: bool = False,
+                 temporal_smoothing: bool = True,
+                 conf_threshold: float = CONFIDENCE_THRESHOLD,
+                 keypoint_model_path: str = DEFAULT_KEYPOINT_MODEL_PATH,
+                 verbose: bool = False):
+        super().__init__(model_path=model_path, verbose=verbose)
+        self.keypoint_model = PoseEstimation(model_path=keypoint_model_path, verbose=verbose)
+        self.save_dir = save_dir
+        self.kalman_filter_enabled = kalman_filter
+        self.temporal_smoothing_enabled = temporal_smoothing
+        self.conf_threshold = conf_threshold
+        self.input = input
+        self.frame_count = 0
+        self.history = deque(maxlen=5)
+        self.phases = load_phases('config/shoot.csv')
+        self.kalman_filter = self._initialize_kalman_filter()
+        self.last_frame_hash = None
+        self.last_saved_frame = None
+        self._setup_workdir()
+
+    # -------------------- Initialization Helpers --------------------
+    def _initialize_kalman_filter(self) -> KalmanFilter:
+        kf = KalmanFilter(dim_x=2, dim_z=1)
+        kf.x = np.array([0., 0.])
+        kf.F = np.array([[1., 1.], [0., 1.]])
+        kf.H = np.array([[1., 0.]])
+        kf.P *= 1000.
+        kf.R = 5
+        kf.Q = 0.1
+        return kf
+
+    def _setup_workdir(self):
+        logging.debug(f"Setting up workdir: {self.save_dir}")
+        os.makedirs(self.save_dir, exist_ok=True)
+        for phase in self.phases:
+            os.makedirs(os.path.join(self.save_dir, phase), exist_ok=True)
+        self._create_metadata_file()
+
+    def _create_metadata_file(self):
+        metadata_file = os.path.join(self.save_dir, 'metadata.csv')
+        with open(metadata_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['frame_number', 'phase', 'confidence', 'timestamp'])
+
+    # -------------------- Frame Processing --------------------
+    def _calculate_frame_hash(self, frame: Any) -> str:
+        return hashlib.md5(frame.tobytes()).hexdigest()
+
+    def _save_frame(self, frame: Any, current_phase: str) -> str:
+        phase_dir = os.path.join(self.save_dir, current_phase)
+        filename_save = f"{current_phase}_{uuid.uuid4()}.jpg"
+        frame_path = os.path.join(phase_dir, filename_save)
+        cv2.imwrite(frame_path, frame)
+        logging.debug(f"Saved frame {self.frame_count} to {frame_path}")
+        self.last_saved_frame = current_phase
+        return frame_path
+
+    def _save_metadata(self, frame_number: int, current_phase: str, confidence: float, timestamp: float):
+        metadata_file = os.path.join(self.save_dir, 'metadata.csv')
+        with open(metadata_file, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([frame_number, current_phase, confidence, timestamp])
+
+    def _apply_temporal_smoothing(self, class_id: int) -> int:
+        self.history.append(class_id)
+        smoothed_class_id = int(sum(self.history) / len(self.history))
+        logging.debug(f"Smoothed class ID: {smoothed_class_id}")
+        return smoothed_class_id
+
+    def _apply_kalman_filter(self, class_id: int) -> int:
+        self.kalman_filter.predict()
+        self.kalman_filter.update(class_id)
+        smoothed_class_id = int(self.kalman_filter.x[0])
+        logging.debug(f"Kalman-filtered class ID: {smoothed_class_id}")
+        return smoothed_class_id
+
+    def _apply_nms(self, boxes: List, confidences: List[float]) -> List[int]:
+        return cv2.dnn.NMSBoxes(boxes, confidences, self.conf_threshold, IOU_THRESHOLD)
+
+    def _is_frame_redundant(self, frame_hash: str) -> bool:
+        return frame_hash == self.last_frame_hash
+
+    def _get_highest_confidence_detection(self, detections: sv.Detections) -> Tuple[int, float]:
+        """Return the class ID and confidence of the detection with the highest confidence."""
+        max_conf_index = np.argmax(detections.confidence)
+        class_id = int(detections.class_id[max_conf_index])
+        confidence = float(detections.confidence[max_conf_index])
+        logging.debug(f"Highest confidence detection: class_id={class_id}, confidence={confidence}")
+        return class_id, confidence
+
+    def plot_result(self, results, frame, timestamp: float) -> Tuple[Any, Dict]:
+        """Process inference results and save only the last frame with the highest confidence for each phase."""
+        result_frame = {}
+        frame_hash = self._calculate_frame_hash(frame)
+
+        if self._is_frame_redundant(frame_hash):
+            logging.debug("Frame is redundant, skipping processing.")
+            return frame, result_frame
+
+        for result in results:
+            detections = sv.Detections.from_ultralytics(result).with_nms(
+                threshold=self.conf_threshold,
+            )
+            if not detections:
+                continue
+            class_id, confidence = self._get_highest_confidence_detection(detections)
+            if confidence >= self.conf_threshold:
+                if self.kalman_filter_enabled:
+                    class_id = self._apply_kalman_filter(class_id)
+                if self.temporal_smoothing_enabled:
+                    class_id = self._apply_temporal_smoothing(class_id)
+
+                current_phase = self.CLASS_NAMES_DICT[class_id]
+                if current_phase != self.last_saved_frame:
+                    keypoints = self.keypoint_model._infer(frame)
+                    processed_frame, _, result_frame = self.keypoint_model.pose_detector(
+                        frame, keypoints, current_phase, confidence
+                    )
+                    frame_path = self._save_frame(processed_frame, current_phase)
+                    result_frame['url_path_frame'] = frame_path
+                    self.last_saved_frame = current_phase
+        self.last_frame_hash = frame_hash
+        return frame, result_frame
+
+    # -------------------- Capture Methods --------------------
+    def __capture_image(self) -> List[FrameData]:
+        results_database: List[FrameData] = []
+        frame = cv2.imread(self.input)
+        results = self._infer(frame)
+        frame, result_frame = self.plot_result(results, frame, timestamp=0)
+        if result_frame:
+            self.frame_count += 1
+            results_database.append(FrameData.model_validate(result_frame))
+        return results_database
+
+    def __capture_video(self) -> List[FrameData]:
+        results_database: List[FrameData] = []
+        cap = cv2.VideoCapture(self.input)
+        while cap.isOpened():
+            success, frame = cap.read()
+            if not success:
+                break
+            results = self._infer(frame)
+            timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+            frame, result_frame = self.plot_result(results, frame, timestamp)
+            if result_frame:
+                results_database.append(FrameData.model_validate(result_frame))
+                self.frame_count += 1
+                if self.verbose:
+                    cv2.imshow(WINDOW_NAME, frame)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+        cap.release()
+        cv2.destroyAllWindows()
+        return results_database
+
+    def run(self, filename: str = None):
+        self.input = filename if filename else self.input
+        file_type = check_fileType(self.input)
+        if file_type == FileType.IMAGE:
+            return self.__capture_image()
+        elif file_type == FileType.VIDEO:
+            return self.__capture_video()
+        else:
+            return self.__capture_video()
