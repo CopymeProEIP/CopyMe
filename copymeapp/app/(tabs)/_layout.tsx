@@ -8,8 +8,10 @@ import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { Activity } from 'lucide-react-native';
+import { useProtectedRoute } from '@/utils/auth';
 
 export default function TabLayout() {
+  useProtectedRoute(true);
   return (
     <Tabs
       screenOptions={{
