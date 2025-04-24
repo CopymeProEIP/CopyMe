@@ -9,44 +9,7 @@ import { FilterChips, FilterOption } from '@/components/FilterChips';
 import { ExerciseItem, Exercise } from '@/components/ExerciseItem';
 import { useRouter } from 'expo-router';
 import { Activity } from 'lucide-react-native';
-
-// const exercisesData: Exercise[] = [
-// 	{
-// 		id: '1',
-// 		title: 'Free Throw',
-// 		level: 'Beginner',
-// 		description: 'Improve accuracy with this fundamental shot',
-// 		completed: 80,
-// 	},
-// 	{
-// 		id: '2',
-// 		title: 'Three-Point Shot',
-// 		level: 'Intermediate',
-// 		description: 'Master long-range shooting with proper technique',
-// 		completed: 45,
-// 	},
-// 	{
-// 		id: '3',
-// 		title: 'Layup Drill',
-// 		level: 'Beginner',
-// 		description: 'Practice essential close-range scoring',
-// 		completed: 95,
-// 	},
-// 	{
-// 		id: '4',
-// 		title: 'Dribbling Course',
-// 		level: 'Advanced',
-// 		description: 'Advanced ball handling exercises to improve control',
-// 		completed: 30,
-// 	},
-// 	{
-// 		id: '5',
-// 		title: 'Defensive Stance',
-// 		level: 'Intermediate',
-// 		description: 'Learn proper defensive positioning and movement',
-// 		completed: 60,
-// 	},
-// ];
+import { useApi } from '@/utils/api';
 
 const levelFilters: FilterOption[] = [
 	{ id: 'all', label: 'All Levels' },
@@ -61,24 +24,23 @@ export default function ExercisesScreen() {
 	const [selectedFilters, setSelectedFilters] = useState<string[]>(['all']);
 	const [exercisesData, setExercisesData] = useState<Exercise[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
+	const api = useApi();
 
 	const getExercises = async () => {
 		try {
-			const res = await fetch('http://localhost:3000/api/exercises');
-			const data = await res.json();
-			if (!res.ok) {
-				throw new Error('Failed to fetch exercises');
-			}
-			setExercisesData(data.exercises);
+			const response = await api.get('/exercises');
+			const data = response as { data: Exercise[] };
+			setExercisesData(data?.data || []);
 			setIsLoading(false);
 		} catch (error) {
 			console.error('Error fetching exercises:', error);
+			setIsLoading(false);
 		}
 	};
 
 	useEffect(() => {
 		getExercises();
-	});
+	}, []);
 
 	const handleFilterToggle = (id: string) => {
 		if (id === 'all') {
@@ -98,39 +60,46 @@ export default function ExercisesScreen() {
 	const filteredExercises = useMemo(() => {
 		return exercisesData.filter((exercise) => {
 			const matchesSearch =
-				exercise.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				exercise.description.toLowerCase().includes(searchQuery.toLowerCase());
+				exercise.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				false ||
+				exercise.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				false;
 
 			const matchesLevel =
-				selectedFilters.includes('all') || selectedFilters.includes(exercise.level.toLowerCase());
+				selectedFilters.includes('all') ||
+				(exercise.difficulty && selectedFilters.includes(exercise.difficulty.toLowerCase()));
 
 			return matchesSearch && matchesLevel;
 		});
-	}, [searchQuery, selectedFilters]);
+	}, [searchQuery, selectedFilters, exercisesData]);
 
 	const handleExercisePress = (exercise: Exercise) => {
 		router.push({
 			pathname: '/exercise/[id]',
 			params: {
 				id: exercise.id,
-				title: exercise.title,
-				level: exercise.level,
+				title: exercise.name,
+				level: exercise.difficulty,
 				description: exercise.description,
-				completed: exercise.completed,
+				completed: exercise.completed || 0,
+				category: exercise.category,
+				instructions: exercise.instructions,
+				imageUrl: exercise.imageUrl,
+				videoUrl: exercise.videoUrl,
 			},
 		});
 	};
 
 	return (
 		<ThemedView style={styles.container}>
-			{/* <SearchBar onSearch={setSearchQuery} placeholder='Search exercises...' /> */}
+			<SearchBar onSearch={setSearchQuery} placeholder='Search exercises...' />
 			<FilterChips
 				options={levelFilters}
 				selectedIds={selectedFilters}
 				onToggle={handleFilterToggle}
 			/>
 
-				{isLoading ? (
+			{isLoading ? (
 				<ThemedView style={styles.loadingContainer}>
 					<Activity size={60} color='gold' style={styles.loadingIcon} />
 					<ThemedText type='subtitle'>Loading Exercises...</ThemedText>
@@ -166,16 +135,15 @@ const styles = StyleSheet.create({
 		marginBottom: 70,
 	},
 	listContent: {
-		height: '100%',
+		height: '90%',
 		gap: 8,
 		paddingTop: 8,
 		paddingBottom: 20,
 	},
 	emptyStateContainer: {
-		flex: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
-		height: '100%',
+		height: '90%',
 		padding: 24,
 	},
 	emptyStateIcon: {

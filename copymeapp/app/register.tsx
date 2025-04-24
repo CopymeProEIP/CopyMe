@@ -12,7 +12,7 @@ import {
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Link, useRouter } from 'expo-router';
-import { Mail, Lock, User, ArrowLeft } from 'lucide-react-native';
+import { Mail, Lock, User } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
@@ -41,7 +41,6 @@ export default function RegisterScreen() {
 		setIsLoading(true);
 
 		try {
-			// Split name into firstName and lastName (required by API)
 			const nameParts = name.trim().split(' ');
 			const firstName = nameParts[0];
 			const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
@@ -56,6 +55,7 @@ export default function RegisterScreen() {
 					password,
 					firstName,
 					lastName,
+					role: 'user', // Default role
 				}),
 			});
 
@@ -86,18 +86,10 @@ export default function RegisterScreen() {
 		<KeyboardAvoidingView
 			behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
 			style={styles.container}>
-			<ScrollView contentContainerStyle={styles.scrollContent}>
-				<ThemedView style={styles.header}>
-					<TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-						<ArrowLeft color={Colors.light.text} size={24} />
-					</TouchableOpacity>
-				</ThemedView>
-
-				<Image
-					source={require('@/assets/images/logo.png')}
-					style={styles.logo}
-					resizeMode='contain'
-				/>
+			<ThemedView style={styles.content}>
+				<ThemedText type='title' style={styles.title}>
+					CopyMe
+				</ThemedText>
 
 				<ThemedText type='title' style={styles.title}>
 					Create Account
@@ -173,7 +165,7 @@ export default function RegisterScreen() {
 						</TouchableOpacity>
 					</Link>
 				</ThemedView>
-			</ScrollView>
+			</ThemedView>
 		</KeyboardAvoidingView>
 	);
 }
@@ -182,24 +174,10 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	scrollContent: {
-		flexGrow: 1,
+	content: {
+		flex: 1,
 		padding: 24,
-	},
-	header: {
-		marginBottom: 16,
-	},
-	backButton: {
-		width: 40,
-		height: 40,
 		justifyContent: 'center',
-		alignItems: 'center',
-	},
-	logo: {
-		width: 80,
-		height: 80,
-		alignSelf: 'center',
-		marginBottom: 16,
 	},
 	title: {
 		textAlign: 'center',
@@ -207,7 +185,7 @@ const styles = StyleSheet.create({
 	},
 	subtitle: {
 		textAlign: 'center',
-		marginBottom: 24,
+		marginBottom: 32,
 		opacity: 0.7,
 	},
 	form: {
@@ -232,12 +210,12 @@ const styles = StyleSheet.create({
 		height: '100%',
 	},
 	button: {
-		marginTop: 8,
+		marginTop: 16,
 	},
 	footer: {
 		flexDirection: 'row',
 		justifyContent: 'center',
-		marginTop: 16,
+		marginTop: 24,
 	},
 	loginLink: {
 		color: Colors.light.principal,

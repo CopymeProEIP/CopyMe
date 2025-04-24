@@ -9,11 +9,12 @@ import { Mail, Lock, ArrowRight } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
 	const router = useRouter();
-	const [email, setEmail] = useState('');
-	const [password, setPassword] = useState('');
+	const [email, setEmail] = useState('idriss.said@epitech.eu');
+	const [password, setPassword] = useState('qwerty');
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
 
@@ -43,13 +44,13 @@ export default function LoginScreen() {
 			if (!response.ok) {
 				throw new Error(data.message || 'Login failed');
 			}
-
+			console.log('Login response:', data.data);
+			if (!data.data) {
+				throw new Error('No token received');
+			}
 			// Store the JWT token for future authenticated requests
-			// This could be in AsyncStorage or a state management solution
-			// AsyncStorage.setItem('userToken', data.token);
-
-			// For now, just console log the token
-			console.log('Authentication successful, token:', data.token);
+			await AsyncStorage.setItem('userToken', data.data);
+			console.log('Authentication successful, token stored');
 
 			// Navigate to the main app
 			router.replace('/(tabs)');
@@ -66,11 +67,14 @@ export default function LoginScreen() {
 			behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
 			style={styles.container}>
 			<ThemedView style={styles.content}>
-				<Image
+				{/* <Image
 					source={require('@/assets/images/logo.png')}
 					style={styles.logo}
 					resizeMode='contain'
-				/>
+				/> */}
+				<ThemedText type='title' style={styles.title}>
+					CopyMe
+				</ThemedText>
 
 				<ThemedText type='title' style={styles.title}>
 					Welcome Back
