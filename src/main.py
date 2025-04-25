@@ -82,7 +82,7 @@ def create_application() -> FastAPI:
         process_time = time.time() - start_time
         response.headers["X-Process-Time"] = str(process_time)
         return response
-    
+
     return app
 
 # Set up logging
