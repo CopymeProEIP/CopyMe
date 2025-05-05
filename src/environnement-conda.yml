@@ -1,3 +1,11 @@
+# Pour créer cet environnement conda, exécutez la commande suivante:
+# conda env create -f environnement-conda.yml
+#
+# Pour activer l'environnement:
+# conda activate copyme-cuda
+#
+# Pour mettre à jour l'environnement après modification du fichier:
+# conda env update -f environnement-conda.yml --prune
 name: copyme-cuda
 dependencies:
   - python=3.9
