@@ -18,6 +18,7 @@ from bson.binary import Binary, UuidRepresentation
 
 # Class Yolov8 model
 from yolov8_basketball.yolov8 import YOLOv8
+from yolov8_basketball.phase_detection import PhaseDetection
 
 try:
     settings = get_variables()
@@ -49,9 +50,8 @@ async def startup_db_client(app):
         app.db = DatabaseManager(app.mongodb_client["CopyMe"])
         logging.info("Logged successful to the mongodb database")
 
-        app.yolo = YOLOv8(capture_index=None, save_path="feedback", mode="debug")
-        app.yolo.load_model("model/copyme.pt")
-        app.yolo.load_keypoint_model()
+        app.yolo = PhaseDetection(input=None, save_dir="feedback", model_path="model/v1.1.3.pt", kalman_filter=True, temporal_smoothing=True)
+        app.yolo.run()
         logging.info("Load our yolo model")
     except Exception as e:
         logging.critical(e)
