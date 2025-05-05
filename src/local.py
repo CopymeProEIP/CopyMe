@@ -20,8 +20,10 @@ if __name__ == "__main__":
 
     yolo = PhaseDetection(
         input=args.input,
+        save_dir=args.output,
         model_path=args.model,
-        keypoint_model_path="model/yolov8l-pose.pt",
+        kalman_filter=True, # custom filter to improve accuracy
+        temporal_smoothing=True,
         verbose=True
     )
     results = yolo.run()
