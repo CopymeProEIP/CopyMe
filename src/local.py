@@ -7,6 +7,7 @@ import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('-a', '--model', type=str, default="model/copyme.pt", help='model path')
     parser.add_argument("-i", "--input", type=str, default="../assets/follow.jpg", help="path to image or video")
     parser.add_argument("-o", "--output", type=str, default="../feedback", help="path to output directory")
     parser.add_argument("-m", "--mode", type=str, default="debug", help="mode to run the model")
@@ -19,7 +20,7 @@ if __name__ == "__main__":
 
     yolo = PhaseDetection(
         input=args.input,
-        model_path="model/copyme.pt",
+        model_path=args.model,
         keypoint_model_path="model/yolov8l-pose.pt",
         verbose=True
     )
