@@ -17,7 +17,7 @@ jobs:
 
       - name: Mirror all branches
         env:
-          MIRROR_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+          MIRROR_TOKEN: ${{ secrets.COPYME_TOKEN }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
