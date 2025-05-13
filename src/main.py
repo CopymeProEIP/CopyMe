@@ -1,23 +1,19 @@
-from fastapi import FastAPI, APIRouter, File, UploadFile, Form, HTTPException, Request, Depends
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from config.setting import get_variables
 from api import router as APIRouter
 import time
-import os
-import uvicorn
 import sys
 from config.exception_class import  SettingsException
 from config.db_models import DatabaseManager
-from pymongo import MongoClient, errors
 # import for fast api lifespan
 from contextlib import asynccontextmanager
 import logging
 from logging_setup import setup_logging
 from motor.motor_asyncio import AsyncIOMotorClient
-from bson.binary import Binary, UuidRepresentation
 
 # Class Yolov8 model
-from yolov8_basketball.yolov8 import YOLOv8
+from yolov8_basketball.phase_detection import PhaseDetection
 
 try:
     settings = get_variables()
@@ -49,10 +45,8 @@ async def startup_db_client(app):
         app.db = DatabaseManager(app.mongodb_client["CopyMe"])
         logging.info("Logged successful to the mongodb database")
 
-        app.yolo = YOLOv8(capture_index=None, save_path="feedback", mode="debug")
-        app.yolo.load_model("model/copyme.pt")
-        app.yolo.load_keypoint_model()
-        logging.info("Load our yolo model")
+        logging.info("Loading YOLOv8 model...")
+        app.yolo = PhaseDetection(model_path="model/v1.1.3.pt", kalman_filter=True, temporal_smoothing=True)
     except Exception as e:
         logging.critical(e)
         sys.exit(84)

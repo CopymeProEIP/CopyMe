@@ -2,10 +2,10 @@ from fastapi import FastAPI, File,  UploadFile, Form, HTTPException, Request, De
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Annotated, List, Dict
 from yolov8_basketball.utils import get_database, get_yolomodel, save_uploaded_file
-from yolov8_basketball.yolov8 import YOLOv8
 from recommendation_engine import analyze_phase
 import logging
 from config.setting import get_variables
+from yolov8_basketball.phase_detection import PhaseDetection
 from config.db_models import ProcessedImage, DatabaseManager, FrameData
 from datetime import datetime, date
 from uuid import uuid4
@@ -32,14 +32,14 @@ async def demo(request: Request,
     files: UploadFile = File(...),
     ) -> ProcessedDemoResponse:
 
-    yolo_basket: YOLOv8 = get_yolomodel(request)
+    yolo_basket: PhaseDetection = get_yolomodel(request)
     logging.debug(f"YOLOv8 object :\n{yolo_basket}")
 
     db_model: DatabaseManager = get_database(request)
 
     file_path = save_uploaded_file(files, settings.UPLOAD_DIR, True)
 
-    results: List[FrameData] = yolo_basket.capture(str(file_path))  # Assuming YOLO saves the processed image
+    results: List[FrameData] = yolo_basket.run(str(file_path))
     logging.info("YOLO processing completed.")
 
     result = "["
