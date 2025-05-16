@@ -14,6 +14,7 @@ class YOLOv8Base:
         self.device = self._get_device()
         self.model = None
         self.is_model_loaded = False
+        self.version = 1
         self._load_model()
 
     # -------------------- Initialization Helpers --------------------

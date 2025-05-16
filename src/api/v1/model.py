@@ -58,7 +58,7 @@ async def demo(request: Request,
         version=1,
     )
 
-    #logging.debug(f"collection : {collection_insert.model_dump_json()}")
+    logging.debug(f"collection : {collection_insert.model_dump_json()}")
 
     response_model = ProcessedDemoResponse(
         frames=collection_insert.frames,
@@ -66,9 +66,18 @@ async def demo(request: Request,
         created_at=collection_insert.created_at,
         version=collection_insert.version
     )
+    logging.debug(f"Saving to database")
 
-    await db_model.insert_new_entry(json.loads(collection_insert.model_dump_json()))
-    logging.debug("Finished to update the database.")
+    try:
+        # Tenter d'insérer dans la base de données
+        await db_model.insert_new_entry(json.loads(collection_insert.model_dump_json()))
+        logging.debug("Finished to update the database.")
+    except Exception as e:
+        # Capturer l'erreur et la journaliser
+        logging.error(f"Database connection error: {str(e)}")
+        logging.warning("Continuing without database persistence. Data will not be saved.")
+        # On pourrait lever une exception HTTP ici, mais nous choisissons de continuer
+        # pour permettre au client d'obtenir quand même les résultats du traitement
 
     return response_model
 
