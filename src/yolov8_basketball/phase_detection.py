@@ -84,14 +84,15 @@ class PhaseDetection(YOLOv8Base):
     def _save_best_frame(self, frame: Any, result_frame: Dict, current_phase: str, confidence: float, timestamp: float):
         """Update the best frame for a phase if it has the highest confidence."""
         if current_phase not in self.best_frames or confidence > self.best_frames[current_phase]['confidence']:
-            self.best_frames[current_phase] = {
+            # J'ai ajouté '+ str(self.frame_count)' pour qu'on puisse avoir tout les keyframes
+            self.best_frames[current_phase + str(self.frame_count)] = {
                 'frame_number': self.frame_count,
                 'timestamp': timestamp,
                 'frame': frame,
                 'results': result_frame,
                 'confidence': confidence
             }
-            logging.debug(f"Updated best frame for phase '{current_phase}' with confidence {confidence:.2f}")
+        logging.debug(f"Updated best frame for phase '{current_phase}' with confidence {confidence:.2f}")
 
     def _save_all_best_frames(self) -> List[Dict]:
         """Save the best frames for each phase at the end and return their metadata."""
@@ -141,9 +142,9 @@ class PhaseDetection(YOLOv8Base):
                 continue
             class_id, confidence = self._get_highest_confidence_detection(detections)
             if self.kalman_filter_enabled:
-              class_id = self._apply_kalman_filter(detections.class_id[0])
+                class_id = self._apply_kalman_filter(detections.class_id[0])
             if self.temporal_smoothing_enabled:
-              class_id = self._apply_temporal_smoothing(detections.class_id[0])
+                class_id = self._apply_temporal_smoothing(detections.class_id[0])
             if confidence <= self.conf_threshold:
                 continue
             current_phase = self.CLASS_NAMES_DICT[class_id]
