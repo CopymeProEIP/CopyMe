@@ -136,7 +136,7 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
         raise HTTPException(status_code=400, detail="Données de frames insuffisantes pour l'analyse")
 
     # Initialiser le comparateur
-    comparator = Comparaison(model="user_model", dataset="reference_model")
+    comparator = Comparaison(model=user_frames, dataset=reference_frames)
 
     # Préparer les données pour la comparaison
     current_keypoints = []
@@ -144,12 +144,9 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
 
     # Sélectionner la frame la plus pertinente pour l'analyse (par exemple, le moment du tir)
     # Pour simplifier, nous utilisons la première frame ici
-    if len(user_frames) > 0 and len(reference_frames) > 0:
-        current_frame = user_frames[0]
-        reference_frame = reference_frames[0]
 
-        current_keypoints = current_frame.keypoints if hasattr(current_frame, 'keypoints') else []
-        reference_keypoints = reference_frame.keypoints if hasattr(reference_frame, 'keypoints') else []
+    current_keypoints = user_frames[0]['keypoints_positions']
+    reference_keypoints = reference_frames[0]['keypoints_positions']
 
     # Comparer les keypoints
     comparison_result = comparator.compare_keypoints(current_keypoints, reference_keypoints)
@@ -158,16 +155,24 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
     current_angles = {}
     reference_angles = {}
 
-    if hasattr(current_frame, 'angles') and hasattr(reference_frame, 'angles'):
-        current_angles = current_frame.angles
-
-        # Préparer les angles de référence avec des tolérances
-        for angle_name, value in reference_frame.angles.items():
+    logging.debug(f"Current angles: {user_frames[0]}")
+    
+    # Accès correct aux angles dans le dictionnaire
+    if 'angles' in user_frames[0]:
+        current_angles = user_frames[0]['angles']
+    
+    # Préparer les angles de référence avec des tolérances
+    if 'angles' in reference_frames[0]:
+        for angle in reference_frames[0]['angles']:
+            # Extraire l'information d'angle
+            angle_name = str(angle.get('angle_name', ['unknown', 0])[0])
+            angle_value = angle.get('angle', 0)
+            
             reference_angles[angle_name] = {
-                "ref": value,
+                "ref": angle_value,
                 "tolerance": 5.0  # Tolérance de 5 degrés par défaut
             }
-
+    
     improvements = comparator.compare_angles(current_angles, reference_angles)
 
     # Convertir les améliorations en dictionnaires pour la réponse
