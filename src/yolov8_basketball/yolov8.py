@@ -1,5 +1,4 @@
 import csv
-
 import os
 from ultralytics import YOLO
 from pymongo import MongoClient
@@ -12,20 +11,19 @@ from .utils import (
     load_labels,
     check_fileType,
     calculate_angle,
-    Debugger,
+    Logger,
     DebugType
 )
 import numpy as np
 from datetime import date, datetime
 import json
-from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional, Dict, Tuple, Hashable, Any
-from enum import Enum
+from typing import List, Dict, Tuple, Any
 import logging
 import uuid
 from config.db_models import FrameData, AngleData, Direction
+from collections import deque
 
-DEBUG = Debugger(enabled=True)
+DEBUG = Logger(enabled=True)
 
 #----------------------------------------------------
 # check if the class csv file is available
@@ -101,6 +99,8 @@ class YOLOv8:
         self.is_model_loaded = False
         self.is_keypoint_model_loaded = False
         self.save_path = save_path
+        self.set_workdir(save_path)
+        self.history = deque(maxlen=5)
         self.last_saved_class = None
         self.saved_frames_data = {}
         self.saved_classes = set()
@@ -118,16 +118,45 @@ class YOLOv8:
         self.sub_foldername_feedback: str = str(uuid.uuid4())
 
         if load_labels_flag:
-            self.shoot_classes = load_labels(CLASS_CSV)
+            self.phases = load_labels(CLASS_CSV)
         else:
-            self.shoot_classes = []
+            self.phases = []
 
         DEBUG.log(message=f"Using YOLOv8 on {self.device}")
         DEBUG.log(message=f"Input: {self.capture_index}")
-        DEBUG.log(message=f"Avalaible classes: {self.shoot_classes}")
+        DEBUG.log(message=f"Avalaible classes: {self.phases}")
 
         #MONGODB_URI = "mongodb+srv://copyme:dgg5kQCAVmGoJ4qD@cluster0.iea0zmj.mongodb.net/CopyMe?retryWrites=true&w=majority&appName=Cluster0"
         #self.connect_to_bdd(MONGODB_URI)
+
+    def non_maximum_suppression(boxes, scores, threshold=MIN_CONFIDENCE):
+      indices = cv2.dnn.NMSBoxes(boxes, scores, score_threshold=threshold, nms_threshold=0.4)
+      return indices
+
+    def set_workdir(self, save_dir: str):
+        os.makedirs(save_dir, exist_ok=True)
+        phases = ["shot_position", "shot_realese", "shot_followthrough"]
+        for phase in phases:
+          phase_dir = os.path.join(save_dir, phase)
+          os.makedirs(phase_dir, exist_ok=True)
+        # Save the metadata file
+        metadata_file = os.path.join(save_dir, 'metadata.csv')
+        with open(metadata_file, mode='w', newline='') as file:
+          writer = csv.writer(file)
+          writer.writerow(['frame_number', 'phase', 'confidence', 'timestamp'])
+
+    def save_metadata(self, frame_number: int, current_phase: str, confidence: float, timestamp: float):
+        metadata_file = os.path.join(self.save_path, 'metadata.csv')
+        with open(metadata_file, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([frame_number, current_phase, confidence, timestamp])
+
+    def temporal_smoothing(self, class_id: int) -> str:
+        if len(self.history) == self.history.maxlen:
+            self.history.append(class_id)
+            avg_class_id = int(sum(self.history) / len(self.history))
+            current_phase = self.phases[avg_class_id]
+        return current_phase
 
     def __str__(self):
         data = {
@@ -136,7 +165,7 @@ class YOLOv8:
             "mode": self.mode,
             "model_loaded": self.is_model_loaded,
             "keypoint_model_loaded": self.is_keypoint_model_loaded,
-            "available_classes": self.shoot_classes,
+            "available_classes": self.phases,
             "version": self.version,
             "saved_frames_count": len(self.saved_frames_data),
         }
@@ -144,7 +173,7 @@ class YOLOv8:
 
     def convert_numpy_to_python(self, data):
         """
-        Convertit les types numpy en types Python natifs dans une structure de données.
+        Convert numpy arrays and other numpy types to Python types.
         """
         if isinstance(data, dict):
             return {key: self.convert_numpy_to_python(value) for key, value in data.items()}
@@ -192,15 +221,16 @@ class YOLOv8:
 
     # load given model with YOLO
     def load_model(self, model_path=DEFAULT_MODEL_PATH):
-        DEBUG.log(message=f"Using model: {model_path}")
+        if self.mode == 'debug':
+            DEBUG.log(message=f"Loading model: {model_path}")
         self.model = YOLO(model_path, verbose=self.verbose).to(self.device)
         self.CLASS_NAMES_DICT = self.model.model.names
-        self.model.fuse()  # Fuse layers for faster inference
+        self.model.fuse()
         self.is_model_loaded = self.model is not None
 
     def load_keypoint_model(self, model_path=DEFAULT_KEYPOINT_MODEL_PATH):
         self.keypoint_model = YOLO(model_path, self.verbose).to(self.device)
-        self.keypoint_model.fuse()  # Fuse layers for faster inference
+        self.keypoint_model.fuse()
         self.is_keypoint_model_loaded = self.keypoint_model is not None
 
     # function that infer given image of video or camera and return the results
@@ -252,16 +282,12 @@ class YOLOv8:
         result_frame = {}
 
         for results in results_list:
-            # Extract keypoints coordinates
             if not hasattr(results, 'keypoints') or results.keypoints is None:
                 continue
-
-            keypoints = results.keypoints.xy.cpu().numpy()  # Assuming keypoints are in this format
-
+            keypoints = results.keypoints.xy.cpu().numpy()
             for kp in keypoints:
                 if kp.shape[0] < 17:  # Ensure we have all 17 keypoints
                     continue
-
                 # Store positions of all keypoints
                 for idx, coord in enumerate(kp):
                     keypoint_name = keypoint_names.get(idx, f"Keypoint {idx}")
@@ -372,6 +398,7 @@ class YOLOv8:
                 # get the coordinates left top and right bottom of the box
                 r = box.xyxy[0].astype(int)
                 class_id = int(box.cls[0])  # Get class ID
+                self.history.append(class_id)
                 class_name = self.CLASS_NAMES_DICT[class_id] # Get class name
 
                 # read existing file to check is the confidence is above the last saved class
@@ -393,7 +420,7 @@ class YOLOv8:
                         else:
                             DEBUG.log(message=f"{class_name}, conf: {confidence} below saved confidence, skipping.")
                             continue
-                elif class_name not in self.shoot_classes:
+                elif class_name not in self.phases:
                     DEBUG.log(message=f"{class_name}, not in shoot classes, skipping.")
                     continue
                 if self.sync == False:
@@ -421,7 +448,7 @@ class YOLOv8:
     def save_frame(self, frame, output_path: str, class_name: str, angles: List, sync=False) -> Tuple[Any, str]:
         filename_save: str = None
 
-        if class_name in self.shoot_classes:
+        if class_name in self.phases:
             if class_name not in self.saved_classes or class_name in self.saved_classes and sync == True:
                 # Ensure angles are present before saving the frame
                 if not angles:
@@ -440,7 +467,7 @@ class YOLOv8:
                     file.write(f'Class: {class_name}\n')
                     for i, angle in enumerate(angles, 1):  # Fix here
                         file.write(f'Angle {i}: {angle:.0f}\n')  # Assuming angles are simple float values
-                if len(self.saved_classes) == len(self.shoot_classes):
+                if len(self.saved_classes) == len(self.phases):
                     self.saved_classes.clear()
                 DEBUG.log(message=f"saved class {self.saved_classes}")
             else:
@@ -503,7 +530,7 @@ class YOLOv8:
 
         else:
             return f"L'angle '{angle_name}' présente un écart de {abs(error):.1f}°, mais aucun conseil spécifique n'est disponible."
-        
+
     def __feedback_key_tuple_to_str(self, key: Tuple[str, Direction]) -> str:
         return f"{key[0]}|{key[1].name}"
 
@@ -526,10 +553,10 @@ class YOLOv8:
                 else:
                     messages[f'{feedback_key}'] = f"L'angle '{angle_name}' n'est pas défini dans les données de référence."
         return messages
-    
+
     def __reset_ressources(self):
         self.sub_foldername_feedback = str(uuid.uuid4())
-    
+
     def __capture_image(self) -> List[FrameData]:
         results_database: List[FrameData] = []
 
@@ -543,9 +570,9 @@ class YOLOv8:
             feedback = self.analyze_phase(results_database[0].angles, results_database[0].class_name)
             results_database[0].feedback = feedback
             logging.debug(f"advice for the users: {results_database[0].feedback}")
-        
+
         return results_database
-    
+
     def __capture_video(self) -> List[FrameData]:
         results_database: List[FrameData] = []
 
@@ -590,7 +617,7 @@ class YOLOv8:
                 success, frame = cap.read()
                 if success:
                     results = self.infer(frame, mode=['object'])
-                    self.plot_result(results, frame)
+                    frame, result_frame = self.plot_result(results, frame)
                     if self.mode == 'show':
                         cv2.imshow(WINDOW_NAME, frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
