@@ -1,4 +1,3 @@
-
 *.pt
 
 # Byte-compiled / optimized / DLL files
@@ -181,3 +180,6 @@ roboflow-python/
 datasets/
 shoot.jpg
 .DS_Store
+
+.env
+node_modules

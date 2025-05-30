@@ -37,6 +37,12 @@ conda env create -f environnement-conda.yml -y -v
 conda env update --file environnement-conda.yml --prune
 ```
 
+#### Activate env
+
+```bash
+conda activate copyme-cuda
+```
+
 ---
 
 ## Dependencies
@@ -47,6 +53,11 @@ Install project dependencies using the provided script:
 ./install.sh
 ```
 
+You have also to install mongodb localy:
+
+[Mongodb install for macos](https://dev.to/saint_vandora/how-to-install-mongodb-locally-on-a-macbook-5h3a)
+[Mongodb install for ubuntu 24](https://www.cherryservers.com/blog/install-mongodb-ubuntu-2404)
+
 ---
 
 ## Environment Configuration
@@ -54,19 +65,22 @@ Install project dependencies using the provided script:
 Create a `.env` file in the `src` directory with the following structure:
 
 ```bash
-APP_NAME=
-APP_VERSION=
-FRONTEND_URL=
-MONGO_ROOT_USERNAME=
-MONGO_ROOT_PASSWORD=
-MONGO_PORT=
-MONGO_HOST=
-MONGO_ARGS=
-MONGO_URI=
-UPLOAD_DIR=
+APP_NAME=copyme
+APP_VERSION=1.0.0
+MONGO_ROOT_USERNAME=admin
+MONGO_ROOT_PASSWORD=zJ*BsPZ9E^98AJLGmbhep4R7a7HP$C
+FRONTEND_URL=beta-copy-me.vercel.app
+MONGO_HOST=localhost
+MONGO_PORT=27017
+MONGO_ARGS=authSource=admin
+MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}
+
+UPLOAD_DIR=uploads
+
+TRAEFIK_EMAIL=
 ```
 
-> **Note:** Ensure all required variables are properly set.
+> **Note:** Ensure all required variables are properly set and not use this exemple variable in production please, I see you.
 
 ---
 
@@ -74,10 +88,16 @@ UPLOAD_DIR=
 
 ### Local Testing
 
-Run the project locally for inference:
+Run the project locally for inference to test the model with a powerful CLI:
 
 ```bash
 python3 local.py [OPTIONS | -i | -o] [ARGS]
+```
+
+Run the backend API that run the model in local:
+
+```bash
+uvicorn --reload main:app
 ```
 
 > A feedback directory will be created during execution.
