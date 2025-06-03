@@ -1,0 +1,14 @@
+name: Test secret
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-secret:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check token
+        env:
+          MIRROR_TOKEN: ${{ secrets.COPYME_TOKEN }}
+        run: |
+          echo "Token present? [${#MIRROR_TOKEN}] caractères"
