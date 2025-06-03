@@ -20,8 +20,6 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-    console.log('🔌 Connexion à MongoDB via:', MONGO_URI);
-
     await mongoose.connect(MONGO_URI);
     console.log('✅ MongoDB connecté');
 
