@@ -1,0 +1,28 @@
+name: Mirror all branches to org repo
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout all branches
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Mirror all branches
+        env:
+          MIRROR_TOKEN: ${{ secrets.COPYME_TOKEN }}
+        run: |
+          echo ${MIRROR_TOKEN}
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git remote add mirror https://x-access-token:${MIRROR_TOKEN}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git
+          git push mirror --all  # push all branches
+          git push mirror --tags  # push all the tags

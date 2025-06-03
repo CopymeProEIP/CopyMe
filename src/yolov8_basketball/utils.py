@@ -4,7 +4,6 @@ import os
 import numpy as np
 from enum import Enum
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request, Depends
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from config.db_models import DatabaseManager
 from pathlib import Path
 import shutil
@@ -14,8 +13,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .yolov8 import YOLOv8
+    from.phase_detection import Phase_Detection
 #----------------------------------------------------------
-# load csv file that list all model's labels from the model
 
 # check if the file exists and load the labels
 
@@ -38,7 +37,7 @@ def calculate_angle(a, b, c):
     return np.degrees(angle) # Convert the angle from radians to degrees
 
 
-def load_labels(file_path):
+def load_phases(file_path):
     assert os.path.exists(file_path), f"File {file_path} not found"
     labels = []
     if os.path.exists(file_path):
@@ -49,36 +48,41 @@ def load_labels(file_path):
 
 
 # check if the file is an image or video
- 
+
+class FileType(Enum):
+    IMAGE = 'image'
+    VIDEO = 'video'
+    UNKNOWN = 'unknown'
+
 def check_fileType(file_path: str):
     if file_path.split('.')[-1] in ['jpg', 'png', 'jpeg', 'bmp', 'webp']:
-        return 'image'
+        return FileType.IMAGE
     elif file_path.split('.')[-1] in ['mp4', 'avi', 'mov']:
-        return 'video'
+        return FileType.VIDEO
     else:
-        return 'unknown'
+        return FileType.UNKNOWN
 
 #----------------------------------------------------------
 
-class DebugType(Enum):
+class Mode(Enum):
     DEBUG = 1
     INFO = 2
     WARNING = 3
 
-class Debugger:
+class Logger:
     def __init__(self, enabled=True):
         self.enabled = enabled
 
     def enable(self, enabled=True):
         self.enabled = enabled
 
-    def log(self, type=DebugType.DEBUG, message=""):
+    def log(self, type=Mode.DEBUG, message=""):
         if self.enabled:
-            if type == DebugType.DEBUG:
+            if type == Mode.DEBUG:
                 print(f"[DEBUG]: {message}")
-            elif type == DebugType.INFO:
+            elif type == Mode.INFO:
                 print(f"[INFO]: {message}")
-            elif type == DebugType.WARNING:
+            elif type == Mode.WARNING:
                 print(f"[WARNING]: {message}")
 
 def get_database(request: Request) -> DatabaseManager:
@@ -86,7 +90,6 @@ def get_database(request: Request) -> DatabaseManager:
 
 def get_yolomodel(request: Request) -> YOLOv8:
     return request.app.yolo
-
 
 def save_uploaded_file(upload_file: UploadFile, destination: str, add_uuid: bool = False) -> Path:
     destination_folder_path = Path(destination)

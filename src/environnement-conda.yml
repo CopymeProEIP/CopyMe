@@ -1,24 +1,34 @@
+# Pour créer cet environnement conda, exécutez la commande suivante:
+# conda env create -f environnement-conda.yml
+#
+# Pour activer l'environnement:
+# conda activate copyme-cuda
+#
+# Pour mettre à jour l'environnement après modification du fichier:
+# conda env update -f environnement-conda.yml --prune
 name: copyme-cuda
 dependencies:
   - python=3.9
   - numpy
   - pip
   - pip:
-    - torch
-    - torchvision
-    - torchaudio
-    - ultralytics==8.3.9
-    - opencv-python
-    - roboflow
-    - selenium
-    - colorlog
+      - torch
+      - torchvision
+      - torchaudio
+      - ultralytics==8.3.9
+      - opencv-python
+      - roboflow
+      - selenium
+      - colorlog
 
-    # for back end api
-    - pymongo
-    - motor
+      # for back end api
+      - pymongo
+      - motor
 
-    # for production
-    - gunicorn
-    - pydantic>=2.10.6
-    - fastapi[standard]>=0.115.7
-    - pydantic-settings
+      # for production
+      - gunicorn
+      - pydantic>=2.10.6
+      - fastapi[standard]>=0.115.7
+      - pydantic-settings
+      - supervision
+      - filterpy>=1.4.5

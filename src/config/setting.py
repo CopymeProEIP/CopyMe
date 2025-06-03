@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from pydantic import BaseModel, ValidationError, field_validator
 from dotenv import load_dotenv
 import os
 from . import exception_class

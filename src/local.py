@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
 
-from yolov8_basketball.yolov8 import YOLOv8
+import logging
+from logging_setup import setup_logging
+from yolov8_basketball.phase_detection import PhaseDetection
 import argparse
-import json
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('-a', '--model', type=str, default="model/copyme.pt", help='model path')
     parser.add_argument("-i", "--input", type=str, default="../assets/follow.jpg", help="path to image or video")
     parser.add_argument("-o", "--output", type=str, default="../feedback", help="path to output directory")
     parser.add_argument("-m", "--mode", type=str, default="debug", help="mode to run the model")
     args = parser.parse_args()
+    # Set up logging
+    setup_logging()
 
-    yolo = YOLOv8(capture_index=args.input, save_path=args.output, mode=args.mode)
-    yolo.load_model('model/copyme.pt')
-    yolo.load_keypoint_model()
-    results = yolo.capture()
+    # Get the logger
+    logger = logging.getLogger(__name__)
+
+    yolo = PhaseDetection(
+        input=args.input,
+        save_dir=args.output,
+        model_path=args.model,
+        kalman_filter=True, # custom filter to improve accuracy
+        temporal_smoothing=True,
+        verbose=True
+    )
+    results = yolo.run()
     result = "["
     for i, res in enumerate(results):
         print(f"{res.model_dump_json(indent=4)}")
