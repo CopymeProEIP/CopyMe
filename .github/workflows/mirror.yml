@@ -20,6 +20,7 @@ jobs:
           MIRROR_TOKEN: ${{ secrets.COPYME_TOKEN }}
         run: |
           echo "🔐 Token starts with: ${MIRROR_TOKEN:0:4}****"
+          echo "🔐 Token present? [${#MIRROR_TOKEN}] caractères"
           echo "🔍 Testing access to remote repository..."
           git ls-remote https://x-access-token:${MIRROR_TOKEN}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git
 
