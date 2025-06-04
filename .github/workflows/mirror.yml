@@ -17,21 +17,21 @@ jobs:
 
       - name: Debug token access
         env:
-          MIRROR_TOKEN: ${{ secrets.COPYME_TOKEN }}
+          MIRROR_TOKEN: ${{ secrets.TOKEN }}
         run: |
           echo "🔐 Token starts with: ${MIRROR_TOKEN:0:4}****"
           echo "🔐 Token present? [${#MIRROR_TOKEN}] caractères"
           echo "🔍 Testing access to remote repository..."
-          git ls-remote https://x-access-token:${MIRROR_TOKEN}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git
+          git ls-remote https://x:${MIRROR_TOKEN}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git
 
       - name: Mirror all branches
         env:
-          MIRROR_TOKEN: ${{ secrets.COPYME_TOKEN }}
+          MIRROR_TOKEN: ${{ secrets.TOKEN }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git remote add mirror https://x-access-token:${MIRROR_TOKEN}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git
+          git remote add mirror https://x:${MIRROR_TOKEN}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git
           git remote -v
           git push mirror --all
           git push mirror --tags
