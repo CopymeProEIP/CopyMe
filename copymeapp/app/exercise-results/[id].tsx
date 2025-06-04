@@ -73,7 +73,11 @@ export default function ExerciseResultsScreen() {
 					<ThemedView style={styles.content}>
 						<ThemedView style={styles.scoreContainer}>
 							<Award size={40} color='gold' style={styles.awardIcon} />
-							<ThemedText type='title' style={styles.scoreValue} adjustsFontSizeToFit={true} numberOfLines={1}>
+							<ThemedText
+								type='title'
+								style={styles.scoreValue}
+								adjustsFontSizeToFit={true}
+								numberOfLines={1}>
 								{score}/100
 							</ThemedText>
 							<ThemedText type='subtitle' style={styles.scoreMessage}>

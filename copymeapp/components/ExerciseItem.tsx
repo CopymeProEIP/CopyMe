@@ -33,13 +33,16 @@ interface ExerciseItemProps {
 }
 
 export function ExerciseItem({ exercise, onPress }: ExerciseItemProps) {
-
 	return (
 		<TouchableOpacity onPress={() => onPress && onPress(exercise)} activeOpacity={0.8}>
 			<Card style={styles.container}>
 				<ThemedView style={styles.content}>
 					<Image
-						source={{ uri: exercise.imageUrl || exerciseImageUrls[Math.floor(Math.random() * exerciseImageUrls.length)] }}
+						source={{
+							uri:
+								exercise.imageUrl ||
+								exerciseImageUrls[Math.floor(Math.random() * exerciseImageUrls.length)],
+						}}
 						style={styles.image}
 						defaultSource={require('@/assets/images/placeholder.png')}
 					/>
@@ -50,7 +53,9 @@ export function ExerciseItem({ exercise, onPress }: ExerciseItemProps) {
 							</ThemedText>
 							<ThemedView style={styles.levelBadge}>
 								<ThemedText type='default' style={styles.levelText}>
-									{typeof exercise.difficulty === 'number' ? `Level ${exercise.difficulty}` : exercise.difficulty}
+									{typeof exercise.difficulty === 'number'
+										? `Level ${exercise.difficulty}`
+										: exercise.difficulty}
 								</ThemedText>
 							</ThemedView>
 						</ThemedView>

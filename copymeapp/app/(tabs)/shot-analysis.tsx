@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useRouter } from 'expo-router';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
@@ -188,8 +188,7 @@ export default function ShotAnalysisListScreen() {
 	);
 
 	return (
-		<ThemedView style={styles.container}>
-
+		<ThemedSafeAreaView style={styles.container}>
 			<FilterChips
 				options={dateFilters}
 				selectedIds={selectedDateFilters}
@@ -213,7 +212,7 @@ export default function ShotAnalysisListScreen() {
 					</ThemedText>
 				</ThemedView>
 			)}
-		</ThemedView>
+		</ThemedSafeAreaView>
 	);
 }
 

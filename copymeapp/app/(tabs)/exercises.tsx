@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { FlatList, StyleSheet, Platform } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
@@ -91,7 +91,7 @@ export default function ExercisesScreen() {
 	};
 
 	return (
-		<ThemedView style={styles.container}>
+		<ThemedSafeAreaView style={styles.container}>
 			<SearchBar onSearch={setSearchQuery} placeholder='Search exercises...' />
 			<FilterChips
 				options={levelFilters}
@@ -110,7 +110,7 @@ export default function ExercisesScreen() {
 			) : filteredExercises.length > 0 ? (
 				<FlatList
 					data={filteredExercises}
-					keyExtractor={(item) => item.id}
+					keyExtractor={(item, index) => index.toString()}
 					renderItem={({ item }) => <ExerciseItem exercise={item} onPress={handleExercisePress} />}
 					showsVerticalScrollIndicator={false}
 					contentContainerStyle={styles.listContent}
@@ -124,7 +124,7 @@ export default function ExercisesScreen() {
 					</ThemedText>
 				</ThemedView>
 			)}
-		</ThemedView>
+		</ThemedSafeAreaView>
 	);
 }
 
