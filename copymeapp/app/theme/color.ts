@@ -2,10 +2,11 @@
 
 export default {
 	colors: {
-		primary: '#F8F9FA',
+		primary: '#FF6A00',
+		background: '#F8F9FA',
 		secondary: '#E8E8E8',
 		foreground: '#FFFFFF',
-		accent: '#FF7F3F',
+		accent: '#FFC300',
 		hoverAccent: '#E36414',
 		error: '#E63946',
 		success: '#4CAF50',

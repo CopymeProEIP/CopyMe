@@ -8,7 +8,6 @@ import { Card } from '@/components/Card';
 import { useRouter } from 'expo-router';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
 import { Activity } from 'lucide-react-native';
-import { SearchBar } from '@/components/SearchBar';
 import { getProgressColor } from '@/styles/theme';
 
 // Type pour les éléments d'analyse
@@ -72,7 +71,7 @@ const dateFilters: FilterOption[] = [
 	{ id: 'older', label: 'Older' },
 ];
 
-export default function ShotAnalysisListScreen() {
+export default function analysisListScreen() {
 	const router = useRouter();
 	const [selectedDateFilters, setSelectedDateFilters] = useState<string[]>(['all']);
 	const [customDate, setCustomDate] = useState(new Date());

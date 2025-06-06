@@ -46,9 +46,9 @@ export default function TabLayout() {
 				}}
 			/>
 			<Tabs.Screen
-				name='shot-analysis'
+				name='analysis'
 				options={{
-					title: 'Shot Analysis',
+					title: 'Analysis',
 					headerShown: false,
 					tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
 				}}
