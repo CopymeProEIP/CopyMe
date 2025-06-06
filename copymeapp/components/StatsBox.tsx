@@ -4,7 +4,6 @@ import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 import { LucideIcon } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
-import { ProgressCircle } from 'react-native-svg-charts';
 import { Card } from './Card';
 import { useState } from 'react';
 
@@ -23,13 +22,13 @@ export function StatsBox(props: { title: string; value: string; icon: LucideIcon
 					<ThemedText type='default'>{props.value}</ThemedText>
 				</ThemedView>
 				<ThemedView style={styles.containerBody}>
-					<ProgressCircle
+					{/* <ProgressCircle
 						style={styles.progressCircle}
 						progress={progress}
 						progressColor={'gold'}
 						backgroundColor={'rgba(255,215,0,0.2)'}
 						strokeWidth={8}
-					/>
+					/> */}
 					<ThemedText style={styles.percentageText} type='defaultSemiBold'>
 						{percentage}%
 					</ThemedText>

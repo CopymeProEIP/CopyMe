@@ -138,7 +138,7 @@ export default function analysisListScreen() {
 
 	const handleAnalysisPress = (analysis: AnalysisItem) => {
 		router.push({
-			pathname: '/analysis/[id]',
+			pathname: '/analyze/[id]',
 			params: {
 				id: analysis.id,
 				title: analysis.title,

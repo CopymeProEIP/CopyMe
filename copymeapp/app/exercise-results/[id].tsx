@@ -53,7 +53,7 @@ export default function ExerciseResultsScreen() {
 
 	const handleViewAnalysis = () => {
 		const id = Array.isArray(params.id) ? params.id[0] : params.id;
-		router.push({
+		router.replace({
 			pathname: '/analysis/[id]',
 			params: {
 				id,
