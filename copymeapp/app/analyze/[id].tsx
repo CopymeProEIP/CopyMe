@@ -5,7 +5,7 @@ import { StyleSheet, Platform, View, ScrollView, TouchableOpacity, Button } from
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
-import { Video } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useLocalSearchParams } from 'expo-router';
 import {
 	Lightbulb,
@@ -20,125 +20,8 @@ import {
 } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { Keypoints, ProcessedData } from '@/constants/processedData';
+import { mockupProcessedData } from '@/constants/Mockup';
 
-const mockProcessedData: ProcessedData = {
-	id: '123456',
-	url: 'https://example.com/videos/shot_analysis.mp4',
-	exercise_id: '42',
-	role: 'client',
-	frames: [
-		{
-			timestamp: 1200, // 1.2 secondes
-			persons: [
-				{
-					step_position: 'shot_preparation',
-					precision_global: 78,
-					keypoint: {
-						nose: { x: 320, y: 240, confidence: 0.92 },
-						left_eye: { x: 310, y: 235, confidence: 0.91 },
-						right_eye: { x: 330, y: 235, confidence: 0.91 },
-						left_ear: { x: 300, y: 240, confidence: 0.85 },
-						right_ear: { x: 340, y: 240, confidence: 0.87 },
-						left_shoulder: { x: 300, y: 280, confidence: 0.95 },
-						right_shoulder: { x: 340, y: 280, confidence: 0.96 },
-						left_elbow: { x: 280, y: 320, confidence: 0.92 },
-						right_elbow: { x: 360, y: 320, confidence: 0.93 },
-						left_wrist: { x: 290, y: 350, confidence: 0.89 },
-						right_wrist: { x: 350, y: 350, confidence: 0.91 },
-						left_hip: { x: 310, y: 380, confidence: 0.88 },
-						right_hip: { x: 330, y: 380, confidence: 0.89 },
-						left_knee: { x: 310, y: 450, confidence: 0.87 },
-						right_knee: { x: 330, y: 450, confidence: 0.88 },
-						left_ankle: { x: 310, y: 510, confidence: 0.85 },
-						right_ankle: { x: 330, y: 510, confidence: 0.86 },
-					},
-					angles: [
-						{
-							name: 'right_elbow',
-							start_point: { x: 340, y: 280 }, // épaule droite
-							middle_point: { x: 360, y: 320 }, // coude droit
-							end_point: { x: 350, y: 350 }, // poignet droit
-							angle: 110,
-						},
-						{
-							name: 'left_elbow',
-							start_point: { x: 300, y: 280 }, // épaule gauche
-							middle_point: { x: 280, y: 320 }, // coude gauche
-							end_point: { x: 290, y: 350 }, // poignet gauche
-							angle: 120,
-						},
-						{
-							name: 'right_knee',
-							start_point: { x: 330, y: 380 }, // hanche droite
-							middle_point: { x: 330, y: 450 }, // genou droit
-							end_point: { x: 330, y: 510 }, // cheville droite
-							angle: 175,
-						},
-					],
-					feedback: [
-						'Your elbow angle is too wide',
-						'Keep your elbow closer to your body',
-						'Maintain vertical alignment',
-					],
-					improvements: [
-						{
-							angle_index: 0, // coude droit
-							target_angle: 90,
-							direction: 'decrease',
-							magnitude: 20,
-							priority: 'high',
-						},
-						{
-							angle_index: 1, // coude gauche
-							target_angle: 100,
-							direction: 'decrease',
-							magnitude: 20,
-							priority: 'medium',
-						},
-					],
-				},
-			],
-		},
-		{
-			timestamp: 1800, // 1.8 secondes
-			persons: [
-				{
-					step_position: 'shot_release',
-					precision_global: 85,
-					keypoint: {
-						// ... données similaires mais avec position différente
-						nose: { x: 320, y: 230, confidence: 0.94 },
-						// ... autres keypoints similaires
-						right_shoulder: { x: 340, y: 270, confidence: 0.97 },
-						right_elbow: { x: 355, y: 290, confidence: 0.95 },
-						right_wrist: { x: 365, y: 320, confidence: 0.94 },
-						// ... autres keypoints
-					} as Keypoints, // type assertion pour éviter d'écrire tous les points
-					angles: [
-						{
-							name: 'right_elbow',
-							start_point: { x: 340, y: 270 },
-							middle_point: { x: 355, y: 290 },
-							end_point: { x: 365, y: 320 },
-							angle: 165,
-						},
-						// ... autres angles
-					],
-					feedback: ['Good extension at release', 'Follow through could be more pronounced'],
-					improvements: [
-						{
-							angle_index: 0,
-							target_angle: 175,
-							direction: 'increase',
-							magnitude: 10,
-							priority: 'low',
-						},
-					],
-				},
-			],
-		},
-	],
-};
 
 function Feedback({ feedbacks }: { feedbacks: string[] }) {
 	return feedbacks.map((feedback, index) => (
@@ -156,9 +39,11 @@ function Feedback({ feedbacks }: { feedbacks: string[] }) {
 export default function AnalysisDetailScreen() {
 	const params = useLocalSearchParams();
 	const colors = Colors;
-	const video = React.useRef<Video>(null);
+  const player = useVideoPlayer('@/assets/videos/pro_shot.mp4', (player) => {
+    player.loop = true;
+    player.play();
+  });
 	const scrollViewRef = React.useRef<ScrollView>(null);
-	const [player, setPlayer] = useState(0);
 	const [frame, setFrame] = useState(0);
 	const [tipsExpanded, setTipsExpanded] = useState(false);
 	const [isPlaying, setIsPlaying] = useState(false);
@@ -181,17 +66,17 @@ export default function AnalysisDetailScreen() {
 	};
 
 	const togglePlayPause = async () => {
-		if (video.current) {
+		if (player.currentTime) {
 			if (isPlaying) {
-				await video.current.pauseAsync();
+				player.pause();
 			} else {
-				await video.current.playAsync();
+				player.play();
 			}
 			setIsPlaying(!isPlaying);
 		}
 	};
 
-	const feedbacks = mockProcessedData.frames[frame].persons[player].feedback;
+	const feedbacks = mockupProcessedData.frames[frame].persons[0].feedback;
 	const tipCount = feedbacks.length;
 
 	return (
@@ -233,19 +118,7 @@ export default function AnalysisDetailScreen() {
 				</Card>
 				<ThemedView>
 					<ThemedView style={styles.videoContainer}>
-						<Video
-							ref={video}
-							style={styles.video}
-							source={require('@/assets/videos/pro_shot.mp4')}
-							useNativeControls
-							shouldPlay={false}
-							isLooping
-							onPlaybackStatusUpdate={(status) => {
-								if (status.isLoaded) {
-									setIsPlaying(status.isPlaying);
-								}
-							}}
-						/>
+						<VideoView style={styles.video} player={player} allowsFullscreen allowsPictureInPicture />
 					</ThemedView>
 
 					<ThemedView style={styles.videoContainer}></ThemedView>
@@ -268,7 +141,7 @@ export default function AnalysisDetailScreen() {
 							showsHorizontalScrollIndicator={false}
 							style={styles.positionScroll}
 							contentContainerStyle={styles.positionScrollContent}>
-							{mockProcessedData.frames.map((frameData, idx) => (
+							{mockupProcessedData.frames.map((frameData, idx) => (
 								<TouchableOpacity
 									key={idx}
 									style={[styles.positionItem, frame === idx ? styles.activePositionItem : null]}
@@ -276,7 +149,7 @@ export default function AnalysisDetailScreen() {
 									<ThemedText
 										type='defaultSemiBold'
 										style={frame === idx ? styles.activePositionText : null}>
-										{idx + 1}. {frameData.persons[player]?.step_position || '-'}
+										{idx + 1}. {frameData.persons[0]?.step_position || '-'}
 									</ThemedText>
 								</TouchableOpacity>
 							))}
@@ -286,7 +159,7 @@ export default function AnalysisDetailScreen() {
 					<TouchableOpacity
 						style={[styles.button, styles.navButton]}
 						onPress={() => {
-							const newFrame = Math.min(mockProcessedData.frames.length - 1, frame + 1);
+							const newFrame = Math.min(mockupProcessedData.frames.length - 1, frame + 1);
 							updateFrame(newFrame);
 						}}>
 						<ThemedText type='defaultSemiBold'>{'>'}</ThemedText>
@@ -325,7 +198,7 @@ export default function AnalysisDetailScreen() {
 							<TouchableOpacity
 								style={styles.controlButton}
 								onPress={() => {
-									const newFrame = Math.min(mockProcessedData.frames.length - 1, frame + 1);
+									const newFrame = Math.min(mockupProcessedData.frames.length - 1, frame + 1);
 									updateFrame(newFrame);
 								}}>
 								<SkipForward size={32} color={colors.light.principal} />

@@ -6,12 +6,13 @@ import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
-import { ExerciseItem, Exercise } from '@/components/ExerciseItem';
+import { ExerciseItem } from '@/components/ExerciseItem';
 import { useRouter } from 'expo-router';
 import { Activity } from 'lucide-react-native';
 import { useApi } from '@/utils/api';
 import styles from '../styles/exercisesTabs';
 import color from '@/app/theme/color';
+import { Exercise } from '@/constants/interface';
 
 const levelFilters: FilterOption[] = [
 	{ id: 'all', label: 'All Levels' },

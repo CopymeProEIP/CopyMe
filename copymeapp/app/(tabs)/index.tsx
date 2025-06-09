@@ -1,64 +1,64 @@
 /** @format */
 
-import { Image, StyleSheet, Platform } from 'react-native';
+import { Image, ScrollView, StyleSheet } from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
-import { StatsBox } from '@/components/StatsBox';
-import { Trophy } from 'lucide-react-native';
-import { ReviewsList } from '@/components/ReviewsList';
-
-const reviews = [
-	{
-		id: '1',
-		title: 'Shooting',
-		score: 100,
-		date: new Date(),
-	},
-	{
-		id: '2',
-		title: 'Free Throw',
-		score: 80,
-		date: new Date(),
-	},
-	{
-		id: '3',
-		title: 'Shooting',
-		score: 20,
-		date: new Date(),
-	},
-];
+import ReviewItem from '@/components/v1/ReviewItem';
+import { mockupProcessedData } from '@/constants/Mockup';
+import SeeAll from '@/components/v1/SeeAll';
+import OverallStats from '@/components/v1/OverallStats';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
 	return (
-		<ThemedSafeAreaView>
-			<ThemedView style={styles.titleContainer}>
-				<ThemedText type='title'>Dashboard</ThemedText>
-				<HelloWave />
-			</ThemedView>
-			<StatsBox title='Best Score' value='Three-point shoot' icon={Trophy} />
-			<ReviewsList reviews={reviews} onSeeAllPress={() => console.log('See all reviews')} />
-		</ThemedSafeAreaView>
+		<SafeAreaProvider>
+			<ThemedSafeAreaView>
+				<ScrollView>
+					<ThemedView style={styles.container}>
+						<ThemedView style={styles.titleContainer}>
+							<ThemedText type='title'>Dashboard</ThemedText>
+							<HelloWave />
+						</ThemedView>
+						<Image source={require('@/assets/images/WelcomeCta2.png')} style={styles.cta} />
+
+						<ThemedView style={styles.reviewContainer}>
+							<SeeAll text='Last reviews' />
+							<ThemedView style={{ flex: 1, gap: 8 }}>
+								<ReviewItem item={mockupProcessedData} />
+								<ReviewItem item={mockupProcessedData} />
+							</ThemedView>
+						</ThemedView>
+						<ThemedView style={styles.reviewContainer}>
+							<SeeAll text='Overall Stats' cta='See More' />
+							<OverallStats />
+						</ThemedView>
+					</ThemedView>
+				</ScrollView>
+			</ThemedSafeAreaView>
+		</SafeAreaProvider>
 	);
 }
 
 const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		padding: 16,
+		gap: 24,
+	},
 	titleContainer: {
 		flexDirection: 'row',
 		alignItems: 'center',
+		gap: 16,
+	},
+	reviewContainer: {
+		flex: 1,
 		gap: 8,
 	},
-	stepContainer: {
-		gap: 8,
-		marginBottom: 8,
-	},
-	reactLogo: {
-		height: 178,
-		width: 290,
-		bottom: 0,
-		left: 0,
-		position: 'absolute',
+	cta: {
+		height: 194,
+		width: '100%',
+		borderRadius: 8,
 	},
 });

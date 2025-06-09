@@ -9,17 +9,21 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { Activity } from 'lucide-react-native';
 import { useProtectedRoute } from '@/utils/auth';
+import color from '../theme/color';
 
 export default function TabLayout() {
 	useProtectedRoute(true);
 	return (
 		<Tabs
 			screenOptions={{
-				tabBarActiveTintColor: 'gold',
+				tabBarActiveTintColor: color.colors.primary,
 				tabBarInactiveTintColor: Colors.light.tabIconDefault,
-				tabBarButton: HapticTab,
+				tabBarButton: (props) => {
+					const { ref, ...otherProps } = props;
+					return <HapticTab {...otherProps} />;
+				},
 				tabBarStyle: {
-					borderTopColor: '#E5E5E5',
+					borderTopColor: color.colors.border,
 					borderTopWidth: 1,
 					...Platform.select({
 						ios: {
