@@ -1,0 +1,49 @@
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+platform :ios, min_ios_version_supported
+prepare_react_native_project!
+
+# Désactivation de Flipper pour éviter les problèmes
+ENV['NO_FLIPPER'] = "1"
+
+# Configuration des permissions
+require_relative '../node_modules/react-native-permissions/scripts/setup.rb'
+
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
+
+target 'BabylonApp' do
+  config = use_native_modules!
+
+  # Configuration des permissions spécifiques
+  setup_permissions([
+    'Camera', # Ajouter les permissions nécessaires ici
+  ])
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    # Enables Fabric when target definition 'BabylonApp' is parsed.
+    :fabric_enabled => true,
+    # Hermes is now enabled by default. Disable by setting this flag to false.
+    :hermes_enabled => true,
+    # Enables TurboModule system
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false
+    )
+  end
+end
