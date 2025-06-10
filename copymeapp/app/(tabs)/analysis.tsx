@@ -1,14 +1,14 @@
 /** @format */
 
 import React, { useState, useMemo } from 'react';
-import { FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
-import { Card } from '@/components/Card';
 import { useRouter } from 'expo-router';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
 import { Activity } from 'lucide-react-native';
-import { getProgressColor } from '@/styles/theme';
+import ReviewItem from '@/components/v1/ReviewItem';
+import color from '../theme/color';
 
 // Type pour les éléments d'analyse
 interface AnalysisItem {
@@ -147,45 +147,6 @@ export default function analysisListScreen() {
 		});
 	};
 
-	const renderAnalysisItem = ({ item }: { item: AnalysisItem }) => (
-		<TouchableOpacity onPress={() => handleAnalysisPress(item)} activeOpacity={0.8}>
-			<Card style={styles.card}>
-				<Image
-					source={{ uri: item.thumbnailUrl }}
-					style={styles.thumbnail}
-					defaultSource={require('@/assets/images/placeholder.png')}
-				/>
-
-				<ThemedView style={styles.contentContainer}>
-					<ThemedView style={styles.headerContainer}>
-						<ThemedText type='defaultSemiBold'>{item.title}</ThemedText>
-						<ThemedText type='small' style={styles.date}>
-							{item.date.toLocaleDateString()}
-						</ThemedText>
-					</ThemedView>
-
-					<ThemedText type='default' style={styles.exerciseName}>
-						{item.exerciseName}
-					</ThemedText>
-
-					<ThemedView style={styles.progressContainer}>
-						<ThemedView style={styles.progressBarContainer}>
-							<ThemedView
-								style={[
-									styles.progressBar,
-									{ width: `${item.progress}%`, backgroundColor: getProgressColor(item.progress) },
-								]}
-							/>
-						</ThemedView>
-						<ThemedText type='small' style={styles.progressText}>
-							{item.progress}%
-						</ThemedText>
-					</ThemedView>
-				</ThemedView>
-			</Card>
-		</TouchableOpacity>
-	);
-
 	return (
 		<ThemedSafeAreaView style={styles.container}>
 			<FilterChips
@@ -197,14 +158,15 @@ export default function analysisListScreen() {
 			{filteredAnalysisData.length > 0 ? (
 				<FlatList
 					data={filteredAnalysisData}
-					renderItem={renderAnalysisItem}
+					// renderItem={renderAnalysisItem}
+					renderItem={({ item }: { item: AnalysisItem }) => <ReviewItem item={item} />}
 					keyExtractor={(item) => item.id}
 					contentContainerStyle={styles.listContent}
 					showsVerticalScrollIndicator={false}
 				/>
 			) : (
 				<ThemedView style={styles.emptyStateContainer}>
-					<Activity size={60} color='gold' style={styles.emptyStateIcon} />
+					<Activity size={60} color={color.colors.primary} style={styles.emptyStateIcon} />
 					<ThemedText type='subtitle'>No Analyses Found</ThemedText>
 					<ThemedText type='default' style={styles.emptyStateText}>
 						No shot analyses match your current filters. Try adjusting your date filters.

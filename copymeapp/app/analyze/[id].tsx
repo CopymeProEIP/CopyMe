@@ -21,7 +21,7 @@ import {
 import { Colors } from '@/constants/Colors';
 import { Keypoints, ProcessedData } from '@/constants/processedData';
 import { mockupProcessedData } from '@/constants/Mockup';
-
+import color from '../theme/color';
 
 function Feedback({ feedbacks }: { feedbacks: string[] }) {
 	return feedbacks.map((feedback, index) => (
@@ -39,10 +39,10 @@ function Feedback({ feedbacks }: { feedbacks: string[] }) {
 export default function AnalysisDetailScreen() {
 	const params = useLocalSearchParams();
 	const colors = Colors;
-  const player = useVideoPlayer('@/assets/videos/pro_shot.mp4', (player) => {
-    player.loop = true;
-    player.play();
-  });
+	const player = useVideoPlayer('@/assets/videos/pro_shot.mp4', (player) => {
+		player.loop = true;
+		player.play();
+	});
 	const scrollViewRef = React.useRef<ScrollView>(null);
 	const [frame, setFrame] = useState(0);
 	const [tipsExpanded, setTipsExpanded] = useState(false);
@@ -118,7 +118,12 @@ export default function AnalysisDetailScreen() {
 				</Card>
 				<ThemedView>
 					<ThemedView style={styles.videoContainer}>
-						<VideoView style={styles.video} player={player} allowsFullscreen allowsPictureInPicture />
+						<VideoView
+							style={styles.video}
+							player={player}
+							allowsFullscreen
+							allowsPictureInPicture
+						/>
 					</ThemedView>
 
 					<ThemedView style={styles.videoContainer}></ThemedView>
@@ -318,7 +323,7 @@ const styles = StyleSheet.create({
 	},
 	tipBullet: {
 		marginRight: 8,
-		color: 'gold',
+		color: color.colors.primary,
 		fontSize: 18,
 	},
 	tipText: {

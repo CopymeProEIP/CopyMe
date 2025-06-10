@@ -1,19 +1,16 @@
 /** @format */
 
-import React, { useMemo } from 'react';
-import { StyleSheet, ScrollView, Image, View, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { StyleSheet, Image, View, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Play, Upload } from 'lucide-react-native';
-
-// Images pour les différents niveaux de difficulté
-const levelImages = {
-	Beginner: 'https://images.unsplash.com/photo-1546519638-68e109acd618?q=80&w=400',
-	Intermediate: 'https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?q=80&w=400',
-	Advanced: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=400',
-};
+import { Play } from 'lucide-react-native';
+import color from '../theme/color';
+import ReviewItem from '@/components/v1/ReviewItem';
+import { Badge } from '@/components/Badge';
+import ParallaxScrollView from '@/components/ParallaxScrollView';
+import { ThemedView } from '@/components/ThemedView';
 
 const reviews = [
 	{
@@ -41,25 +38,6 @@ export default function ExerciseDetailScreen() {
 	const router = useRouter();
 	const { id, title, level, description, completed } = params;
 
-	// Calculer le score moyen des précédentes sessions
-	const averageScore = useMemo(() => {
-		if (reviews.length === 0) return 0;
-		const sum = reviews.reduce((acc, review) => acc + review.score, 0);
-		return Math.round(sum / reviews.length);
-	}, []);
-
-	// Trouver le meilleur score
-	const bestScore = useMemo(() => {
-		if (reviews.length === 0) return 0;
-		return Math.max(...reviews.map((review) => review.score));
-	}, []);
-
-	// Sélectionner l'image en fonction du niveau
-	const imageUrl =
-		level && typeof level === 'string'
-			? levelImages[level as keyof typeof levelImages] || levelImages.Beginner
-			: levelImages.Beginner;
-
 	const handleStartExercise = () => {
 		// Convertir les paramètres en string pour éviter l'erreur TypeScript
 		const idParam = typeof id === 'string' ? id : String(id);
@@ -72,96 +50,69 @@ export default function ExerciseDetailScreen() {
 	};
 
 	return (
-		<ScrollView style={styles.container}>
-			<Image
-				source={{ uri: imageUrl }}
-				style={styles.coverImage}
-				defaultSource={require('@/assets/images/placeholder.png')}
-			/>
-
-			<ThemedView style={styles.content}>
+		<ParallaxScrollView
+			headerImage={
+				<Image
+					source={
+						params.imageUrl
+							? { uri: params.imageUrl as string }
+							: require('@/assets/images/placeholder.png')
+					}
+					style={styles.coverImage}
+					defaultSource={require('@/assets/images/placeholder.png')}
+				/>
+			}
+			headerBackgroundColor={{dark: color.colors.background, light: color.colors.background}}>
+			<ThemedView>
 				<ThemedView style={styles.header}>
-					<ThemedText type='title'>{title as string}</ThemedText>
-					<View style={styles.badge}>
-						<ThemedText style={styles.badgeText}>{level as string}</ThemedText>
-					</View>
+					<ThemedText type='title'>{(title as string) || 'No Name'}</ThemedText>
+					<Badge type='primary' text={(level as string) || 'No level'} />
 				</ThemedView>
 
 				<Card style={styles.statsCard}>
 					<ThemedView style={styles.statsRow}>
 						<ThemedView style={styles.statItem}>
-							<ThemedText type='defaultSemiBold'>Completion</ThemedText>
-							<ThemedText type='subtitle'>{averageScore}%</ThemedText>
+							<ThemedText type='defaultSemiBold'>Sessions</ThemedText>
+							<ThemedText type='subtitle'>{reviews.length}</ThemedText>
 						</ThemedView>
 						<View style={styles.divider} />
 						<ThemedView style={styles.statItem}>
-							<ThemedText type='defaultSemiBold'>Best Score</ThemedText>
-							<ThemedText type='subtitle'>{bestScore}%</ThemedText>
+							<ThemedText type='defaultSemiBold'>Highest alignement</ThemedText>
+							<ThemedText type='subtitle'>0%</ThemedText>
 						</ThemedView>
 					</ThemedView>
 				</Card>
 
 				<TouchableOpacity style={styles.startButton} onPress={handleStartExercise}>
-					<Play size={24} color='#000000' />
-					<ThemedText style={styles.startButtonText}>Start Exercise</ThemedText>
+					<Play size={24} color={color.colors.textForeground} />
+					<ThemedText type='button'>Start Exercise</ThemedText>
 				</TouchableOpacity>
 
 				<ThemedText type='subtitle' style={styles.sectionTitle}>
 					Description
 				</ThemedText>
 				<Card style={styles.descriptionCard}>
-					<ThemedText type='default'>{description as string}</ThemedText>
+					<ThemedText type='default'>{description as string || 'No description'}</ThemedText>
 				</Card>
 
 				<ThemedText type='subtitle' style={styles.sectionTitle}>
 					Previous Sessions
 				</ThemedText>
 
-				{reviews.map((review) => (
-					<Card key={review.id} style={styles.sessionCard}>
-						<ThemedView style={styles.sessionHeader}>
-							<ThemedText type='defaultSemiBold'>{review.title}</ThemedText>
-							<ThemedText type='small'>{review.date.toLocaleDateString()}</ThemedText>
-						</ThemedView>
-						<ThemedView style={styles.progressContainer}>
-							<ThemedView style={styles.progressBarContainer}>
-								<View
-									style={[
-										styles.progressBar,
-										{ width: `${review.score}%`, backgroundColor: getProgressColor(review.score) },
-									]}
-								/>
-							</ThemedView>
-							<ThemedText type='defaultSemiBold'>{review.score}%</ThemedText>
-						</ThemedView>
-					</Card>
+				{reviews.map((review, index) => (
+					<ReviewItem key={index} item={review} />
 				))}
 			</ThemedView>
-		</ScrollView>
+		</ParallaxScrollView>
 	);
 }
 
-// Helper function to determine progress bar color based on percentage
-function getProgressColor(progress: number): string {
-	if (progress >= 80) return 'gold';
-	if (progress >= 60) return '#36A2EB';
-	return '#FF6384';
-}
-
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
+
 	coverImage: {
 		width: '100%',
 		height: 250,
 		resizeMode: 'cover',
-	},
-	content: {
-		padding: 16,
-		marginTop: -40,
-		borderTopLeftRadius: 30,
-		borderTopRightRadius: 30,
 	},
 	header: {
 		flexDirection: 'row',
@@ -170,14 +121,10 @@ const styles = StyleSheet.create({
 		marginBottom: 24,
 	},
 	badge: {
-		backgroundColor: 'gold',
+		backgroundColor: color.colors.primary,
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 		borderRadius: 16,
-	},
-	badgeText: {
-		color: '#000',
-		fontWeight: 'bold',
 	},
 	statsCard: {
 		marginBottom: 24,
@@ -203,19 +150,13 @@ const styles = StyleSheet.create({
 		marginBottom: 24,
 	},
 	startButton: {
-		backgroundColor: 'gold',
+		backgroundColor: color.colors.primary,
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'center',
 		paddingVertical: 16,
 		borderRadius: 12,
 		marginBottom: 24,
-	},
-	startButtonText: {
-		marginLeft: 8,
-		fontSize: 16,
-		fontWeight: 'bold',
-		color: '#000',
 	},
 	sessionCard: {
 		marginBottom: 12,
@@ -225,21 +166,5 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		marginBottom: 8,
-	},
-	progressContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		gap: 8,
-	},
-	progressBarContainer: {
-		flex: 1,
-		height: 8,
-		backgroundColor: 'rgba(0,0,0,0.05)',
-		borderRadius: 4,
-		overflow: 'hidden',
-	},
-	progressBar: {
-		height: '100%',
-		borderRadius: 4,
 	},
 });

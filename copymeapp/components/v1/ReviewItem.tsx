@@ -7,7 +7,7 @@ import { ThemedText } from '../ThemedText';
 import color from '@/app/theme/color';
 
 const ReviewItem = ({ item }: { item: Partial<ProcessedData> }) => {
-	if (!item || !item.exercise) {
+	if (!item) {
 		return null;
 	}
 	const formattedDate = item.created_at
@@ -23,18 +23,20 @@ const ReviewItem = ({ item }: { item: Partial<ProcessedData> }) => {
 	return (
 		<ThemedView style={styles.container}>
 			<ThemedView>
-				<ThemedText type='defaultSemiBold'>{item.exercise.name}</ThemedText>
+				<ThemedText type='defaultSemiBold'>
+					{item?.exercise ? item?.exercise.name : 'No name'}
+				</ThemedText>
 				<ThemedText type='small'>{formattedDate}</ThemedText>
 			</ThemedView>
 			<ThemedView style={{ alignItems: 'center', padding: 8, borderRadius: 8 }}>
 				<ThemedText type='subtitle' style={styles.scoresText}>
-					{item.alignement_score}%
+					{item.alignement_score || 'NAN'}%
 				</ThemedText>
 				<ThemedText>Alignment</ThemedText>
 			</ThemedView>
 			<ThemedView style={{ alignItems: 'center', padding: 8, borderRadius: 8 }}>
 				<ThemedText type='subtitle' style={styles.scoresText}>
-					{item.precision_score}%
+					{item.precision_score || 'NAN'}%
 				</ThemedText>
 				<ThemedText>Precision</ThemedText>
 			</ThemedView>

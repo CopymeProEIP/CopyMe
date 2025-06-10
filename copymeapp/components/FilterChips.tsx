@@ -4,6 +4,7 @@ import { StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 import { useTheme } from '@react-navigation/native';
+import color from '@/app/theme/color';
 
 export type FilterOption = {
 	id: string;
@@ -33,11 +34,11 @@ export function FilterChips({ options, selectedIds, onToggle }: FilterChipsProps
 							style={[
 								styles.chip,
 								{
-									backgroundColor: isSelected ? 'gold' : 'transparent',
-									borderColor: isSelected ? 'gold' : colors.border,
+									backgroundColor: isSelected ?  color.colors.primary : 'transparent',
+									borderColor: isSelected ?  color.colors.primary : color.colors.border,
 								},
 							]}>
-							<ThemedText type='default' style={{ color: isSelected ? '#000' : colors.text }}>
+							<ThemedText type='default' style={{ color: isSelected ? color.colors.background : color.colors.textPrimary }}>
 								{option.label}
 							</ThemedText>
 						</ThemedView>
