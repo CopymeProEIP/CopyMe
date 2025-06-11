@@ -35,6 +35,12 @@ class FrameData(BaseModel):
     angles: List[AngleData]
     feedback: Optional[Dict] = None
 
+class FrameDataResponse(BaseModel):
+    class_name: str
+    url_path_frame: str
+    keypoints_positions: Dict[str, float]
+    angles: List[AngleData]
+
 # Main model representative a image
 class ProcessedImage(BaseModel):
     uuid: UUID = uuid4()
