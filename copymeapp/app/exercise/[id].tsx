@@ -77,7 +77,7 @@ export default function ExerciseDetailScreen() {
 						</ThemedView>
 						<View style={styles.divider} />
 						<ThemedView style={styles.statItem}>
-							<ThemedText type='defaultSemiBold'>Highest alignement</ThemedText>
+							<ThemedText type='defaultSemiBold'>Average alignement</ThemedText>
 							<ThemedText type='subtitle'>0%</ThemedText>
 						</ThemedView>
 					</ThemedView>

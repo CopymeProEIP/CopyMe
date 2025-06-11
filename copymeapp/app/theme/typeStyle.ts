@@ -70,12 +70,7 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		lineHeight: 24,
 		fontFamily: 'Inter-SemiBold',
-		color: '#FFFFFF',
-		backgroundColor: '#FF6A00',
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		borderRadius: 8,
-		textAlign: 'center',
+		color: color.colors.textForeground,
 	},
 	error: {
 		fontSize: 14,
