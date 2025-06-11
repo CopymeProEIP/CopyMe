@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { Activity } from 'lucide-react-native';
+import { Activity, User } from 'lucide-react-native';
 import { useProtectedRoute } from '@/utils/auth';
 import color from '../theme/color';
 
@@ -55,6 +55,14 @@ export default function TabLayout() {
 					title: 'Analysis',
 					headerShown: false,
 					tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
+				}}
+			/>
+			<Tabs.Screen
+				name='profile'
+				options={{
+					title: 'Profile',
+					headerShown: false,
+					tabBarIcon: ({ color }) => <User size={24} color={color} />,
 				}}
 			/>
 		</Tabs>

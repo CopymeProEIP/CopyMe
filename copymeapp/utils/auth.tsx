@@ -58,17 +58,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 	// Listen for segment changes to handle protected routes
 	useEffect(() => {
-		if (!isLoading) {
+		const verifyAuth = async () => {
+			const token = await AsyncStorage.getItem('userToken');
 			const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
 
-			if (!user && !inAuthGroup && segments[0] !== undefined) {
+			if ((!user && !inAuthGroup && segments[0] !== undefined) || !token) {
 				// If user is not authenticated and not on an auth screen, redirect to login
 				router.replace('/login');
 			} else if (user && inAuthGroup) {
 				// If user is authenticated and on an auth screen, redirect to home
 				router.replace('/(tabs)');
 			}
-		}
+		};
+		if (!isLoading) verifyAuth();
 	}, [user, segments, isLoading]);
 
 	const signIn = async (token: string) => {

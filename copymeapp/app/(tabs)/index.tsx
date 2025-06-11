@@ -10,8 +10,24 @@ import { mockupProcessedData } from '@/constants/Mockup';
 import SeeAll from '@/components/v1/SeeAll';
 import OverallStats from '@/components/v1/OverallStats';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ProcessedData } from '@/constants/processedData';
+import { useState } from 'react';
+import { useApi } from '@/utils/api';
 
 export default function HomeScreen() {
+	const [lastReviews, setLastReviews] = useState<ProcessedData[]>([]);
+	const api = useApi();
+
+	const getLastReviews = async () => {
+		try {
+			const response = await api.get('/reviews/last');
+			const data = response as { data: ProcessedData[] };
+			setLastReviews(data?.data || []);
+		} catch (error) {
+			console.error('Error fetching last reviews:', error);
+		}
+	};
+
 	return (
 		<SafeAreaProvider>
 			<ThemedSafeAreaView>

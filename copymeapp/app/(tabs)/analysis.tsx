@@ -1,7 +1,7 @@
 /** @format */
 
 import React, { useState, useMemo } from 'react';
-import { FlatList, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
@@ -159,7 +159,11 @@ export default function analysisListScreen() {
 				<FlatList
 					data={filteredAnalysisData}
 					// renderItem={renderAnalysisItem}
-					renderItem={({ item }: { item: AnalysisItem }) => <ReviewItem item={item} />}
+					renderItem={({ item }: { item: AnalysisItem }) => (
+						<TouchableOpacity onPress={() => handleAnalysisPress(item)}>
+							<ReviewItem item={item} />
+						</TouchableOpacity>
+					)}
 					keyExtractor={(item) => item.id}
 					contentContainerStyle={styles.listContent}
 					showsVerticalScrollIndicator={false}
