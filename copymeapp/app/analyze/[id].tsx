@@ -1,7 +1,7 @@
 /** @format */
 
 import React, { useState } from 'react';
-import { StyleSheet, Platform, View, ScrollView, TouchableOpacity, Button } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, Button } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
@@ -14,12 +14,7 @@ import {
 	SkipForward,
 	Play,
 	Pause,
-	ChevronDown,
-	ChevronUp,
-	Maximize,
 } from 'lucide-react-native';
-import { Colors } from '@/constants/Colors';
-import { Keypoints, ProcessedData } from '@/constants/processedData';
 import { mockupProcessedData } from '@/constants/Mockup';
 import color from '../theme/color';
 
@@ -38,7 +33,6 @@ function Feedback({ feedbacks }: { feedbacks: string[] }) {
 
 export default function AnalysisDetailScreen() {
 	const params = useLocalSearchParams();
-	const colors = Colors;
 	const player = useVideoPlayer('@/assets/videos/pro_shot.mp4', (player) => {
 		player.loop = true;
 		player.play();
@@ -47,7 +41,6 @@ export default function AnalysisDetailScreen() {
 	const [frame, setFrame] = useState(0);
 	const [tipsExpanded, setTipsExpanded] = useState(false);
 	const [isPlaying, setIsPlaying] = useState(false);
-	const [videoExpanded, setVideoExpanded] = useState(false);
 
 	// Fonction pour faire défiler jusqu'à l'élément sélectionné
 	const scrollToSelected = (index: number) => {
@@ -89,7 +82,7 @@ export default function AnalysisDetailScreen() {
 						disabled={tipCount === 0}
 						onPress={() => setTipsExpanded(!tipsExpanded)}>
 						<ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-							<Lightbulb color={colors.light.principal} />
+							<Lightbulb color={color.colors.primary} />
 							<ThemedText type='subtitle'>Improvement</ThemedText>
 						</ThemedView>
 
@@ -176,7 +169,7 @@ export default function AnalysisDetailScreen() {
 							type='default'
 							style={{
 								borderBottomWidth: 1,
-								borderBottomColor: colors.light.border,
+								borderBottomColor: color.colors.border,
 								width: '90%',
 								textAlign: 'center',
 							}}>
@@ -189,7 +182,7 @@ export default function AnalysisDetailScreen() {
 									const newFrame = Math.max(0, frame - 1);
 									updateFrame(newFrame);
 								}}>
-								<SkipBack size={32} color={colors.light.principal} />
+								<SkipBack size={32} color={color.colors.primary} />
 							</TouchableOpacity>
 
 							<TouchableOpacity
@@ -197,7 +190,7 @@ export default function AnalysisDetailScreen() {
 								onPress={() => {
 									updateFrame(0);
 								}}>
-								<RotateCcw size={32} color={colors.light.principal} />
+								<RotateCcw size={32} color={color.colors.primary} />
 							</TouchableOpacity>
 
 							<TouchableOpacity
@@ -206,7 +199,7 @@ export default function AnalysisDetailScreen() {
 									const newFrame = Math.min(mockupProcessedData.frames.length - 1, frame + 1);
 									updateFrame(newFrame);
 								}}>
-								<SkipForward size={32} color={colors.light.principal} />
+								<SkipForward size={32} color={color.colors.primary} />
 							</TouchableOpacity>
 						</ThemedView>
 					</ThemedView>
@@ -214,9 +207,9 @@ export default function AnalysisDetailScreen() {
 					<ThemedView style={styles.controlRight}>
 						<TouchableOpacity style={styles.playButton} onPress={togglePlayPause}>
 							{isPlaying ? (
-								<Pause color={colors.light.principal} size={32} />
+								<Pause color={color.colors.primary} size={32} />
 							) : (
-								<Play color={colors.light.principal} size={32} />
+								<Play color={color.colors.primary} size={32} />
 							)}
 						</TouchableOpacity>
 					</ThemedView>
@@ -242,7 +235,7 @@ const styles = StyleSheet.create({
 		overflow: 'hidden',
 		marginBottom: 8,
 		borderWidth: 1,
-		borderColor: 'rgba(0, 0, 0, 0.1)',
+		borderColor: color.colors.border,
 	},
 	video: {
 		width: '100%',
@@ -286,10 +279,10 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 	},
 	activePositionItem: {
-		backgroundColor: 'rgba(255, 215, 0, 0.2)',
+		backgroundColor: color.colors.primaryForeground,
 	},
 	activePositionText: {
-		color: Colors.light.principal,
+		color: color.colors.primary,
 	},
 	// Tips card
 	tipsCard: {
@@ -306,11 +299,11 @@ const styles = StyleSheet.create({
 	seeMoreButton: {
 		paddingVertical: 4,
 		paddingHorizontal: 12,
-		backgroundColor: 'rgba(255, 215, 0, 0.2)',
+		backgroundColor: color.colors.primaryForeground,
 		borderRadius: 12,
 	},
 	seeMoreText: {
-		color: Colors.light.principal,
+		color: color.colors.primary,
 		fontWeight: '600',
 	},
 	tipsContainer: {
@@ -340,7 +333,7 @@ const styles = StyleSheet.create({
 		height: '100%',
 		borderWidth: 1,
 		borderRadius: 12,
-		borderColor: 'rgba(0, 0, 0, 0.1)',
+		borderColor: color.colors.border,
 		flexDirection: 'column',
 		alignItems: 'center',
 	},
@@ -362,15 +355,14 @@ const styles = StyleSheet.create({
 		width: 40,
 		height: 40,
 		borderRadius: 20,
-		backgroundColor: 'rgba(255, 255, 255, 0.1)',
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
 	playButton: {
 		width: 50,
 		height: 50,
-		borderRadius: 25,
-		backgroundColor: 'rgba(255, 215, 0, 0.2)',
+		borderRadius: 8,
+		backgroundColor: color.colors.primaryForeground,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -385,15 +377,14 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		paddingVertical: 8,
 		paddingHorizontal: 12,
-		borderBottomColor: Colors.light.border,
+		borderBottomColor:color.colors.border,
 		marginBottom: 8,
 	},
 	collapsedVideoPlaceholder: {
 		height: 80,
 		borderRadius: 12,
 		borderWidth: 1,
-		borderColor: 'rgba(255, 0, 0, 0.1)',
-		backgroundColor: 'rgba(255, 255, 255, 0.05)',
+		borderColor: color.colors.border,
 		marginBottom: 16,
 		justifyContent: 'center',
 		alignItems: 'center',
