@@ -104,6 +104,7 @@ class PhaseDetection(YOLOv8Base):
             cv2.imwrite(frame_path, data['frame'])
             data['results']['url_path_frame'] = frame_path
             logging.debug(f"Saved best frame for phase '{phase}' to {frame_path}")
+            logging.debug(f"results frame: {data['results']}")
             best_frames_metadata.append(data['results'])
         return best_frames_metadata
 

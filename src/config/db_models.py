@@ -31,9 +31,15 @@ class AngleData(BaseModel):
 class FrameData(BaseModel):
     class_name: str
     url_path_frame: str
-    keypoints_positions: List[List[float]]  # List of keypoint positions [x, y]
+    keypoints_positions: Dict[str, float]  # List of keypoint positions [x, y]
     angles: List[AngleData]
     feedback: Optional[Dict] = None
+
+class FrameDataResponse(BaseModel):
+    class_name: str
+    url_path_frame: str
+    keypoints_positions: Dict[str, float]
+    angles: List[AngleData]
 
 # Main model representative a image
 class ProcessedImage(BaseModel):

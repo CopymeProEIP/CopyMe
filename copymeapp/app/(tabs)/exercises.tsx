@@ -1,15 +1,18 @@
 /** @format */
 
 import { useState, useMemo, useEffect } from 'react';
-import { FlatList, StyleSheet, Platform } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
+import { FlatList } from 'react-native';
+import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
-import { ExerciseItem, Exercise } from '@/components/ExerciseItem';
+import { ExerciseItem } from '@/components/ExerciseItem';
 import { useRouter } from 'expo-router';
 import { Activity } from 'lucide-react-native';
 import { useApi } from '@/utils/api';
+import styles from '../styles/exercisesTabs';
+import color from '@/app/theme/color';
+import { Exercise } from '@/constants/interface';
 
 const levelFilters: FilterOption[] = [
 	{ id: 'all', label: 'All Levels' },
@@ -91,7 +94,7 @@ export default function ExercisesScreen() {
 	};
 
 	return (
-		<ThemedView style={styles.container}>
+		<ThemedSafeAreaView style={styles.container}>
 			<SearchBar onSearch={setSearchQuery} placeholder='Search exercises...' />
 			<FilterChips
 				options={levelFilters}
@@ -101,7 +104,7 @@ export default function ExercisesScreen() {
 
 			{isLoading ? (
 				<ThemedView style={styles.loadingContainer}>
-					<Activity size={60} color='gold' style={styles.loadingIcon} />
+					<Activity size={60} color={color.colors.accent} style={styles.loadingIcon} />
 					<ThemedText type='subtitle'>Loading Exercises...</ThemedText>
 					<ThemedText type='default' style={styles.loadingText}>
 						Loading your exercises, please wait a moment.
@@ -110,67 +113,20 @@ export default function ExercisesScreen() {
 			) : filteredExercises.length > 0 ? (
 				<FlatList
 					data={filteredExercises}
-					keyExtractor={(item) => item.id}
+					keyExtractor={(item, index) => index.toString()}
 					renderItem={({ item }) => <ExerciseItem exercise={item} onPress={handleExercisePress} />}
 					showsVerticalScrollIndicator={false}
 					contentContainerStyle={styles.listContent}
 				/>
 			) : (
 				<ThemedView style={styles.emptyStateContainer}>
-					<Activity size={60} color='gold' style={styles.emptyStateIcon} />
+					<Activity size={60} color={color.colors.accent} style={styles.emptyStateIcon} />
 					<ThemedText type='subtitle'>No Exercises Found</ThemedText>
 					<ThemedText type='default' style={styles.emptyStateText}>
 						Try adjusting your search or filters
 					</ThemedText>
 				</ThemedView>
 			)}
-		</ThemedView>
+		</ThemedSafeAreaView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		padding: 8,
-		marginBottom: 70,
-	},
-	listContent: {
-		height: '90%',
-		gap: 8,
-		paddingTop: 8,
-		paddingBottom: 20,
-	},
-	emptyStateContainer: {
-		justifyContent: 'center',
-		alignItems: 'center',
-		height: '90%',
-		padding: 24,
-	},
-	emptyStateIcon: {
-		marginBottom: 16,
-		opacity: 0.7,
-	},
-	emptyStateText: {
-		textAlign: 'center',
-		marginTop: 8,
-		opacity: 0.7,
-		maxWidth: '80%',
-	},
-	loadingContainer: {
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: 'center',
-		height: '100%',
-		padding: 24,
-	},
-	loadingIcon: {
-		marginBottom: 16,
-		opacity: 0.7,
-	},
-	loadingText: {
-		textAlign: 'center',
-		marginTop: 8,
-		opacity: 0.7,
-		maxWidth: '80%',
-	},
-});

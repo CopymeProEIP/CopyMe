@@ -16,6 +16,7 @@ import { Mail, Lock, User } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
+import color from './theme/color';
 
 export default function RegisterScreen() {
 	const router = useRouter();
@@ -69,9 +70,6 @@ export default function RegisterScreen() {
 			// This could be in AsyncStorage or a state management solution
 			// AsyncStorage.setItem('userToken', data.token);
 
-			// For now, just console log the success
-			console.log('Registration successful:', data);
-
 			// Navigate to the main app
 			router.replace('/(tabs)');
 		} catch (error) {
@@ -106,7 +104,7 @@ export default function RegisterScreen() {
 
 				<ThemedView style={styles.form}>
 					<ThemedView style={styles.inputContainer}>
-						<User color={Colors.light.text} size={20} style={styles.inputIcon} />
+						<User color={color.colors.textPrimary} size={20} style={styles.inputIcon} />
 						<TextInput
 							placeholder='Full Name'
 							style={styles.input}
@@ -116,7 +114,7 @@ export default function RegisterScreen() {
 					</ThemedView>
 
 					<ThemedView style={styles.inputContainer}>
-						<Mail color={Colors.light.text} size={20} style={styles.inputIcon} />
+						<Mail color={color.colors.textPrimary} size={20} style={styles.inputIcon} />
 						<TextInput
 							placeholder='Email Address'
 							style={styles.input}
@@ -128,7 +126,7 @@ export default function RegisterScreen() {
 					</ThemedView>
 
 					<ThemedView style={styles.inputContainer}>
-						<Lock color={Colors.light.text} size={20} style={styles.inputIcon} />
+						<Lock color={color.colors.textPrimary} size={20} style={styles.inputIcon} />
 						<TextInput
 							placeholder='Password'
 							style={styles.input}
@@ -139,7 +137,7 @@ export default function RegisterScreen() {
 					</ThemedView>
 
 					<ThemedView style={styles.inputContainer}>
-						<Lock color={Colors.light.text} size={20} style={styles.inputIcon} />
+						<Lock color={color.colors.textPrimary} size={20} style={styles.inputIcon} />
 						<TextInput
 							placeholder='Confirm Password'
 							style={styles.input}
@@ -196,7 +194,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		borderWidth: 1,
-		borderColor: Colors.light.border,
+		borderColor: color.colors.border,
 		borderRadius: 8,
 		paddingHorizontal: 12,
 		height: 50,
@@ -218,7 +216,7 @@ const styles = StyleSheet.create({
 		marginTop: 24,
 	},
 	loginLink: {
-		color: Colors.light.principal,
+		color: color.colors.primary,
 		fontWeight: 'bold',
 	},
 	errorContainer: {
