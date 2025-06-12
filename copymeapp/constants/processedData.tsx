@@ -1,11 +1,20 @@
 /** @format */
 
+import { Exercise } from "./interface";
+
+
+
 export interface ProcessedData {
 	id: string;
 	url: string; // URL de la vidéo ou image
-	exercise_id: string; // ID de l'exercice
+	exercise: Partial<Exercise>; // ID de l'exercice
 	role: 'pro' | 'client' | 'ia'; // Origine: client = utilisateur, pro = référence, ia = généré
 	frames: Frame[]; // Données de la vidéo (plusieurs frames) ou image (une seule frame)
+	created_at: number; // Timestamp de création
+
+		// Just added
+	alignement_score?: number; // Score d'alignement (0-100)
+	precision_score?: number; // Score de précision (0-100)
 }
 
 export interface Frame {
