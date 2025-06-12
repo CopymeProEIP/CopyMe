@@ -50,11 +50,10 @@ export async function authenticateUser(data: any) {
                 message: 'Invalid password'
             };
         }
-
         return {
             status: 'success',
             message: 'User authenticated successfully',
-            data: generateToken(user)
+            token: generateToken(user)
         };
     } catch (error) {
         return {
