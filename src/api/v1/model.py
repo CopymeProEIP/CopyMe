@@ -156,23 +156,23 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
     reference_angles = {}
 
     logging.debug(f"Current angles: {user_frames[0]}")
-    
+
     # Accès correct aux angles dans le dictionnaire
     if 'angles' in user_frames[0]:
         current_angles = user_frames[0]['angles']
-    
+
     # Préparer les angles de référence avec des tolérances
     if 'angles' in reference_frames[0]:
         for angle in reference_frames[0]['angles']:
             # Extraire l'information d'angle
             angle_name = str(angle.get('angle_name', ['unknown', 0])[0])
             angle_value = angle.get('angle', 0)
-            
+
             reference_angles[angle_name] = {
                 "ref": angle_value,
                 "tolerance": 5.0  # Tolérance de 5 degrés par défaut
             }
-    
+
     improvements = comparator.compare_angles(current_angles, reference_angles)
 
     # Convertir les améliorations en dictionnaires pour la réponse

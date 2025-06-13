@@ -35,6 +35,13 @@ class FrameData(BaseModel):
     angles: List[AngleData]
     feedback: Optional[Dict] = None
 
+
+# Model to represent a person in a frame
+class PersonData(BaseModel):
+    uuid: UUID = uuid4()
+    best_frame: Optional[bool] = False
+    frame_data: FrameData
+
 # Main model representative a image
 class ProcessedImage(BaseModel):
     uuid: UUID = uuid4()
