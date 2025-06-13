@@ -17,7 +17,6 @@ settings = get_variables()
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 class ProcessedDemoResponse(BaseModel):
-    email: EmailStr
     frames: List[FrameData]
     created_at: datetime
     version: int
@@ -62,7 +61,6 @@ async def demo(request: Request,
 
     response_model = ProcessedDemoResponse(
         frames=collection_insert.frames,
-        email=collection_insert.email,
         created_at=collection_insert.created_at,
         version=collection_insert.version
     )

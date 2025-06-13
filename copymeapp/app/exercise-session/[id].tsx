@@ -1,12 +1,13 @@
 /** @format */
 
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Platform, Image, Alert } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Platform, Image, Alert, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Camera, Upload, X, ChevronLeft, VideoIcon } from 'lucide-react-native';
+import color from '../theme/color';
 
 // Nous remplaçons expo-image-picker par une implémentation fictive
 const mockVideoUris = [
@@ -76,12 +77,11 @@ export default function ExerciseSessionScreen() {
 					),
 				}}
 			/>
-
-			<ThemedView style={styles.content}>
+			<ScrollView style={styles.content}>
 				<Card style={styles.uploadCard}>
 					{!uploadedVideo ? (
 						<ThemedView style={styles.placeholderContainer}>
-							<VideoIcon size={40} color='gray' style={styles.videoIcon} />
+							<VideoIcon size={40} color={color.colors.textSecondary} style={styles.videoIcon} />
 							<ThemedText type='subtitle' style={styles.uploadTitle}>
 								Upload Your Performance
 							</ThemedText>
@@ -91,13 +91,13 @@ export default function ExerciseSessionScreen() {
 
 							<ThemedView style={styles.buttonsContainer}>
 								<TouchableOpacity style={styles.uploadButton} onPress={handleUploadVideo}>
-									<Upload size={24} color='#000' />
-									<ThemedText style={styles.buttonText}>Upload Video</ThemedText>
+									<Upload size={24} color={color.colors.textForeground} />
+									<ThemedText type='button'>Upload Video</ThemedText>
 								</TouchableOpacity>
 
 								<TouchableOpacity style={styles.captureButton} onPress={handleCaptureVideo}>
-									<Camera size={24} color='#000' />
-									<ThemedText style={styles.buttonText}>Record Video</ThemedText>
+									<Camera size={24} color={color.colors.textForeground} />
+									<ThemedText type='button'>Record Video</ThemedText>
 								</TouchableOpacity>
 							</ThemedView>
 						</ThemedView>
@@ -112,7 +112,7 @@ export default function ExerciseSessionScreen() {
 								style={styles.analyzeButton}
 								onPress={handleSubmitVideo}
 								disabled={processing}>
-								<ThemedText style={styles.analyzeButtonText}>
+								<ThemedText type='button'>
 									{processing ? 'Processing...' : 'Analyze Performance'}
 								</ThemedText>
 							</TouchableOpacity>
@@ -154,18 +154,16 @@ export default function ExerciseSessionScreen() {
 						<ThemedText type='default'>Sessions Completed</ThemedText>
 						<ThemedText type='subtitle'>3</ThemedText>
 					</ThemedView>
-					<View style={styles.statDivider} />
 					<ThemedView style={styles.statItem}>
 						<ThemedText type='default'>Average Score</ThemedText>
 						<ThemedText type='subtitle'>76%</ThemedText>
 					</ThemedView>
-					<View style={styles.statDivider} />
 					<ThemedView style={styles.statItem}>
 						<ThemedText type='default'>Best Score</ThemedText>
 						<ThemedText type='subtitle'>85%</ThemedText>
 					</ThemedView>
 				</Card>
-			</ThemedView>
+			</ScrollView>
 		</ThemedView>
 	);
 }
@@ -203,13 +201,14 @@ const styles = StyleSheet.create({
 		width: '100%',
 	},
 	uploadButton: {
-		backgroundColor: 'gold',
+		backgroundColor: color.colors.primary,
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'center',
 		paddingVertical: 12,
 		paddingHorizontal: 16,
 		borderRadius: 12,
+		gap: 8,
 		flex: 1,
 	},
 	captureButton: {
@@ -220,13 +219,8 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 		paddingHorizontal: 16,
 		borderRadius: 12,
+		gap: 8,
 		flex: 1,
-	},
-	buttonText: {
-		marginLeft: 8,
-		fontSize: 14,
-		fontWeight: 'bold',
-		color: '#000',
 	},
 	videoPreviewContainer: {
 		position: 'relative',
@@ -250,13 +244,13 @@ const styles = StyleSheet.create({
 	analyzeButton: {
 		position: 'absolute',
 		bottom: 20,
-		left: '50%',
+		left: '35%',
 		transform: [{ translateX: -100 }],
-		backgroundColor: 'gold',
+		backgroundColor: color.colors.primary,
 		paddingVertical: 12,
 		paddingHorizontal: 24,
 		borderRadius: 24,
-		width: 200,
+		width: 300,
 		alignItems: 'center',
 	},
 	analyzeButtonText: {
@@ -276,22 +270,18 @@ const styles = StyleSheet.create({
 		marginBottom: 12,
 	},
 	tipBullet: {
-		color: 'gold',
+		color: color.colors.primary,
 		marginRight: 8,
 		fontSize: 18,
 	},
 	statsContainer: {
-		flexDirection: 'row',
+		gridTemplateColumns: 'repeat(3, 1fr)',
+		gap: 16,
 		padding: 16,
 	},
 	statItem: {
-		flex: 1,
 		alignItems: 'center',
-	},
-	statDivider: {
-		width: 1,
-		backgroundColor: 'rgba(0,0,0,0.1)',
-		marginHorizontal: 8,
+		justifyContent: 'center',
 	},
 	videoIcon: {
 		marginBottom: 16,

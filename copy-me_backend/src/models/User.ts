@@ -1,12 +1,13 @@
 import { Schema, model } from 'mongoose';
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
+
 export const ValidateUser = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().required(),
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
-    role: Joi.string().valid('user', 'admin').required()
+    role: Joi.string().valid('user', 'admin').default('user')
 });
 
 interface IUsers {
@@ -37,7 +38,7 @@ const usersSchema = new Schema<IUsers>({
     },
     role: { type: String,
       enum: ['user', 'admin'],
-      required: true
+      default: 'user'
     }
 });
 

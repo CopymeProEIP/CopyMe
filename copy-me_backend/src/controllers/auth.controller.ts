@@ -9,7 +9,7 @@ export const register = async (req: Request, res: Response) => {
     password: req.body.password,
     firstName: req.body.firstName,
     lastName: req.body.lastName,
-    role: req.body.role
+    role: 'user'
   }
 
   const { error, value } = ValidateUser.validate(data);

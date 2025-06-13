@@ -31,16 +31,16 @@ class AngleData(BaseModel):
 class FrameData(BaseModel):
     class_name: str
     url_path_frame: str
-    keypoints_positions: List[List[float]]  # List of keypoint positions [x, y]
+    frame_number: int
+    keypoints_positions: Dict[str, float]  # List of keypoint positions [x, y]
     angles: List[AngleData]
     feedback: Optional[Dict] = None
 
-
-# Model to represent a person in a frame
-class PersonData(BaseModel):
-    uuid: UUID = uuid4()
-    best_frame: Optional[bool] = False
-    frame_data: FrameData
+class FrameDataResponse(BaseModel):
+    class_name: str
+    url_path_frame: str
+    keypoints_positions: Dict[str, float]
+    angles: List[AngleData]
 
 # Main model representative a image
 class ProcessedImage(BaseModel):

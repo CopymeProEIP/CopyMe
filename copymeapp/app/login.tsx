@@ -10,6 +10,7 @@ import { Colors } from '@/constants/Colors';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import color from './theme/color';
 
 export default function LoginScreen() {
 	const router = useRouter();
@@ -44,13 +45,11 @@ export default function LoginScreen() {
 			if (!response.ok) {
 				throw new Error(data.message || 'Login failed');
 			}
-			console.log('Login response:', data.data);
 			if (!data.data) {
 				throw new Error('No token received');
 			}
 			// Store the JWT token for future authenticated requests
 			await AsyncStorage.setItem('userToken', data.data);
-			console.log('Authentication successful, token stored');
 
 			// Navigate to the main app
 			router.replace('/(tabs)');
@@ -91,7 +90,7 @@ export default function LoginScreen() {
 
 				<ThemedView style={styles.form}>
 					<ThemedView style={styles.inputContainer}>
-						<Mail color={Colors.light.text} size={20} style={styles.inputIcon} />
+						<Mail color={color.colors.textPrimary} size={20} style={styles.inputIcon} />
 						<TextInput
 							placeholder='Email Address'
 							style={styles.input}
@@ -103,7 +102,7 @@ export default function LoginScreen() {
 					</ThemedView>
 
 					<ThemedView style={styles.inputContainer}>
-						<Lock color={Colors.light.text} size={20} style={styles.inputIcon} />
+						<Lock color={color.colors.textPrimary} size={20} style={styles.inputIcon} />
 						<TextInput
 							placeholder='Password'
 							style={styles.input}
@@ -165,7 +164,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		borderWidth: 1,
-		borderColor: Colors.light.border,
+		borderColor: color.colors.border,
 		borderRadius: 8,
 		paddingHorizontal: 12,
 		height: 50,
@@ -180,7 +179,7 @@ const styles = StyleSheet.create({
 	},
 	forgotPassword: {
 		textAlign: 'right',
-		color: Colors.light.principal,
+		color: color.colors.primary,
 	},
 	button: {
 		marginTop: 16,
@@ -191,7 +190,7 @@ const styles = StyleSheet.create({
 		marginTop: 24,
 	},
 	registerLink: {
-		color: Colors.light.principal,
+		color: color.colors.primary,
 		fontWeight: 'bold',
 	},
 	errorContainer: {

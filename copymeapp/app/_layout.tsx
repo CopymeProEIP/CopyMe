@@ -35,7 +35,7 @@ export default function RootLayout() {
 			<ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
 				<Stack screenOptions={{ headerShown: false }}>
 					<Stack.Screen name='(tabs)' options={{ headerShown: false }} />
-					<Stack.Screen name='analysis' options={{ headerShown: false }} />
+					<Stack.Screen name='analyze' options={{ headerShown: false }} />
 					<Stack.Screen name='exercise' options={{ headerShown: false }} />
 					<Stack.Screen name='exercise-session' options={{ headerShown: false }} />
 					<Stack.Screen name='exercise-results' options={{ headerShown: false }} />

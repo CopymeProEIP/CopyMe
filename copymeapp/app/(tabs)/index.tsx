@@ -1,75 +1,80 @@
 /** @format */
 
-import { Image, StyleSheet, Platform } from 'react-native';
+import { Image, ScrollView, StyleSheet } from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { StatsBox } from '@/components/StatsBox';
-import { Trophy } from 'lucide-react-native';
-import { ReviewsList } from '@/components/ReviewsList';
-
-const reviews = [
-  {
-    id: '1',
-    title: 'Shooting',
-    score: 100,
-    date: new Date(),
-  },
-  {
-    id: '2',
-    title: 'Free Throw',
-    score: 80,
-    date: new Date(),
-  },
-  {
-    id: '3',
-    title: 'Shooting',
-    score: 20,
-    date: new Date(),
-  },
-];
+import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
+import ReviewItem from '@/components/v1/ReviewItem';
+import { mockupProcessedData } from '@/constants/Mockup';
+import SeeAll from '@/components/v1/SeeAll';
+import OverallStats from '@/components/v1/OverallStats';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ProcessedData } from '@/constants/processedData';
+import { useState } from 'react';
+import { useApi } from '@/utils/api';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type='title'>Dashboard</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <StatsBox title='Best Score' value='Three-point shoot' icon={Trophy} />
-      <ReviewsList
-        reviews={reviews}
-        onSeeAllPress={() => console.log('See all reviews')}
-      />
-    </ParallaxScrollView>
-  );
+	const [lastReviews, setLastReviews] = useState<ProcessedData[]>([]);
+	const api = useApi();
+
+	const getLastReviews = async () => {
+		try {
+			const response = await api.get('/reviews/last');
+			const data = response as { data: ProcessedData[] };
+			setLastReviews(data?.data || []);
+		} catch (error) {
+			console.error('Error fetching last reviews:', error);
+		}
+	};
+
+	return (
+		<SafeAreaProvider>
+			<ThemedSafeAreaView>
+				<ScrollView>
+					<ThemedView style={styles.container}>
+						<ThemedView style={styles.titleContainer}>
+							<ThemedText type='title'>Dashboard</ThemedText>
+							<HelloWave />
+						</ThemedView>
+						<Image source={require('@/assets/images/WelcomeCta2.png')} style={styles.cta} />
+
+						<ThemedView style={styles.reviewContainer}>
+							<SeeAll text='Last reviews' />
+							<ThemedView style={{ flex: 1, gap: 8 }}>
+								<ReviewItem item={mockupProcessedData} />
+								<ReviewItem item={mockupProcessedData} />
+							</ThemedView>
+						</ThemedView>
+						<ThemedView style={styles.reviewContainer}>
+							<SeeAll text='Overall Stats' cta='See More' />
+							<OverallStats />
+						</ThemedView>
+					</ThemedView>
+				</ScrollView>
+			</ThemedSafeAreaView>
+		</SafeAreaProvider>
+	);
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+	container: {
+		flex: 1,
+		padding: 16,
+		gap: 24,
+	},
+	titleContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 16,
+	},
+	reviewContainer: {
+		flex: 1,
+		gap: 8,
+	},
+	cta: {
+		height: 194,
+		width: '100%',
+		borderRadius: 8,
+	},
 });
