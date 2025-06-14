@@ -22,9 +22,9 @@ if __name__ == "__main__":
         input=args.input,
         save_dir=args.output,
         model_path=args.model,
-        kalman_filter=True, # custom filter to improve accuracy
+        kalman_filter=True,
         temporal_smoothing=True,
-        verbose=True
+        verbose=False
     )
     results = yolo.run()
     result = "["

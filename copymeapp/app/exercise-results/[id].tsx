@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Share2, Home, Award, LineChart } from 'lucide-react-native';
+import color from '../theme/color';
 
 export default function ExerciseResultsScreen() {
 	const params = useLocalSearchParams();
@@ -53,8 +54,8 @@ export default function ExerciseResultsScreen() {
 
 	const handleViewAnalysis = () => {
 		const id = Array.isArray(params.id) ? params.id[0] : params.id;
-		router.push({
-			pathname: '/analysis/[id]',
+		router.replace({
+			pathname: '/analyze/[id]',
 			params: {
 				id,
 				title: `${params.title} Analysis`,
@@ -67,122 +68,115 @@ export default function ExerciseResultsScreen() {
 	};
 
 	return (
-		<SafeAreaView style={styles.safeArea}>
-			<ThemedView style={styles.container}>
-				<ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-					<ThemedView style={styles.content}>
-						<ThemedView style={styles.scoreContainer}>
-							<Award size={40} color='gold' style={styles.awardIcon} />
-							<ThemedText type='title' style={styles.scoreValue} adjustsFontSizeToFit={true} numberOfLines={1}>
-								{score}/100
-							</ThemedText>
-							<ThemedText type='subtitle' style={styles.scoreMessage}>
-								{getScoreMessage(score)}
-							</ThemedText>
+		<ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+			<ThemedView style={styles.content}>
+				<ThemedView style={styles.scoreContainer}>
+					<Award size={40} color={color.colors.primary} style={styles.awardIcon} />
+					<ThemedText
+						type='title'
+						style={styles.scoreValue}
+						adjustsFontSizeToFit={true}
+						numberOfLines={1}>
+						{score}/100
+					</ThemedText>
+					<ThemedText type='subtitle' style={styles.scoreMessage}>
+						{getScoreMessage(score)}
+					</ThemedText>
+				</ThemedView>
+
+				<Card style={styles.statsCard}>
+					<ThemedView style={styles.statsGrid}>
+						<ThemedView style={styles.statItem}>
+							<ThemedText type='defaultSemiBold'>Form</ThemedText>
+							<ThemedView style={styles.miniProgressContainer}>
+								<ThemedView style={styles.miniProgressBarContainer}>
+									<View
+										style={[
+											styles.miniProgressBar,
+											{ width: `${score - 5}%`, backgroundColor: color.colors.primary },
+										]}
+									/>
+								</ThemedView>
+								<ThemedText type='small'>{score - 5}%</ThemedText>
+							</ThemedView>
 						</ThemedView>
-
-						<Card style={styles.statsCard}>
-							<ThemedView style={styles.statsGrid}>
-								<ThemedView style={styles.statItem}>
-									<ThemedText type='defaultSemiBold'>Form</ThemedText>
-									<ThemedView style={styles.miniProgressContainer}>
-										<ThemedView style={styles.miniProgressBarContainer}>
-											<View
-												style={[
-													styles.miniProgressBar,
-													{ width: `${score - 5}%`, backgroundColor: 'gold' },
-												]}
-											/>
-										</ThemedView>
-										<ThemedText type='small'>{score - 5}%</ThemedText>
-									</ThemedView>
+						<ThemedView style={styles.statItem}>
+							<ThemedText type='defaultSemiBold'>Execution</ThemedText>
+							<ThemedView style={styles.miniProgressContainer}>
+								<ThemedView style={styles.miniProgressBarContainer}>
+									<View
+										style={[
+											styles.miniProgressBar,
+											{ width: `${score + 5}%`, backgroundColor: color.colors.primary },
+										]}
+									/>
 								</ThemedView>
-								<ThemedView style={styles.statItem}>
-									<ThemedText type='defaultSemiBold'>Execution</ThemedText>
-									<ThemedView style={styles.miniProgressContainer}>
-										<ThemedView style={styles.miniProgressBarContainer}>
-											<View
-												style={[
-													styles.miniProgressBar,
-													{ width: `${score + 5}%`, backgroundColor: 'gold' },
-												]}
-											/>
-										</ThemedView>
-										<ThemedText type='small'>{score + 5 > 100 ? 100 : score + 5}%</ThemedText>
-									</ThemedView>
-								</ThemedView>
-								<ThemedView style={styles.statItem}>
-									<ThemedText type='defaultSemiBold'>Consistency</ThemedText>
-									<ThemedView style={styles.miniProgressContainer}>
-										<ThemedView style={styles.miniProgressBarContainer}>
-											<View
-												style={[
-													styles.miniProgressBar,
-													{ width: `${score - 10}%`, backgroundColor: 'gold' },
-												]}
-											/>
-										</ThemedView>
-										<ThemedText type='small'>{score - 10}%</ThemedText>
-									</ThemedView>
-								</ThemedView>
-								<ThemedView style={styles.statItem}>
-									<ThemedText type='defaultSemiBold'>Mechanics</ThemedText>
-									<ThemedView style={styles.miniProgressContainer}>
-										<ThemedView style={styles.miniProgressBarContainer}>
-											<View
-												style={[
-													styles.miniProgressBar,
-													{ width: `${score + 2}%`, backgroundColor: 'gold' },
-												]}
-											/>
-										</ThemedView>
-										<ThemedText type='small'>{score + 2 > 100 ? 100 : score + 2}%</ThemedText>
-									</ThemedView>
-								</ThemedView>
+								<ThemedText type='small'>{score + 5 > 100 ? 100 : score + 5}%</ThemedText>
 							</ThemedView>
-						</Card>
-
-						<ThemedText type='subtitle' style={styles.sectionTitle}>
-							Feedback
-						</ThemedText>
-
-						<Card style={styles.feedbackCard}>
-							<ThemedView style={styles.feedbackList}>
-								{getFeedback(score).map((item, index) => (
-									<ThemedView key={index} style={styles.feedbackItem}>
-										<ThemedText type='defaultSemiBold' style={styles.bulletPoint}>
-											•
-										</ThemedText>
-										<ThemedText type='default'>{item}</ThemedText>
-									</ThemedView>
-								))}
+						</ThemedView>
+						<ThemedView style={styles.statItem}>
+							<ThemedText type='defaultSemiBold'>Consistency</ThemedText>
+							<ThemedView style={styles.miniProgressContainer}>
+								<ThemedView style={styles.miniProgressBarContainer}>
+									<View
+										style={[
+											styles.miniProgressBar,
+											{ width: `${score - 10}%`, backgroundColor: color.colors.primary },
+										]}
+									/>
+								</ThemedView>
+								<ThemedText type='small'>{score - 10}%</ThemedText>
 							</ThemedView>
-						</Card>
-
-						<TouchableOpacity style={styles.analysisButton} onPress={handleViewAnalysis}>
-							<LineChart size={20} color='#000' />
-							<ThemedText style={styles.buttonText}>View Detailed Analysis</ThemedText>
-						</TouchableOpacity>
-
-						<TouchableOpacity style={styles.tryAgainButton} onPress={handleRetry}>
-							<ArrowLeft size={20} color='#000' />
-							<ThemedText style={styles.tryAgainText}>Try Again</ThemedText>
-						</TouchableOpacity>
+						</ThemedView>
+						<ThemedView style={styles.statItem}>
+							<ThemedText type='defaultSemiBold'>Mechanics</ThemedText>
+							<ThemedView style={styles.miniProgressContainer}>
+								<ThemedView style={styles.miniProgressBarContainer}>
+									<View
+										style={[
+											styles.miniProgressBar,
+											{ width: `${score + 2}%`, backgroundColor: color.colors.primary },
+										]}
+									/>
+								</ThemedView>
+								<ThemedText type='small'>{score + 2 > 100 ? 100 : score + 2}%</ThemedText>
+							</ThemedView>
+						</ThemedView>
 					</ThemedView>
-				</ScrollView>
+				</Card>
+
+				<ThemedText type='subtitle' style={styles.sectionTitle}>
+					Feedback
+				</ThemedText>
+
+				<Card style={styles.feedbackCard}>
+					<ThemedView style={styles.feedbackList}>
+						{getFeedback(score).map((item, index) => (
+							<ThemedView key={index} style={styles.feedbackItem}>
+								<ThemedText type='defaultSemiBold' style={styles.bulletPoint}>
+									•
+								</ThemedText>
+								<ThemedText type='default'>{item}</ThemedText>
+							</ThemedView>
+						))}
+					</ThemedView>
+				</Card>
+
+				<TouchableOpacity style={styles.analysisButton} onPress={handleViewAnalysis}>
+					<LineChart size={20} color={color.colors.textForeground} />
+					<ThemedText type='button'>View Detailed Analysis</ThemedText>
+				</TouchableOpacity>
+
+				<TouchableOpacity style={styles.tryAgainButton} onPress={handleRetry}>
+					<ArrowLeft size={20} color={color.colors.textForeground} />
+					<ThemedText type='button'>Try Again</ThemedText>
+				</TouchableOpacity>
 			</ThemedView>
-		</SafeAreaView>
+		</ScrollView>
 	);
 }
 
 const styles = StyleSheet.create({
-	safeArea: {
-		flex: 1,
-		backgroundColor: 'white',
-	},
-	container: {
-		flex: 1,
-	},
 	header: {
 		flexDirection: 'row',
 		alignItems: 'center',
@@ -214,7 +208,7 @@ const styles = StyleSheet.create({
 	scoreValue: {
 		fontSize: 48,
 		fontWeight: 'bold',
-		color: 'gold',
+		color: color.colors.primary,
 		textAlign: 'center',
 		includeFontPadding: false,
 		width: '100%',
@@ -265,7 +259,7 @@ const styles = StyleSheet.create({
 		marginBottom: 12,
 	},
 	bulletPoint: {
-		color: 'gold',
+		color: color.colors.primary,
 		marginRight: 8,
 	},
 	analysisButton: {
@@ -276,27 +270,17 @@ const styles = StyleSheet.create({
 		paddingVertical: 16,
 		borderRadius: 12,
 		marginBottom: 16,
-	},
-	buttonText: {
-		marginLeft: 8,
-		fontSize: 16,
-		fontWeight: 'bold',
-		color: '#000',
+		gap: 8,
 	},
 	tryAgainButton: {
-		backgroundColor: 'gold',
+		backgroundColor: color.colors.primary,
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'center',
 		paddingVertical: 16,
 		borderRadius: 12,
 		marginBottom: 24,
-	},
-	tryAgainText: {
-		marginLeft: 8,
-		fontSize: 16,
-		fontWeight: 'bold',
-		color: '#000',
+		gap: 8,
 	},
 	headerTitle: {
 		flex: 1,

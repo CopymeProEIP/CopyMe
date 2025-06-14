@@ -37,7 +37,8 @@ class YOLOv8Base:
     # -------------------- Model Loading --------------------
     def _load_model(self):
         """Load the YOLO model."""
-        logging.debug(f"Loading model from {self.model_path} on device {self.device}")
+        if self.verbose:
+          logging.debug(f"Loading model from {self.model_path} on device {self.device}")
         self.model = YOLO(self.model_path, verbose=self.verbose).to(self.device)
         self.CLASS_NAMES_DICT = self.model.model.names
         self.model.fuse()
@@ -46,7 +47,6 @@ class YOLOv8Base:
     # -------------------- Inference --------------------
     def _infer(self, frame) -> YOLO:
         """Run inference on the given frame."""
-        logging.debug(f"Running inference on frame")
         if not self.is_model_loaded:
             raise RuntimeError("Model not loaded. Please load the model before inference.")
         return self.model(frame)

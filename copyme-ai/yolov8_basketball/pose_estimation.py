@@ -6,11 +6,11 @@ from .yolov8_base import YOLOv8Base
 
 class PoseEstimation(YOLOv8Base):
     def __init__(self,model_path: str , verbose: bool = False):
-        # Initialize parent class
         super().__init__(model_path=model_path, verbose=verbose)
 
-    def pose_detector(self, frame, results_list, class_name, confidence) -> Tuple[Any, List, Dict]:
-        logging.debug(f"Pose Estimation: {class_name} with confidence {confidence:.2f}")
+    def pose_detector(self, frame, results_list, class_name, confidence, frame_number) -> Tuple[Any, List, Dict]:
+        if self.verbose:
+          logging.debug(f"Pose Estimation: {class_name} with confidence {confidence:.2f}")
         skeleton = [
             (5, 6),  # Shoulders connection
             (5, 11), (6, 12),  # Shoulders to hips
@@ -83,6 +83,7 @@ class PoseEstimation(YOLOv8Base):
 
                 result_frame = {
                     "class_name": class_name,
+                    "frame_number": frame_number,
                     "keypoints_positions": keypoints_positions,
                     "angles": self.convert_numpy_to_python(angles_tmp),
                 }
