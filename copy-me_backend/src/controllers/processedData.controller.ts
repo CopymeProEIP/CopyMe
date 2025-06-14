@@ -57,7 +57,51 @@ export const upload = multer({
 
 export const getAllProcessedData = async (req: AuthenticatedRequest, res: Response) => {
 	try {
-		const processedData = await ProcessedData.find({ user_id: req.user?.id });
+		const limit = req.body.limit || -1;
+		const range = req.body.range || 'all';
+		let query = { user_id: req.user?.id };
+
+		if (range !== 'all') {
+			const now = new Date();
+			let dateFilter;
+
+			switch (range) {
+				case '3months':
+					const threeMonthsAgo = new Date(now);
+					threeMonthsAgo.setMonth(now.getMonth() - 3);
+					dateFilter = { createdAt: { $gte: threeMonthsAgo } };
+					break;
+				case '1month':
+					const oneMonthAgo = new Date(now);
+					oneMonthAgo.setMonth(now.getMonth() - 1);
+					dateFilter = { createdAt: { $gte: oneMonthAgo } };
+					break;
+				case '1week':
+					const oneWeekAgo = new Date(now);
+					oneWeekAgo.setDate(now.getDate() - 7);
+					dateFilter = { createdAt: { $gte: oneWeekAgo } };
+					break;
+				default:
+					if (range.match(/^\d{4}-\d{2}-\d{2}$/)) {
+						const specificDate = new Date(range);
+						const nextDay = new Date(specificDate);
+						nextDay.setDate(specificDate.getDate() + 1);
+
+						dateFilter = {
+							createdAt: {
+								$gte: specificDate,
+								$lt: nextDay,
+							},
+						};
+					}
+			}
+
+			if (dateFilter) {
+				query = { ...query, ...dateFilter };
+			}
+		}
+
+		const processedData = await ProcessedData.find(query).limit(limit);
 
 		return res.status(200).json({
 			success: true,
@@ -134,7 +178,6 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 			});
 		}
 		const processedData = await ProcessedData.create({
-			id: req.file.filename,
 			url: req.file.path,
 			exercise_id: exercise_id,
 			user_id: req.user?.id,
@@ -143,17 +186,26 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 			frames: [],
 		});
 
-		setTimeout(async () => {
-			try {
-				if (fileType === 'video') {
-					logger.info(`Vidéo ${processedData.id} en cours de traitement`);
-				} else {
-					logger.info(`Image ${processedData.id} traitée avec succès`);
-				}
-			} catch (error) {
-				logger.error(`Erreur lors du traitement de la ${fileType} ${processedData.id}:`, error);
-			}
-		}, 2000);
+		const fileBuffer = fs.readFileSync(req.file.path);
+
+		const formData = new FormData();
+
+		formData.append('userId', req.user?.id || '');
+
+		const blob = new Blob([fileBuffer], { type: req.file!.mimetype });
+		formData.append('files', blob, req.file!.originalname);
+
+		formData.append('processedDataId', processedData.id);
+		formData.append('exerciseId', exercise_id);
+		formData.append('fileType', fileType);
+
+		await fetch(`${process.env.AI_API_URL}/process`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${process.env.AI_API_KEY}`,
+			},
+			body: formData,
+		});
 
 		return res.status(201).json({
 			success: true,
