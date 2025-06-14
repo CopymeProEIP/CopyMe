@@ -30,7 +30,7 @@ RUN npm install --only=production
 
 # Copier les fichiers compilés depuis l'étape de construction
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/.env ./.env
+#COPY --from=builder /app/.env ./.env
 
 # Créer le dossier uploads
 RUN mkdir -p uploads
