@@ -1,8 +1,11 @@
+/** @format */
+
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import exerciseRoutes from './routes/exercise.routes';
+import processedDataRoutes from './routes/processedData.routes';
 import { logger } from './middlewares/logger.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 
@@ -16,20 +19,21 @@ app.use(express.json());
 app.use(logger);
 app.use('/api/auth', authRoutes);
 app.use('/api/exercises', exerciseRoutes);
-app.use(errorHandler); 
+app.use('/api/process', processedDataRoutes);
+app.use(errorHandler);
 
 const startServer = async () => {
-  try {
-    await mongoose.connect(MONGO_URI);
-    console.log('✅ MongoDB connecté');
+	try {
+		await mongoose.connect(MONGO_URI);
+		console.log('✅ MongoDB connecté');
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error('❌ Erreur de connexion MongoDB:', error);
-    process.exit(1);
-  }
+		app.listen(PORT, () => {
+			console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
+		});
+	} catch (error) {
+		console.error('❌ Erreur de connexion MongoDB:', error);
+		process.exit(1);
+	}
 };
 
 startServer();

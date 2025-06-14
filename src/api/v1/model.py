@@ -16,21 +16,34 @@ settings = get_variables()
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-class ProcessedDemoResponse(BaseModel):
-    email: EmailStr
+class ProcessResponse(BaseModel):
     frames: List[FrameData]
     created_at: datetime
     version: int
 
-class DemoRequest(BaseModel):
-    email: EmailStr = Field(..., examples=["email@exemple.com"])
+class ProcessRequest(BaseModel):
+    userId: str = Field(..., examples=["680a1e190ceb2230eeb132b6"])
+    processedDataId: str = Field(..., examples=["680a1e190ceb2230eeb132b6"])
     allow_training: Optional[bool] = False
 
-@router.post("/demo", response_model=ProcessedDemoResponse)
-async def demo(request: Request,
-    form_data: DemoRequest = Depends(),
+@router.post("/process", response_model=ProcessResponse)
+async def process(
+    request: Request,
     files: UploadFile = File(...),
-    ) -> ProcessedDemoResponse:
+    userId: str = Form(...),
+    allow_training: Optional[bool] = Form(False),
+    processedDataId: str = Form(...)
+) -> ProcessResponse:
+    """
+    Traite une vidéo ou une image pour l'analyse de mouvements de basket.
+    Met à jour un document existant identifié par processedDataId.
+    """
+    # Créer l'objet de formulaire à partir des champs individuels
+    form_data = ProcessRequest(
+        userId=userId,
+        processedDataId=processedDataId,
+        allow_training=allow_training
+    )
 
     yolo_basket: PhaseDetection = get_yolomodel(request)
     logging.debug(f"YOLOv8 object :\n{yolo_basket}")
@@ -50,34 +63,64 @@ async def demo(request: Request,
     result += "]"
     logging.debug(f"result dump : \n{result}")
 
-    collection_insert = ProcessedImage(
-        url=str(file_path),
-        frames=results,
-        email=form_data.email,
-        created_at=datetime.combine(date.today(), datetime.min.time()),
-        version=1,
-    )
-
-    logging.debug(f"collection : {collection_insert.model_dump_json()}")
-
-    response_model = ProcessedDemoResponse(
-        frames=collection_insert.frames,
-        email=collection_insert.email,
-        created_at=collection_insert.created_at,
-        version=collection_insert.version
-    )
-    logging.debug(f"Saving to database")
-
     try:
-        # Tenter d'insérer dans la base de données
-        await db_model.insert_new_entry(json.loads(collection_insert.model_dump_json()))
-        logging.debug("Finished to update the database.")
+        # Vérifier si le document existe
+        existing_doc = await db_model.get_by_id(processedDataId)
+
+        if existing_doc:
+            logging.info(f"Document with ID {processedDataId} found, updating...")
+            # Mettre à jour le document existant
+
+            # Sérialiser et désérialiser les frames de manière sécurisée
+            frames_data = []
+            for frame in results:
+                # Utiliser directement model_dump_json et loads pour éviter les problèmes avec mappingproxy
+                frame_json = frame.model_dump_json()
+                frame_dict = json.loads(frame_json)
+                frames_data.append(frame_dict)
+
+            update_data = {
+                "url": str(file_path),
+                "frames": frames_data,
+                "updated_at": datetime.now()
+            }
+
+            await db_model.update_entry(processedDataId, update_data)
+            logging.debug("Document updated successfully.")
+
+            # Construire la réponse
+            response_model = ProcessResponse(
+                frames=results,
+                created_at=existing_doc.get("created_at", datetime.now()),
+                version=existing_doc.get("version", 1) + 1
+            )
+        else:
+            logging.warning(f"Document with ID {processedDataId} not found, creating new document...")
+            # Créer un nouveau document
+            collection_insert = ProcessedImage(
+                url=str(file_path),
+                frames=results,
+                userId=form_data.userId,
+                created_at=datetime.combine(date.today(), datetime.min.time()),
+                version=1,
+            )
+
+            await db_model.insert_new_entry(json.loads(collection_insert.model_dump_json()))
+            logging.debug("New document created successfully.")
+
+            response_model = ProcessResponse(
+                frames=collection_insert.frames,
+                created_at=collection_insert.created_at,
+                version=collection_insert.version
+            )
     except Exception as e:
-        # Capturer l'erreur et la journaliser
-        logging.error(f"Database connection error: {str(e)}")
-        logging.warning("Continuing without database persistence. Data will not be saved.")
-        # On pourrait lever une exception HTTP ici, mais nous choisissons de continuer
-        # pour permettre au client d'obtenir quand même les résultats du traitement
+        logging.error(f"Database operation error: {str(e)}")
+        # Créer une réponse minimale en cas d'échec
+        response_model = ProcessResponse(
+            frames=results,
+            created_at=datetime.combine(date.today(), datetime.min.time()),
+            version=1
+        )
 
     return response_model
 
@@ -156,23 +199,23 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
     reference_angles = {}
 
     logging.debug(f"Current angles: {user_frames[0]}")
-    
+
     # Accès correct aux angles dans le dictionnaire
     if 'angles' in user_frames[0]:
         current_angles = user_frames[0]['angles']
-    
+
     # Préparer les angles de référence avec des tolérances
     if 'angles' in reference_frames[0]:
         for angle in reference_frames[0]['angles']:
             # Extraire l'information d'angle
             angle_name = str(angle.get('angle_name', ['unknown', 0])[0])
             angle_value = angle.get('angle', 0)
-            
+
             reference_angles[angle_name] = {
                 "ref": angle_value,
                 "tolerance": 5.0  # Tolérance de 5 degrés par défaut
             }
-    
+
     improvements = comparator.compare_angles(current_angles, reference_angles)
 
     # Convertir les améliorations en dictionnaires pour la réponse

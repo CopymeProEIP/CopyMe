@@ -31,16 +31,23 @@ class AngleData(BaseModel):
 class FrameData(BaseModel):
     class_name: str
     url_path_frame: str
-    keypoints_positions: List[List[float]]  # List of keypoint positions [x, y]
+    frame_number: int
+    keypoints_positions: Dict[str, float]  # List of keypoint positions [x, y]
     angles: List[AngleData]
     feedback: Optional[Dict] = None
+
+class FrameDataResponse(BaseModel):
+    class_name: str
+    url_path_frame: str
+    keypoints_positions: Dict[str, float]
+    angles: List[AngleData]
 
 # Main model representative a image
 class ProcessedImage(BaseModel):
     uuid: UUID = uuid4()
     url: str
     frames: List["FrameData"]
-    email: EmailStr
+    userId: str
     allow_training: Optional[bool] = False
     created_at: datetime = datetime.utcnow()
     version: int
@@ -50,9 +57,8 @@ ProcessedImage.model_rebuild()
 class DatabaseManager:
     def __init__(self, client: AsyncIOMotorClient):
         self.client = client
-        self.db = self.client["CopyMe"]
-        self.collection = self.db["processed_image"]
-        self.analysis_collection = self.db["analysis_results"]
+        self.collection = self.client["processed_data"]
+        self.analysis_collection = self.client["analysis_results"]
 
     async def insert_new_entry(self, image_model: ProcessedImage):
         await self.collection.insert_one(image_model)
@@ -99,6 +105,19 @@ class DatabaseManager:
         except Exception as e:
             logging.error(f"Error inserting analysis result: {e}")
             return None
+
+    async def update_entry(self, id_str: str, update_data: Dict) -> bool:
+        """Met à jour un document existant par son ID"""
+        from bson.objectid import ObjectId
+        try:
+            result = await self.collection.update_one(
+                {"_id": ObjectId(id_str)},
+                {"$set": update_data}
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            logging.error(f"Error updating document: {e}")
+            return False
 
     async def close_connection(self):
         await self.client.close()

@@ -6,11 +6,11 @@ from .yolov8_base import YOLOv8Base
 
 class PoseEstimation(YOLOv8Base):
     def __init__(self,model_path: str , verbose: bool = False):
-        # Initialize parent class
         super().__init__(model_path=model_path, verbose=verbose)
 
-    def pose_detector(self, frame, results_list, class_name, confidence) -> Tuple[Any, List, Dict]:
-        logging.debug(f"Pose Estimation: {class_name} with confidence {confidence:.2f}")
+    def pose_detector(self, frame, results_list, class_name, confidence, frame_number) -> Tuple[Any, List, Dict]:
+        if self.verbose:
+          logging.debug(f"Pose Estimation: {class_name} with confidence {confidence:.2f}")
         skeleton = [
             (5, 6),  # Shoulders connection
             (5, 11), (6, 12),  # Shoulders to hips
@@ -23,13 +23,13 @@ class PoseEstimation(YOLOv8Base):
 
         # Optional: Name the keypoints for clarity
         keypoint_names = {
-            0: "Nose", 1: "L eye", 2: "R eye", 3: "L ear", 4: "R ear",
-            5: "L shoulder", 6: "R shoulder",
-            7: "L elbow", 8: "R elbow",
-            9: "L wrist", 10: "R wrist",
-            11: "L hip", 12: "R hip",
-            13: "L knee", 14: "R knee",
-            15: "L ankle", 16: "R ankle"
+            0: "nose", 1: "left_eye", 2: "right_eye", 3: "left_ear", 4: "right_ear",
+            5: "left_shoulder", 6: "right_shoulder",
+            7: "left_elbow", 8: "right_elbow",
+            9: "left_wrist", 10: "right_wrist",
+            11: "left_hip", 12: "right_hip",
+            13: "left_knee", 14: "right_knee",
+            15: "left_ankle", 16: "right_ankle"
         }
 
         angle_names = {
@@ -53,20 +53,19 @@ class PoseEstimation(YOLOv8Base):
                 if kp.shape[0] < 17:
                     continue
                 for idx, coord in enumerate(kp):
-                    keypoint_name = keypoint_names.get(idx, f"Keypoint {idx}")
-                    keypoints_positions[keypoint_name] = coord.tolist()
+                    keypoint_name = keypoint_names.get(idx, f"keypoint_{idx}")
+                    keypoints_positions[f"{keypoint_name}_x"] = float(coord[0])
+                    keypoints_positions[f"{keypoint_name}_y"] = float(coord[1])
 
-                # Calculate angles for each pair in the skeleton
+                # Calculate angles
                 for start, end in skeleton:
                     if start >= len(kp) or end >= len(kp):
                         continue
                     angle, frame, third_point = self.draw_angle_and_triangle(frame, kp, start, end, keypoint_names)
                     if angle is not None:
-                        # Get the keypoint names
-                        start_name = keypoint_names.get(start, f"Keypoint {start}")
-                        end_name = keypoint_names.get(end, f"Keypoint {end}")
+                        start_name = keypoint_names.get(start, f"keypoint_{start}")
+                        end_name = keypoint_names.get(end, f"keypoint_{end}")
                         angle_name = angle_names.get((start, end, third_point), ("Unknown angle", Direction.UNKNOWN))
-                        # Append angle and linked points
                         angles_with_points.append({
                             "start_point": start_name,
                             "end_point": end_name,
@@ -84,7 +83,8 @@ class PoseEstimation(YOLOv8Base):
 
                 result_frame = {
                     "class_name": class_name,
-                    "keypoints_positions": self.convert_numpy_to_python(kp),
+                    "frame_number": frame_number,
+                    "keypoints_positions": keypoints_positions,
                     "angles": self.convert_numpy_to_python(angles_tmp),
                 }
 
