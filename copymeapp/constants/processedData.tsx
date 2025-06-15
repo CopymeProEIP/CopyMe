@@ -6,11 +6,13 @@ import { Exercise } from "./interface";
 
 export interface ProcessedData {
 	id: string;
+	_id: string;
 	url: string; // URL de la vidéo ou image
 	exercise: Partial<Exercise>; // ID de l'exercice
 	role: 'pro' | 'client' | 'ia'; // Origine: client = utilisateur, pro = référence, ia = généré
 	frames: Frame[]; // Données de la vidéo (plusieurs frames) ou image (une seule frame)
-	created_at: number; // Timestamp de création
+	created_at: Date; // Timestamp de création
+	updated_at: Date; // Timestamp de mise à jour
 
 		// Just added
 	alignement_score?: number; // Score d'alignement (0-100)

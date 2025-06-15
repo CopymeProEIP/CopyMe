@@ -11,22 +11,26 @@ import SeeAll from '@/components/v1/SeeAll';
 import OverallStats from '@/components/v1/OverallStats';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ProcessedData } from '@/constants/processedData';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApi } from '@/utils/api';
 
 export default function HomeScreen() {
 	const [lastReviews, setLastReviews] = useState<ProcessedData[]>([]);
 	const api = useApi();
 
-	const getLastReviews = async () => {
+	const getReviews = async () => {
 		try {
-			const response = await api.get('/reviews/last');
+			const response = await api.get('/process?limit=2');
 			const data = response as { data: ProcessedData[] };
 			setLastReviews(data?.data || []);
 		} catch (error) {
 			console.error('Error fetching last reviews:', error);
 		}
 	};
+
+	useEffect(() => {
+		getReviews();
+	}, []);
 
 	return (
 		<SafeAreaProvider>
@@ -42,8 +46,11 @@ export default function HomeScreen() {
 						<ThemedView style={styles.reviewContainer}>
 							<SeeAll text='Last reviews' />
 							<ThemedView style={{ flex: 1, gap: 8 }}>
-								<ReviewItem item={mockupProcessedData} />
-								<ReviewItem item={mockupProcessedData} />
+								{lastReviews.length > 0 ? (
+									lastReviews.map((item, index) => <ReviewItem key={index} item={item} />)
+								) : (
+									<ThemedText type='default'>No reviews available</ThemedText>
+								)}
 							</ThemedView>
 						</ThemedView>
 						<ThemedView style={styles.reviewContainer}>

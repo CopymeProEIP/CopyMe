@@ -45,11 +45,11 @@ export default function LoginScreen() {
 			if (!response.ok) {
 				throw new Error(data.message || 'Login failed');
 			}
-			if (!data.data) {
+			if (!data.token) {
 				throw new Error('No token received');
 			}
 			// Store the JWT token for future authenticated requests
-			await AsyncStorage.setItem('userToken', data.data);
+			await AsyncStorage.setItem('userToken', data.token);
 
 			// Navigate to the main app
 			router.replace('/(tabs)');

@@ -9,8 +9,8 @@ export function useApi() {
 	const authFetch = useAuthFetch();
 
 	// Generic GET request with authentication
-	const get = async <T,>(endpoint: string): Promise<T> => {
-		const response = await authFetch(`${API_BASE_URL}${endpoint}`);
+	const get = async <T,>(endpoint: string, headers?: any): Promise<T> => {
+		const response = await authFetch(`${API_BASE_URL}${endpoint}`, { headers: headers });
 
 		if (!response.ok) {
 			const error = await response.json();

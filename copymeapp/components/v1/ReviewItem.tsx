@@ -18,7 +18,15 @@ const ReviewItem = ({ item }: { item: Partial<ProcessedData> }) => {
 				hour: '2-digit',
 				minute: '2-digit',
 		  })
-		: 'Date inconnue';
+		: item.updated_at
+		  ? new Date(item.updated_at).toLocaleDateString('fr-FR', {
+				day: 'numeric',
+				month: 'short',
+				year: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit',
+			})
+		  : 'N/A';
 
 	return (
 		<ThemedView style={styles.container}>
