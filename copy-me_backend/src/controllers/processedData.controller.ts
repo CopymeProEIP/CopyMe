@@ -57,8 +57,13 @@ export const upload = multer({
 
 export const getAllProcessedData = async (req: AuthenticatedRequest, res: Response) => {
 	try {
+<<<<<<< HEAD
 		const limit = req.query.limit ? parseInt(req.query.limit?.toString()) : -1;
 		const range = req.query.range?.toString() || 'all';
+=======
+		const limit = req.body.limit || -1;
+		const range = req.body.range || 'all';
+>>>>>>> cb47a819621a284695bb4004b1d0916bc91bb793
 		let query = { user_id: req.user?.id };
 
 		if (range !== 'all') {
@@ -101,6 +106,7 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 			}
 		}
 
+<<<<<<< HEAD
 		const processedData = await ProcessedData.find(query)
 			.limit(limit)
 			.select('-__v -user_id')
@@ -117,6 +123,14 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 			success: true,
 			count: transformedData.length,
 			data: transformedData,
+=======
+		const processedData = await ProcessedData.find(query).limit(limit);
+
+		return res.status(200).json({
+			success: true,
+			count: processedData.length,
+			data: processedData,
+>>>>>>> cb47a819621a284695bb4004b1d0916bc91bb793
 		});
 	} catch (error) {
 		logger.error('Erreur lors de la récupération des processed data:', error);
@@ -130,9 +144,13 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 export const getProcessedDataById = async (req: AuthenticatedRequest, res: Response) => {
 	try {
+<<<<<<< HEAD
 		const processedData = await ProcessedData.findById(req.params.id)
 			.select('-__v -user_id')
 			.populate({ path: 'exercise_id', select: '-user_id -_id' });
+=======
+		const processedData = await ProcessedData.findById(req.params.id);
+>>>>>>> cb47a819621a284695bb4004b1d0916bc91bb793
 
 		if (!processedData) {
 			return res.status(404).json({
@@ -151,6 +169,7 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 			});
 		}
 
+<<<<<<< HEAD
 		const itemObj = processedData.toObject() as any;
 		itemObj.exercise = itemObj.exercise_id;
 		delete itemObj.exercise_id;
@@ -161,6 +180,11 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 		return res.status(200).json({
 			success: true,
 			data: transformedData,
+=======
+		return res.status(200).json({
+			success: true,
+			data: processedData,
+>>>>>>> cb47a819621a284695bb4004b1d0916bc91bb793
 		});
 	} catch (error) {
 		logger.error('Erreur lors de la récupération de la processed data:', error);

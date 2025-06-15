@@ -183,3 +183,4 @@ shoot.jpg
 
 .env
 node_modules
+.mongodb
