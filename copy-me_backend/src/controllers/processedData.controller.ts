@@ -57,8 +57,8 @@ export const upload = multer({
 
 export const getAllProcessedData = async (req: AuthenticatedRequest, res: Response) => {
 	try {
-		const limit = req.body.limit || -1;
-		const range = req.body.range || 'all';
+		const limit = req.query.limit ? parseInt(req.query.limit?.toString()) : -1;
+		const range = req.query.range?.toString() || 'all';
 		let query = { user_id: req.user?.id };
 
 		if (range !== 'all') {
@@ -101,12 +101,22 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 			}
 		}
 
-		const processedData = await ProcessedData.find(query).limit(limit);
+		const processedData = await ProcessedData.find(query)
+			.limit(limit)
+			.select('-__v -user_id')
+			.populate({ path: 'exercise_id', select: '-user_id -_id' });
+
+		const transformedData = processedData.map((item) => {
+			const itemObj = item.toObject() as any;
+			itemObj.exercise = itemObj.exercise_id;
+			delete itemObj.exercise_id;
+			return itemObj;
+		});
 
 		return res.status(200).json({
 			success: true,
-			count: processedData.length,
-			data: processedData,
+			count: transformedData.length,
+			data: transformedData,
 		});
 	} catch (error) {
 		logger.error('Erreur lors de la récupération des processed data:', error);
@@ -120,7 +130,9 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 export const getProcessedDataById = async (req: AuthenticatedRequest, res: Response) => {
 	try {
-		const processedData = await ProcessedData.findById(req.params.id);
+		const processedData = await ProcessedData.findById(req.params.id)
+			.select('-__v -user_id')
+			.populate({ path: 'exercise_id', select: '-user_id -_id' });
 
 		if (!processedData) {
 			return res.status(404).json({
@@ -139,9 +151,16 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 			});
 		}
 
+		const itemObj = processedData.toObject() as any;
+		itemObj.exercise = itemObj.exercise_id;
+		delete itemObj.exercise_id;
+		const transformedData = itemObj;
+
+		console.log('Transformed Data:', transformedData);
+
 		return res.status(200).json({
 			success: true,
-			data: processedData,
+			data: transformedData,
 		});
 	} catch (error) {
 		logger.error('Erreur lors de la récupération de la processed data:', error);

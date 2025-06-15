@@ -9,8 +9,8 @@ export function useApi() {
 	const authFetch = useAuthFetch();
 
 	// Generic GET request with authentication
-	const get = async <T,>(endpoint: string): Promise<T> => {
-		const response = await authFetch(`${API_BASE_URL}${endpoint}`);
+	const get = async <T,>(endpoint: string, headers?: any): Promise<T> => {
+		const response = await authFetch(`${API_BASE_URL}${endpoint}`, { headers: headers });
 
 		if (!response.ok) {
 			const error = await response.json();
@@ -69,10 +69,56 @@ export function useApi() {
 		return response.json();
 	};
 
+	// Upload file with authentication
+	const uploadFile = async <T,>(
+		endpoint: string,
+		fileUri: string,
+		fieldName: string = 'file',
+		fileName?: string,
+		fileType: string = 'video/mp4',
+		additionalFields?: Record<string, string>,
+	): Promise<T> => {
+		// Créer un formData pour l'upload du fichier
+		const formData = new FormData();
+
+		// Obtenir le nom du fichier à partir de l'URI si non fourni
+		const finalFileName = fileName || fileUri.split('/').pop() || `file_${Date.now()}`;
+
+		// Ajouter le fichier au formData
+		formData.append(fieldName, {
+			uri: fileUri,
+			name: finalFileName,
+			type: fileType,
+		} as any);
+
+		// Ajouter les champs additionnels
+		if (additionalFields) {
+			Object.entries(additionalFields).forEach(([key, value]) => {
+				formData.append(key, value);
+			});
+		}
+
+		const response = await authFetch(`${API_BASE_URL}${endpoint}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'multipart/form-data',
+			},
+			body: formData,
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.message || `Upload failed with status ${response.status}`);
+		}
+
+		return response.json();
+	};
+
 	return {
 		get,
 		post,
 		put,
 		delete: del,
+		uploadFile,
 	};
 }

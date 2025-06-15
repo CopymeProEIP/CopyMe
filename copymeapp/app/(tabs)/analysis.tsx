@@ -1,6 +1,6 @@
 /** @format */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
@@ -9,60 +9,9 @@ import { FilterChips, FilterOption } from '@/components/FilterChips';
 import { Activity } from 'lucide-react-native';
 import ReviewItem from '@/components/v1/ReviewItem';
 import color from '../theme/color';
-
-// Type pour les éléments d'analyse
-interface AnalysisItem {
-	id: string;
-	title: string;
-	date: Date;
-	exerciseName: string;
-	thumbnailUrl: string;
-	progress: number;
-}
-
-// Données factices pour les analyses
-const analysisData: AnalysisItem[] = [
-	{
-		id: '1',
-		title: 'Free Throw Analysis',
-		date: new Date(2023, 5, 10),
-		exerciseName: 'Free Throw',
-		thumbnailUrl: 'https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?q=80&w=200',
-		progress: 75,
-	},
-	{
-		id: '2',
-		title: 'Jump Shot Analysis',
-		date: new Date(2023, 5, 15),
-		exerciseName: 'Three-Point Shot',
-		thumbnailUrl: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=200',
-		progress: 62,
-	},
-	{
-		id: '3',
-		title: 'Layup Analysis',
-		date: new Date(2023, 6, 2),
-		exerciseName: 'Layup Drill',
-		thumbnailUrl: 'https://images.unsplash.com/photo-1608245449230-4ac19066d2d0?q=80&w=200',
-		progress: 88,
-	},
-	{
-		id: '4',
-		title: 'Recent Free Throw',
-		date: new Date(2023, 10, 20), // Plus récent
-		exerciseName: 'Free Throw',
-		thumbnailUrl: 'https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?q=80&w=200',
-		progress: 82,
-	},
-	{
-		id: '5',
-		title: 'Recent Jump Shot',
-		date: new Date(2023, 10, 25), // Plus récent
-		exerciseName: 'Three-Point Shot',
-		thumbnailUrl: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=200',
-		progress: 68,
-	},
-];
+import { ProcessedData } from '@/constants/processedData';
+import { useApi } from '@/utils/api';
+import useReviews from '../hooks/useReviews';
 
 // Filtres de date
 const dateFilters: FilterOption[] = [
@@ -76,9 +25,11 @@ export default function analysisListScreen() {
 	const [selectedDateFilters, setSelectedDateFilters] = useState<string[]>(['all']);
 	const [customDate, setCustomDate] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
+	const { reviews, loading, error } = useReviews();
+
 
 	const handleDateFilterToggle = (id: string) => {
-		if (id === 'custom') {
+		if (id === 'custom') {-
 			setShowDatePicker(true);
 		}
 
@@ -105,21 +56,21 @@ export default function analysisListScreen() {
 		const now = new Date();
 		const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 jours en millisecondes
 
-		return analysisData.filter((item) => {
+		return reviews?.filter((item) => {
 			// Filtre de date
 			let matchesDateFilter = false;
 			if (selectedDateFilters.includes('all')) {
 				matchesDateFilter = true;
 			} else {
-				if (selectedDateFilters.includes('recent') && item.date >= thirtyDaysAgo) {
+				if (selectedDateFilters.includes('recent') && item.created_at >= thirtyDaysAgo) {
 					matchesDateFilter = true;
 				}
-				if (selectedDateFilters.includes('older') && item.date < thirtyDaysAgo) {
+				if (selectedDateFilters.includes('older') && item.created_at < thirtyDaysAgo) {
 					matchesDateFilter = true;
 				}
 				if (selectedDateFilters.includes('custom')) {
 					// Compare seulement année, mois, jour
-					const itemDate = new Date(item.date);
+					const itemDate = new Date(item.created_at);
 					const filterDate = new Date(customDate);
 
 					if (
@@ -134,15 +85,15 @@ export default function analysisListScreen() {
 
 			return matchesDateFilter;
 		});
-	}, [selectedDateFilters, customDate]);
+	}, [selectedDateFilters, customDate, reviews]);
 
-	const handleAnalysisPress = (analysis: AnalysisItem) => {
+	const handleAnalysisPress = (analysis: ProcessedData) => {
 		router.push({
 			pathname: '/analyze/[id]',
 			params: {
 				id: analysis.id,
-				title: analysis.title,
-				exerciseName: analysis.exerciseName,
+				title: analysis.exercise.name,
+				exerciseName: analysis.exercise.name,
 			},
 		});
 	};
@@ -158,13 +109,12 @@ export default function analysisListScreen() {
 			{filteredAnalysisData.length > 0 ? (
 				<FlatList
 					data={filteredAnalysisData}
-					// renderItem={renderAnalysisItem}
-					renderItem={({ item }: { item: AnalysisItem }) => (
+					renderItem={({ item, index }: { item: ProcessedData; index: number }) => (
 						<TouchableOpacity onPress={() => handleAnalysisPress(item)}>
 							<ReviewItem item={item} />
 						</TouchableOpacity>
 					)}
-					keyExtractor={(item) => item.id}
+					keyExtractor={(item, index) => index.toString()}
 					contentContainerStyle={styles.listContent}
 					showsVerticalScrollIndicator={false}
 				/>
