@@ -11,16 +11,7 @@ import ReviewItem from '@/components/v1/ReviewItem';
 import color from '../theme/color';
 import { ProcessedData } from '@/constants/processedData';
 import { useApi } from '@/utils/api';
-
-// Type pour les éléments d'analyse
-interface AnalysisItem {
-	id: string;
-	title: string;
-	date: Date;
-	exerciseName: string;
-	thumbnailUrl: string;
-	progress: number;
-}
+import useReviews from '../hooks/useReviews';
 
 // Filtres de date
 const dateFilters: FilterOption[] = [
@@ -34,22 +25,8 @@ export default function analysisListScreen() {
 	const [selectedDateFilters, setSelectedDateFilters] = useState<string[]>(['all']);
 	const [customDate, setCustomDate] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
+	const { reviews, loading, error } = useReviews();
 
-	const [lastReviews, setLastReviews] = useState<ProcessedData[]>([]);
-	const api = useApi();
-
-	const getReviews = async () => {
-		try {
-			const response: any = await api.get('/process?limit=10');
-			setLastReviews(response?.data || []);
-		} catch (error) {
-			console.error('Error fetching last reviews:', error);
-		}
-	};
-
-	useEffect(() => {
-		getReviews();
-	}, []);
 
 	const handleDateFilterToggle = (id: string) => {
 		if (id === 'custom') {-
@@ -79,7 +56,7 @@ export default function analysisListScreen() {
 		const now = new Date();
 		const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 jours en millisecondes
 
-		return lastReviews?.filter((item) => {
+		return reviews?.filter((item) => {
 			// Filtre de date
 			let matchesDateFilter = false;
 			if (selectedDateFilters.includes('all')) {
@@ -108,7 +85,7 @@ export default function analysisListScreen() {
 
 			return matchesDateFilter;
 		});
-	}, [selectedDateFilters, customDate, lastReviews]);
+	}, [selectedDateFilters, customDate, reviews]);
 
 	const handleAnalysisPress = (analysis: ProcessedData) => {
 		router.push({

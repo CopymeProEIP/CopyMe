@@ -80,15 +80,7 @@ export default function ExercisesScreen() {
 		router.push({
 			pathname: '/exercise/[id]',
 			params: {
-				id: exercise.id,
-				title: exercise.name,
-				level: exercise.difficulty,
-				description: exercise.description,
-				completed: exercise.completed || 0,
-				category: exercise.category,
-				instructions: exercise.instructions,
-				imageUrl: exercise.imageUrl,
-				videoUrl: exercise.videoUrl,
+				id: exercise._id,
 			},
 		});
 	};

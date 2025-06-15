@@ -1,36 +1,32 @@
 /** @format */
 
-import { Image, ScrollView, StyleSheet } from 'react-native';
+import { Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import ReviewItem from '@/components/v1/ReviewItem';
-import { mockupProcessedData } from '@/constants/Mockup';
 import SeeAll from '@/components/v1/SeeAll';
 import OverallStats from '@/components/v1/OverallStats';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import useReviews from '../hooks/useReviews';
+import { useRouter } from 'expo-router';
 import { ProcessedData } from '@/constants/processedData';
-import { useEffect, useState } from 'react';
-import { useApi } from '@/utils/api';
 
 export default function HomeScreen() {
-	const [lastReviews, setLastReviews] = useState<ProcessedData[]>([]);
-	const api = useApi();
+	const { reviews, loading, error } = useReviews();
+	const router = useRouter();
 
-	const getReviews = async () => {
-		try {
-			const response = await api.get('/process?limit=2');
-			const data = response as { data: ProcessedData[] };
-			setLastReviews(data?.data || []);
-		} catch (error) {
-			console.error('Error fetching last reviews:', error);
-		}
+	const handleAnalysisPress = (analysis: ProcessedData) => {
+		router.push({
+			pathname: '/analyze/[id]',
+			params: {
+				id: analysis.id,
+				title: analysis.exercise.name,
+				exerciseName: analysis.exercise.name,
+			},
+		});
 	};
-
-	useEffect(() => {
-		getReviews();
-	}, []);
 
 	return (
 		<SafeAreaProvider>
@@ -46,8 +42,16 @@ export default function HomeScreen() {
 						<ThemedView style={styles.reviewContainer}>
 							<SeeAll text='Last reviews' />
 							<ThemedView style={{ flex: 1, gap: 8 }}>
-								{lastReviews.length > 0 ? (
-									lastReviews.map((item, index) => <ReviewItem key={index} item={item} />)
+								{reviews.length > 0 ? (
+									loading ? (
+										<ThemedText type='default'>Loading...</ThemedText>
+									) : (
+										reviews.map((item, index) => (
+											<TouchableOpacity key={index} onPress={() => handleAnalysisPress(item)}>
+												<ReviewItem item={item} />
+											</TouchableOpacity>
+										))
+									)
 								) : (
 									<ThemedText type='default'>No reviews available</ThemedText>
 								)}

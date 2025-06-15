@@ -1,6 +1,6 @@
 /** @format */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, View, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Card } from '@/components/Card';
@@ -11,41 +11,61 @@ import ReviewItem from '@/components/v1/ReviewItem';
 import { Badge } from '@/components/Badge';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedView } from '@/components/ThemedView';
-
-const reviews = [
-	{
-		id: '1',
-		title: 'First attempt',
-		score: 65,
-		date: new Date(2023, 9, 15),
-	},
-	{
-		id: '2',
-		title: 'Second try',
-		score: 78,
-		date: new Date(2023, 10, 2),
-	},
-	{
-		id: '3',
-		title: 'Latest practice',
-		score: 85,
-		date: new Date(2023, 10, 20),
-	},
-];
+import { Exercise } from '@/constants/interface';
+import { useApi } from '@/utils/api';
+import useReviews from '../hooks/useReviews';
+import { ProcessedData } from '@/constants/processedData';
 
 export default function ExerciseDetailScreen() {
 	const params = useLocalSearchParams();
 	const router = useRouter();
-	const { id, title, level, description, completed } = params;
+	const { id } = params;
+	const { reviews, loading, error } = useReviews();
+
+	const [exercisesData, setExercisesData] = useState<Exercise>();
+	const [isLoading, setIsLoading] = useState(true);
+	const api = useApi();
+
+	const getExercises = async () => {
+		try {
+			const response = await api.get('/exercises/' + (id as string));
+			const data = response as { data: Exercise };
+			setExercisesData(data?.data);
+
+			setIsLoading(false);
+		} catch (error) {
+			console.error('Error fetching exercises:', error);
+			setIsLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		getExercises();
+	}, []);
 
 	const handleStartExercise = () => {
-		// Convertir les paramètres en string pour éviter l'erreur TypeScript
-		const idParam = typeof id === 'string' ? id : String(id);
-		const titleParam = typeof title === 'string' ? title : String(title);
-
 		router.push({
 			pathname: '/exercise-session/[id]',
-			params: { id: idParam, title: titleParam },
+			params: { id: (id as string) || 0, title: exercisesData?.name },
+		});
+	};
+
+	if (isLoading) {
+		return <ThemedText type='default'>Loading...</ThemedText>;
+	}
+
+	if (!exercisesData) {
+		return <ThemedText type='default'>Exercise not found</ThemedText>;
+	}
+
+	const handleAnalysisPress = (analysis: ProcessedData) => {
+		router.push({
+			pathname: '/analyze/[id]',
+			params: {
+				id: analysis.id,
+				title: analysis.exercise.name,
+				exerciseName: analysis.exercise.name,
+			},
 		});
 	};
 
@@ -62,11 +82,11 @@ export default function ExerciseDetailScreen() {
 					defaultSource={require('@/assets/images/placeholder.png')}
 				/>
 			}
-			headerBackgroundColor={{dark: color.colors.background, light: color.colors.background}}>
+			headerBackgroundColor={{ dark: color.colors.background, light: color.colors.background }}>
 			<ThemedView>
 				<ThemedView style={styles.header}>
-					<ThemedText type='title'>{(title as string) || 'No Name'}</ThemedText>
-					<Badge type='primary' text={(level as string) || 'No level'} />
+					<ThemedText type='title'>{(exercisesData?.name as string) || 'No Name'}</ThemedText>
+					<Badge type='primary' text={(exercisesData?.difficulty as string) || 'No level'} />
 				</ThemedView>
 
 				<Card style={styles.statsCard}>
@@ -92,7 +112,9 @@ export default function ExerciseDetailScreen() {
 					Description
 				</ThemedText>
 				<Card style={styles.descriptionCard}>
-					<ThemedText type='default'>{description as string || 'No description'}</ThemedText>
+					<ThemedText type='default'>
+						{(exercisesData?.description as string) || 'No description'}
+					</ThemedText>
 				</Card>
 
 				<ThemedText type='subtitle' style={styles.sectionTitle}>
@@ -100,7 +122,9 @@ export default function ExerciseDetailScreen() {
 				</ThemedText>
 
 				{reviews.map((review, index) => (
-					<ReviewItem key={index} item={review} />
+					<TouchableOpacity key={index} onPress={() => handleAnalysisPress(review)}>
+						<ReviewItem item={review} />
+					</TouchableOpacity>
 				))}
 			</ThemedView>
 		</ParallaxScrollView>
@@ -108,7 +132,6 @@ export default function ExerciseDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-
 	coverImage: {
 		width: '100%',
 		height: 250,
