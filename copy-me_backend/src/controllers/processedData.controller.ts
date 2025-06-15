@@ -130,7 +130,9 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 export const getProcessedDataById = async (req: AuthenticatedRequest, res: Response) => {
 	try {
-		const processedData = await ProcessedData.findById(req.params.id);
+		const processedData = await ProcessedData.findById(req.params.id)
+			.select('-__v -user_id')
+			.populate({ path: 'exercise_id', select: '-user_id -_id' });
 
 		if (!processedData) {
 			return res.status(404).json({
@@ -149,9 +151,16 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 			});
 		}
 
+		const itemObj = processedData.toObject() as any;
+		itemObj.exercise = itemObj.exercise_id;
+		delete itemObj.exercise_id;
+		const transformedData = itemObj;
+
+		console.log('Transformed Data:', transformedData);
+
 		return res.status(200).json({
 			success: true,
-			data: processedData,
+			data: transformedData,
 		});
 	} catch (error) {
 		logger.error('Erreur lors de la récupération de la processed data:', error);

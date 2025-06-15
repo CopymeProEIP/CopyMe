@@ -1,13 +1,15 @@
 /** @format */
 
-import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Platform, Image, Alert, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, TouchableOpacity, Platform, Image, Alert, ScrollView, Linking } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Camera, Upload, X, ChevronLeft, VideoIcon } from 'lucide-react-native';
 import color from '../theme/color';
+import { useApi } from '@/utils/api';
+import * as ImagePicker from 'expo-image-picker';
 
 // Nous remplaçons expo-image-picker par une implémentation fictive
 const mockVideoUris = [
@@ -21,44 +23,159 @@ export default function ExerciseSessionScreen() {
 	const router = useRouter();
 	const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
 	const [processing, setProcessing] = useState(false);
+	const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState(false);
+	const [hasCameraPermission, setHasCameraPermission] = useState(false);
+	const api = useApi();
 
-	const handleUploadVideo = () => {
-		// Simuler une sélection de vidéo
-		const randomIndex = Math.floor(Math.random() * mockVideoUris.length);
-		const randomVideoUri = mockVideoUris[randomIndex];
-		setUploadedVideo(randomVideoUri);
+	// Demander les permissions au chargement du composant
+	useEffect(() => {
+		(async () => {
+			// Demander la permission d'accès à la bibliothèque
+			const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+			setHasMediaLibraryPermission(mediaLibraryPermission.status === 'granted');
+			
+			// Demander la permission d'accès à la caméra
+			const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+			setHasCameraPermission(cameraPermission.status === 'granted');
+		})();
+	}, []);
+
+	const handleUploadVideo = async () => {
+		// Vérifier si nous avons la permission
+		if (!hasMediaLibraryPermission) {
+			Alert.alert(
+				'Permission Required',
+				'We need permission to access your media library to upload videos.',
+				[
+					{ text: 'Cancel', style: 'cancel' },
+					{ 
+						text: 'Settings', 
+						onPress: () => {
+							// Ouvrir les paramètres de l'application pour que l'utilisateur puisse accorder les permissions
+							if (Platform.OS === 'ios') {
+								Linking.openURL('app-settings:');
+							} else {
+								Linking.openSettings();
+							}
+						}
+					}
+				]
+			);
+			return;
+		}
+
+		// Lancer le sélecteur de médias
+		try {
+			const result = await ImagePicker.launchImageLibraryAsync({
+				mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+				allowsEditing: true,
+				aspect: [16, 9],
+				quality: 1,
+			});
+
+			if (!result.canceled && result.assets && result.assets.length > 0) {
+				setUploadedVideo(result.assets[0].uri);
+			}
+		} catch (error) {
+			console.error('Error picking video from library:', error);
+			Alert.alert('Error', 'Failed to pick video from library');
+			
+			// Fallback au mock en cas d'erreur en développement
+			if (__DEV__) {
+				const randomIndex = Math.floor(Math.random() * mockVideoUris.length);
+				const randomVideoUri = mockVideoUris[randomIndex];
+				setUploadedVideo(randomVideoUri);
+			}
+		}
 	};
 
-	const handleCaptureVideo = () => {
-		Alert.alert(
-			'Capture Video',
-			"This would normally open your camera. Since expo-image-picker is not installed, we'll use a mock video.",
-		);
-		// Simuler une capture de vidéo
-		const randomIndex = Math.floor(Math.random() * mockVideoUris.length);
-		const randomVideoUri = mockVideoUris[randomIndex];
-		setUploadedVideo(randomVideoUri);
+	const handleCaptureVideo = async () => {
+		// Vérifier si nous avons la permission
+		if (!hasCameraPermission) {
+			Alert.alert(
+				'Permission Required',
+				'We need permission to access your camera to record videos.',
+				[
+					{ text: 'Cancel', style: 'cancel' },
+					{ 
+						text: 'Settings', 
+						onPress: () => {
+							// Ouvrir les paramètres de l'application
+							if (Platform.OS === 'ios') {
+								Linking.openURL('app-settings:');
+							} else {
+								Linking.openSettings();
+							}
+						}
+					}
+				]
+			);
+			return;
+		}
+
+		// Lancer la caméra
+		try {
+			const result = await ImagePicker.launchCameraAsync({
+				mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+				allowsEditing: true,
+				aspect: [16, 9],
+				quality: 1,
+				videoMaxDuration: 60, // 60 secondes max
+			});
+
+			if (!result.canceled && result.assets && result.assets.length > 0) {
+				setUploadedVideo(result.assets[0].uri);
+			}
+		} catch (error) {
+			console.error('Error recording video:', error);
+			Alert.alert('Error', 'Failed to record video');
+			
+			// Fallback au mock en cas d'erreur en développement
+			if (__DEV__) {
+				const randomIndex = Math.floor(Math.random() * mockVideoUris.length);
+				const randomVideoUri = mockVideoUris[randomIndex];
+				setUploadedVideo(randomVideoUri);
+			}
+		}
 	};
 
-	const handleSubmitVideo = () => {
+	const handleSubmitVideo = async () => {
+		if (!uploadedVideo) {
+			Alert.alert('Error', 'Please upload or record a video first');
+			return;
+		}
+
 		setProcessing(true);
-		// Simuler le temps de traitement
-		setTimeout(() => {
-			setProcessing(false);
-			// Convertir les paramètres en string pour éviter l'erreur TypeScript
-			const idParam = typeof params.id === 'string' ? params.id : String(params.id);
-			const titleParam = typeof params.title === 'string' ? params.title : String(params.title);
+
+		try {
+			const exerciseId = typeof params.id === 'string' ? params.id : String(params.id);
+
+			const data = await api.uploadFile(
+				'/process',
+				uploadedVideo,
+				'media',
+				undefined, // nom de fichier automatique
+				'video/mp4',
+				{ exercise_id: exerciseId },
+			) as any;
 
 			// Naviguer vers les résultats
+			const titleParam = typeof params.title === 'string' ? params.title : String(params.title);
+
 			router.push({
 				pathname: '/exercise-results/[id]',
 				params: {
-					id: idParam,
+					id: data.id || exerciseId,
 					title: titleParam,
-					score: Math.floor(Math.random() * 40) + 60, // Score aléatoire entre 60-100
+					score: data.precision_score || Math.floor(Math.random() * 40) + 60, // Utiliser le score réel ou un score aléatoire comme fallback
 				},
 			});
-		}, 2000);
+		} catch (error) {
+			console.error('Error uploading video:', error);
+			Alert.alert('Upload Failed', 'There was an error processing your video. Please try again.');
+		} finally {
+			setProcessing(false);
+		}
 	};
 
 	const handleCancelUpload = () => {
