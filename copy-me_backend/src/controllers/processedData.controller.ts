@@ -156,8 +156,6 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 		delete itemObj.exercise_id;
 		const transformedData = itemObj;
 
-		console.log('Transformed Data:', transformedData);
-
 		return res.status(200).json({
 			success: true,
 			data: transformedData,
