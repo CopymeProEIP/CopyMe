@@ -14,7 +14,6 @@ const generateToken = (user: any) => {
 export async function createUser(data: any) {
     try {
         const user = await User.create(data);
-        console.log(user);
 
         return {
             status: 'success',

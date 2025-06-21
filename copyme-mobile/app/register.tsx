@@ -38,7 +38,7 @@ export default function RegisterScreen() {
 			const firstName = nameParts[0];
 			const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-			const response = await fetch('http://localhost:3000/api/auth/register', {
+			const response = await fetch('http://localhost:3001/api/auth/register', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
