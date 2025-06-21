@@ -1,0 +1,57 @@
+{
+  "name": "copymeapp",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-native-community/blur": "^4.4.1",
+    "@react-navigation/bottom-tabs": "^7.3.1",
+    "@react-navigation/elements": "^2.2.8",
+    "@react-navigation/native": "^7.0.17",
+    "@react-navigation/stack": "^7.3.6",
+    "lucide-react-native": "^0.483.0",
+    "react": "19.0.0",
+    "react-native": "0.79.3",
+    "react-native-chart-kit": "^6.12.0",
+    "react-native-charts-wrapper": "^0.3.0",
+    "react-native-gesture-handler": "~2.24.0",
+    "react-native-haptic-feedback": "^2.0.0",
+    "react-native-image-picker": "^7.1.0",
+    "react-native-reanimated": "~3.17.5",
+    "react-native-safe-area-context": "5.4.0",
+    "react-native-screens": "~4.11.1",
+    "react-native-svg": "15.11.2",
+    "react-native-vector-icons": "^10.2.0",
+    "react-native-video": "^6.11.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/plugin-transform-runtime": "^7.26.10",
+    "@babel/preset-env": "^7.27.2",
+    "@babel/runtime": "^7.27.6",
+    "@react-native-community/cli": "19.0.0",
+    "@react-native-community/cli-platform-android": "19.0.0",
+    "@react-native-community/cli-platform-ios": "19.0.0",
+    "@react-native/babel-preset": "0.80.0",
+    "@react-native/eslint-config": "0.80.0",
+    "@react-native/metro-config": "0.80.0",
+    "@react-native/typescript-config": "0.80.0",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.1.8",
+    "@types/react-test-renderer": "^18.3.1",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "jest": "^30.0.2",
+    "prettier": "3.5.3",
+    "react-test-renderer": "19.1.0",
+    "typescript": "5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
