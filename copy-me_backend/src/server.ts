@@ -8,18 +8,24 @@ import exerciseRoutes from './routes/exercise.routes';
 import processedDataRoutes from './routes/processedData.routes';
 import { logger } from './middlewares/logger.middleware';
 import { errorHandler } from './middlewares/error.middleware';
+
+// Charger les variables d'environnement depuis le fichier .env
+dotenv.config();
+
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGODB_URI as string;
 
 // Middleware
-app.use(cors({
-	origin: '*', // Permet les requêtes de toutes les origines
-	methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-	allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
-	credentials: true,
-	exposedHeaders: ['Content-Length', 'X-Requested-With', 'Authorization']
-}));
+app.use(
+	cors({
+		origin: 'http://localhost:3000', // Origine spécifique au lieu de '*'
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
+		exposedHeaders: ['Content-Length', 'X-Requested-With', 'Authorization'],
+		credentials: true, // Autoriser l'envoi de cookies
+	}),
+);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(logger);
