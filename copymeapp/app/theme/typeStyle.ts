@@ -1,6 +1,6 @@
 /** @format */
 
-import { ThemedTextProps } from "@/components/ThemedText";
+import { ThemedTextProps } from "../components/ThemedText";
 import { StyleSheet, TextStyle } from "react-native";
 import color from "./color";
 

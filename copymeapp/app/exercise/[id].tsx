@@ -4,22 +4,27 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, View, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Card } from '@/components/Card';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { Play } from 'lucide-react-native';
-import color from '../theme/color';
+import color from '@/app/theme/color';
 import ReviewItem from '@/components/v1/ReviewItem';
 import { Badge } from '@/components/Badge';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedView } from '@/components/ThemedView';
 import { Exercise } from '@/constants/interface';
 import { useApi } from '@/utils/api';
-import useReviews from '../hooks/useReviews';
+import useReviews from '@/app/hooks/useReviews';
 import { ProcessedData } from '@/constants/processedData';
 
+type RouteParams = {
+	id: string;
+	imageUrl?: string;
+};
+
 export default function ExerciseDetailScreen() {
-	const params = useLocalSearchParams();
-	const router = useRouter();
-	const { id } = params;
+	const route = useRoute();
+	const navigation = useNavigation();
+	const { id, imageUrl } = route.params as RouteParams;
 	const { reviews, loading, error } = useReviews();
 
 	const [exercisesData, setExercisesData] = useState<Exercise>();
@@ -44,9 +49,9 @@ export default function ExerciseDetailScreen() {
 	}, []);
 
 	const handleStartExercise = () => {
-		router.push({
-			pathname: '/exercise-session/[id]',
-			params: { id: (id as string) || 0, title: exercisesData?.name },
+		(navigation as any).navigate('ExerciseSession', {
+			id: (id as string) || 0,
+			title: exercisesData?.name
 		});
 	};
 
@@ -59,13 +64,10 @@ export default function ExerciseDetailScreen() {
 	}
 
 	const handleAnalysisPress = (analysis: ProcessedData) => {
-		router.push({
-			pathname: '/analyze/[id]',
-			params: {
-				id: analysis.id,
-				title: analysis.exercise.name,
-				exerciseName: analysis.exercise.name,
-			},
+		(navigation as any).navigate('Analyze', {
+			id: analysis.id,
+			title: analysis.exercise.name,
+			exerciseName: analysis.exercise.name,
 		});
 	};
 
@@ -74,8 +76,8 @@ export default function ExerciseDetailScreen() {
 			headerImage={
 				<Image
 					source={
-						params.imageUrl
-							? { uri: params.imageUrl as string }
+						imageUrl
+							? { uri: imageUrl }
 							: require('@/assets/images/placeholder.png')
 					}
 					style={styles.coverImage}

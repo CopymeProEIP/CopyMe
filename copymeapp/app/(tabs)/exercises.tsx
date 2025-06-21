@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
 import { ExerciseItem } from '@/components/ExerciseItem';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { Activity } from 'lucide-react-native';
 import { useApi } from '@/utils/api';
 import styles from '../styles/exercisesTabs';
@@ -22,7 +22,7 @@ const levelFilters: FilterOption[] = [
 ];
 
 export default function ExercisesScreen() {
-	const router = useRouter();
+	const navigation = useNavigation();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedFilters, setSelectedFilters] = useState<string[]>(['all']);
 	const [exercisesData, setExercisesData] = useState<Exercise[]>([]);
@@ -77,11 +77,8 @@ export default function ExercisesScreen() {
 	}, [searchQuery, selectedFilters, exercisesData]);
 
 	const handleExercisePress = (exercise: Exercise) => {
-		router.push({
-			pathname: '/exercise/[id]',
-			params: {
-				id: exercise._id,
-			},
+		(navigation as any).navigate('ExerciseDetail', {
+			id: exercise._id,
 		});
 	};
 

@@ -1,18 +1,25 @@
 /** @format */
 
 import React from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, SafeAreaView } from 'react-native';
+import { StyleSheet, ScrollView, View, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Share2, Home, Award, LineChart } from 'lucide-react-native';
-import color from '../theme/color';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { ArrowLeft, Award, LineChart } from 'lucide-react-native';
+import color from '@/app/theme/color';
+
+type RouteParams = {
+	id: string;
+	title?: string;
+	score?: number;
+};
 
 export default function ExerciseResultsScreen() {
-	const params = useLocalSearchParams();
-	const router = useRouter();
-	const score = Number(params.score) || 75;
+	const route = useRoute();
+	const navigation = useNavigation();
+	const { id, title, score: routeScore } = route.params as RouteParams;
+	const score = routeScore || 75;
 
 	const getScoreMessage = (score: number) => {
 		if (score >= 90) return 'Excellent!';
@@ -45,26 +52,22 @@ export default function ExerciseResultsScreen() {
 	};
 
 	const handleGoHome = () => {
-		router.replace('/(tabs)');
+		(navigation as any).replace('Main');
 	};
 
 	const handleRetry = () => {
-		router.back();
+		(navigation as any).goBack();
 	};
 
 	const handleViewAnalysis = () => {
-		const id = Array.isArray(params.id) ? params.id[0] : params.id;
-		router.replace({
-			pathname: '/analyze/[id]',
-			params: {
-				id,
-				title: `${params.title} Analysis`,
-			},
+		(navigation as any).navigate('Analyze', {
+			id,
+			title: `${title} Analysis`,
 		});
 	};
 
 	const handleShare = () => {
-		alert('Sharing functionality would go here!');
+		Alert.alert('Sharing functionality would go here!');
 	};
 
 	return (

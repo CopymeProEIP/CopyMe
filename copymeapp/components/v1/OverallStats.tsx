@@ -1,11 +1,11 @@
 /** @format */
 
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { ThemedText } from '../ThemedText';
-import { Card } from '../Card';
+import { StyleSheet, Dimensions } from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { Card } from '@/components/Card';
 import color from '@/app/theme/color';
-import { ThemedView } from '../ThemedView';
+import { ThemedView } from '@/components/ThemedView';
 import { LineChart } from 'react-native-chart-kit';
 import { TrendingUp } from 'lucide-react-native';
 

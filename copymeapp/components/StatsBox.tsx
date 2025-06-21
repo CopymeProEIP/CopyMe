@@ -1,10 +1,10 @@
 /** @format */
 
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { LucideIcon } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
-import { Card } from './Card';
+import { Card } from '@/components/Card';
 import { useState } from 'react';
 
 export function StatsBox(props: { title: string; value: string; icon: LucideIcon }) {

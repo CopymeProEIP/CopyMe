@@ -1,15 +1,36 @@
 /** @format */
 
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, Platform, Image, Alert, ScrollView, Linking } from 'react-native';
+import { StyleSheet, TouchableOpacity, Image, Alert, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Camera, Upload, X, ChevronLeft, VideoIcon } from 'lucide-react-native';
-import color from '../theme/color';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { Camera, Upload, X, VideoIcon } from 'lucide-react-native';
+import color from '@/app/theme/color';
 import { useApi } from '@/utils/api';
-import * as ImagePicker from 'expo-image-picker';
+
+// Mock pour l'image picker en attendant l'installation
+const mockImagePicker = {
+	launchImageLibrary: async () => {
+		return new Promise((resolve) => {
+			setTimeout(() => {
+				resolve({
+					assets: [{ uri: 'https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?q=80&w=200' }]
+				});
+			}, 1000);
+		});
+	},
+	launchCamera: async () => {
+		return new Promise((resolve) => {
+			setTimeout(() => {
+				resolve({
+					assets: [{ uri: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=200' }]
+				});
+			}, 1000);
+		});
+	}
+};
 
 // Nous remplaçons expo-image-picker par une implémentation fictive
 const mockVideoUris = [
@@ -18,9 +39,15 @@ const mockVideoUris = [
 	'https://images.unsplash.com/photo-1608245449230-4ac19066d2d0?q=80&w=200',
 ];
 
+type RouteParams = {
+	id: string;
+	title?: string;
+};
+
 export default function ExerciseSessionScreen() {
-	const params = useLocalSearchParams();
-	const router = useRouter();
+	const route = useRoute();
+	const navigation = useNavigation();
+	const { id, title } = route.params as RouteParams;
 	const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
 	const [processing, setProcessing] = useState(false);
 	const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState(false);
@@ -29,57 +56,23 @@ export default function ExerciseSessionScreen() {
 
 	// Demander les permissions au chargement du composant
 	useEffect(() => {
-		(async () => {
-			// Demander la permission d'accès à la bibliothèque
-			const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-			setHasMediaLibraryPermission(mediaLibraryPermission.status === 'granted');
-			
-			// Demander la permission d'accès à la caméra
-			const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-			setHasCameraPermission(cameraPermission.status === 'granted');
-		})();
+		// Pour react-native-image-picker, les permissions sont gérées automatiquement
+		setHasMediaLibraryPermission(true);
+		setHasCameraPermission(true);
 	}, []);
 
 	const handleUploadVideo = async () => {
-		// Vérifier si nous avons la permission
-		if (!hasMediaLibraryPermission) {
-			Alert.alert(
-				'Permission Required',
-				'We need permission to access your media library to upload videos.',
-				[
-					{ text: 'Cancel', style: 'cancel' },
-					{ 
-						text: 'Settings', 
-						onPress: () => {
-							// Ouvrir les paramètres de l'application pour que l'utilisateur puisse accorder les permissions
-							if (Platform.OS === 'ios') {
-								Linking.openURL('app-settings:');
-							} else {
-								Linking.openSettings();
-							}
-						}
-					}
-				]
-			);
-			return;
-		}
-
 		// Lancer le sélecteur de médias
 		try {
-			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-				allowsEditing: true,
-				aspect: [16, 9],
-				quality: 1,
-			});
+			const result: any = await mockImagePicker.launchImageLibrary();
 
-			if (!result.canceled && result.assets && result.assets.length > 0) {
+			if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
 				setUploadedVideo(result.assets[0].uri);
 			}
 		} catch (error) {
 			console.error('Error picking video from library:', error);
 			Alert.alert('Error', 'Failed to pick video from library');
-			
+
 			// Fallback au mock en cas d'erreur en développement
 			if (__DEV__) {
 				const randomIndex = Math.floor(Math.random() * mockVideoUris.length);
@@ -90,46 +83,17 @@ export default function ExerciseSessionScreen() {
 	};
 
 	const handleCaptureVideo = async () => {
-		// Vérifier si nous avons la permission
-		if (!hasCameraPermission) {
-			Alert.alert(
-				'Permission Required',
-				'We need permission to access your camera to record videos.',
-				[
-					{ text: 'Cancel', style: 'cancel' },
-					{ 
-						text: 'Settings', 
-						onPress: () => {
-							// Ouvrir les paramètres de l'application
-							if (Platform.OS === 'ios') {
-								Linking.openURL('app-settings:');
-							} else {
-								Linking.openSettings();
-							}
-						}
-					}
-				]
-			);
-			return;
-		}
-
 		// Lancer la caméra
 		try {
-			const result = await ImagePicker.launchCameraAsync({
-				mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-				allowsEditing: true,
-				aspect: [16, 9],
-				quality: 1,
-				videoMaxDuration: 60, // 60 secondes max
-			});
+			const result: any = await mockImagePicker.launchCamera();
 
-			if (!result.canceled && result.assets && result.assets.length > 0) {
+			if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
 				setUploadedVideo(result.assets[0].uri);
 			}
 		} catch (error) {
 			console.error('Error recording video:', error);
 			Alert.alert('Error', 'Failed to record video');
-			
+
 			// Fallback au mock en cas d'erreur en développement
 			if (__DEV__) {
 				const randomIndex = Math.floor(Math.random() * mockVideoUris.length);
@@ -148,7 +112,7 @@ export default function ExerciseSessionScreen() {
 		setProcessing(true);
 
 		try {
-			const exerciseId = typeof params.id === 'string' ? params.id : String(params.id);
+			const exerciseId = id;
 
 			const data = await api.uploadFile(
 				'/process',
@@ -160,15 +124,12 @@ export default function ExerciseSessionScreen() {
 			) as any;
 
 			// Naviguer vers les résultats
-			const titleParam = typeof params.title === 'string' ? params.title : String(params.title);
+			const titleParam = title || 'Exercise Session';
 
-			router.push({
-				pathname: '/exercise-results/[id]',
-				params: {
-					id: data.id || exerciseId,
-					title: titleParam,
-					score: data.precision_score || Math.floor(Math.random() * 40) + 60, // Utiliser le score réel ou un score aléatoire comme fallback
-				},
+			(navigation as any).navigate('ExerciseResults', {
+				id: data.id || exerciseId,
+				title: titleParam,
+				score: data.precision_score || Math.floor(Math.random() * 40) + 60, // Utiliser le score réel ou un score aléatoire comme fallback
 			});
 		} catch (error) {
 			console.error('Error uploading video:', error);
@@ -184,37 +145,29 @@ export default function ExerciseSessionScreen() {
 
 	return (
 		<ThemedView style={styles.container}>
-			<Stack.Screen
-				options={{
-					title: typeof params.title === 'string' ? params.title : 'Exercise Session',
-					headerLeft: () => (
-						<TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10, padding: 5 }}>
-							<ChevronLeft size={24} color='#000' />
-						</TouchableOpacity>
-					),
-				}}
-			/>
 			<ScrollView style={styles.content}>
 				<Card style={styles.uploadCard}>
 					{!uploadedVideo ? (
 						<ThemedView style={styles.placeholderContainer}>
-							<VideoIcon size={40} color={color.colors.textSecondary} style={styles.videoIcon} />
-							<ThemedText type='subtitle' style={styles.uploadTitle}>
-								Upload Your Performance
+							<VideoIcon size={48} color={color.colors.primary} />
+							<ThemedText type='subtitle' style={styles.placeholderTitle}>
+								Upload Your Video
 							</ThemedText>
-							<ThemedText type='default' style={styles.uploadDescription}>
-								Upload a video of you performing this exercise for analysis
+							<ThemedText type='default' style={styles.placeholderText}>
+								Record a new video or upload an existing one to analyze your form
 							</ThemedText>
 
-							<ThemedView style={styles.buttonsContainer}>
+							<ThemedView style={styles.buttonContainer}>
 								<TouchableOpacity style={styles.uploadButton} onPress={handleUploadVideo}>
-									<Upload size={24} color={color.colors.textForeground} />
+									<Upload size={20} color={color.colors.textForeground} />
 									<ThemedText type='button'>Upload Video</ThemedText>
 								</TouchableOpacity>
 
-								<TouchableOpacity style={styles.captureButton} onPress={handleCaptureVideo}>
-									<Camera size={24} color={color.colors.textForeground} />
-									<ThemedText type='button'>Record Video</ThemedText>
+								<TouchableOpacity style={styles.cameraButton} onPress={handleCaptureVideo}>
+									<Camera size={20} color={color.colors.primary} />
+									<ThemedText type='button' style={styles.cameraButtonText}>
+										Record Video
+									</ThemedText>
 								</TouchableOpacity>
 							</ThemedView>
 						</ThemedView>
@@ -222,64 +175,23 @@ export default function ExerciseSessionScreen() {
 						<ThemedView style={styles.videoPreviewContainer}>
 							<Image source={{ uri: uploadedVideo }} style={styles.videoPreview} />
 							<TouchableOpacity style={styles.cancelButton} onPress={handleCancelUpload}>
-								<X size={18} color='#FFF' />
-							</TouchableOpacity>
-
-							<TouchableOpacity
-								style={styles.analyzeButton}
-								onPress={handleSubmitVideo}
-								disabled={processing}>
-								<ThemedText type='button'>
-									{processing ? 'Processing...' : 'Analyze Performance'}
-								</ThemedText>
+								<X size={20} color={color.colors.textForeground} />
 							</TouchableOpacity>
 						</ThemedView>
 					)}
 				</Card>
 
-				<ThemedText type='subtitle' style={styles.sectionTitle}>
-					Performance Tips
-				</ThemedText>
-
-				<Card style={styles.tipsCard}>
-					<ThemedView style={styles.tipItem}>
-						<ThemedText type='defaultSemiBold' style={styles.tipBullet}>
-							•
+				{uploadedVideo && (
+					<TouchableOpacity
+						style={[styles.submitButton, processing && styles.submitButtonDisabled]}
+						onPress={handleSubmitVideo}
+						disabled={processing}
+					>
+						<ThemedText type='button'>
+							{processing ? 'Processing...' : 'Analyze Video'}
 						</ThemedText>
-						<ThemedText type='default'>Make sure you're clearly visible in the frame</ThemedText>
-					</ThemedView>
-					<ThemedView style={styles.tipItem}>
-						<ThemedText type='defaultSemiBold' style={styles.tipBullet}>
-							•
-						</ThemedText>
-						<ThemedText type='default'>Record from a stable position or use a tripod</ThemedText>
-					</ThemedView>
-					<ThemedView style={styles.tipItem}>
-						<ThemedText type='defaultSemiBold' style={styles.tipBullet}>
-							•
-						</ThemedText>
-						<ThemedText type='default'>Ensure good lighting for optimal analysis</ThemedText>
-					</ThemedView>
-				</Card>
-
-				<ThemedText type='subtitle' style={styles.sectionTitle}>
-					Your Stats
-				</ThemedText>
-
-				<Card style={styles.statsContainer}>
-					<ThemedView style={styles.statItem}>
-						<ThemedText type='default'>Sessions Completed</ThemedText>
-						<ThemedText type='subtitle'>3</ThemedText>
-					</ThemedView>
-					<ThemedView style={styles.statItem}>
-						<ThemedText type='default'>Average Score</ThemedText>
-						<ThemedText type='subtitle'>76%</ThemedText>
-					</ThemedView>
-					<ThemedView style={styles.statItem}>
-						<ThemedText type='default'>Best Score</ThemedText>
-						<ThemedText type='subtitle'>85%</ThemedText>
-					</ThemedView>
-				</Card>
+					</TouchableOpacity>
+				)}
 			</ScrollView>
 		</ThemedView>
 	);
@@ -295,113 +207,76 @@ const styles = StyleSheet.create({
 	},
 	uploadCard: {
 		marginBottom: 24,
-		padding: 0,
+		padding: 24,
 		overflow: 'hidden',
 	},
 	placeholderContainer: {
 		padding: 24,
 		alignItems: 'center',
 	},
-	uploadTitle: {
+	placeholderTitle: {
 		textAlign: 'center',
 		marginBottom: 8,
 	},
-	uploadDescription: {
+	placeholderText: {
 		textAlign: 'center',
 		marginBottom: 24,
 		opacity: 0.7,
 	},
-	buttonsContainer: {
+	buttonContainer: {
 		flexDirection: 'row',
 		justifyContent: 'center',
-		gap: 16,
-		width: '100%',
+		gap: 12,
 	},
 	uploadButton: {
 		backgroundColor: color.colors.primary,
 		flexDirection: 'row',
 		alignItems: 'center',
-		justifyContent: 'center',
-		paddingVertical: 12,
 		paddingHorizontal: 16,
-		borderRadius: 12,
+		paddingVertical: 12,
+		borderRadius: 8,
 		gap: 8,
-		flex: 1,
 	},
-	captureButton: {
-		backgroundColor: '#36A2EB',
+	cameraButton: {
+		backgroundColor: 'transparent',
+		borderWidth: 1,
+		borderColor: color.colors.primary,
 		flexDirection: 'row',
 		alignItems: 'center',
-		justifyContent: 'center',
-		paddingVertical: 12,
 		paddingHorizontal: 16,
-		borderRadius: 12,
+		paddingVertical: 12,
+		borderRadius: 8,
 		gap: 8,
-		flex: 1,
+	},
+	cameraButtonText: {
+		color: color.colors.primary,
 	},
 	videoPreviewContainer: {
 		position: 'relative',
-		height: 250,
 	},
 	videoPreview: {
 		width: '100%',
-		height: '100%',
+		height: 200,
+		borderRadius: 8,
 	},
 	cancelButton: {
 		position: 'absolute',
-		top: 12,
-		right: 12,
-		backgroundColor: 'rgba(0,0,0,0.6)',
+		top: 8,
+		right: 8,
+		backgroundColor: 'rgba(0, 0, 0, 0.5)',
 		borderRadius: 20,
-		width: 36,
-		height: 36,
-		alignItems: 'center',
+		width: 32,
+		height: 32,
 		justifyContent: 'center',
+		alignItems: 'center',
 	},
-	analyzeButton: {
-		position: 'absolute',
-		bottom: 20,
-		left: '35%',
-		transform: [{ translateX: -100 }],
+	submitButton: {
 		backgroundColor: color.colors.primary,
-		paddingVertical: 12,
-		paddingHorizontal: 24,
-		borderRadius: 24,
-		width: 300,
+		paddingVertical: 16,
+		borderRadius: 12,
 		alignItems: 'center',
 	},
-	analyzeButtonText: {
-		fontWeight: 'bold',
-		color: '#000',
-	},
-	sectionTitle: {
-		marginBottom: 16,
-	},
-	tipsCard: {
-		marginBottom: 24,
-		padding: 16,
-	},
-	tipItem: {
-		flexDirection: 'row',
-		alignItems: 'flex-start',
-		marginBottom: 12,
-	},
-	tipBullet: {
-		color: color.colors.primary,
-		marginRight: 8,
-		fontSize: 18,
-	},
-	statsContainer: {
-		gridTemplateColumns: 'repeat(3, 1fr)',
-		gap: 16,
-		padding: 16,
-	},
-	statItem: {
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
-	videoIcon: {
-		marginBottom: 16,
-		opacity: 0.5,
+	submitButtonDisabled: {
+		opacity: 0.6,
 	},
 });

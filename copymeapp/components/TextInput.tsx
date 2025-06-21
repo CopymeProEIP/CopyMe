@@ -4,16 +4,15 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 interface ThemedTextInputProps extends TextInputProps {
-  // Propriétés spécifiques si nécessaire
 }
 
 export function TextInput(props: ThemedTextInputProps) {
   const colorScheme = useColorScheme();
   const { style, ...otherProps } = props;
-  
+
   const themeTextColor = colorScheme === 'dark' ? Colors.dark.text : Colors.light.text;
-  const themePlaceholderColor = colorScheme === 'dark' 
-    ? 'rgba(255, 255, 255, 0.5)' 
+  const themePlaceholderColor = colorScheme === 'dark'
+    ? 'rgba(255, 255, 255, 0.5)'
     : 'rgba(0, 0, 0, 0.5)';
 
   return (
@@ -32,6 +31,6 @@ export function TextInput(props: ThemedTextInputProps) {
 const styles = StyleSheet.create({
   input: {
     fontSize: 16,
-    padding: 0, // Pour éviter un padding supplémentaire sur Android
+    padding: 0,
   },
 });

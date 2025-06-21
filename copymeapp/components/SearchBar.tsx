@@ -1,7 +1,7 @@
 /** @format */
 
 import { StyleSheet, TextInput } from 'react-native';
-import { ThemedView } from './ThemedView';
+import { ThemedView } from '@/components/ThemedView';
 import { Search } from 'lucide-react-native';
 import { useTheme } from '@react-navigation/native';
 import { useState } from 'react';

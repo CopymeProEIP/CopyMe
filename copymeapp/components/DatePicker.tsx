@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View, Modal, ScrollView } from 'react-native';
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { CalendarIcon } from 'lucide-react-native';
 import { useTheme } from '@react-navigation/native';
-import { Card } from './Card';
+import { Card } from '@/components/Card';
 
 interface DatePickerProps {
 	value: Date;
@@ -14,7 +14,6 @@ interface DatePickerProps {
 	label?: string;
 }
 
-// Mois de l'année
 const MONTHS = [
 	'January',
 	'February',

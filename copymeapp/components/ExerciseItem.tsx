@@ -1,10 +1,10 @@
 /** @format */
 
 import { StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
-import { Card } from './Card';
-import { Badge } from './Badge';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Card } from '@/components/Card';
+import { Badge } from '@/components/Badge';
 import { Exercise } from '@/constants/interface';
 
 interface ExerciseItemProps {
@@ -21,7 +21,7 @@ export function ExerciseItem({ exercise, onPress }: ExerciseItemProps) {
 						// source={{
 						// 	uri: exercise.imageUrl
 						// 		? exercise.imageUrl
-						// 		: require('@/assets/images/placeholder.png'),
+						// 		: require('../assets/images/placeholder.png'),
 						// }}
 						source={require('@/assets/images/placeholder.png')}
 						style={styles.image}

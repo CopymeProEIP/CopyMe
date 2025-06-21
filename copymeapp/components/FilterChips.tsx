@@ -1,9 +1,8 @@
 /** @format */
 
-import { StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
-import { useTheme } from '@react-navigation/native';
+import { StyleSheet, TouchableOpacity, ScrollView, View } from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import color from '@/app/theme/color';
 
 export type FilterOption = {
@@ -18,8 +17,6 @@ interface FilterChipsProps {
 }
 
 export function FilterChips({ options, selectedIds, onToggle }: FilterChipsProps) {
-	const { colors } = useTheme();
-
 	return (
 		<ScrollView
 			horizontal

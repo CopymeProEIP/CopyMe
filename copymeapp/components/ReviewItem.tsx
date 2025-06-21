@@ -1,9 +1,9 @@
 /** @format */
 
-import { StyleSheet, View, Image } from 'react-native';
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
-import { Card } from './Card';
+import { StyleSheet, Image } from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Card } from '@/components/Card';
 import { useMemo } from 'react';
 
 const basketballImageUrls = [

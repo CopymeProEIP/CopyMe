@@ -2,8 +2,8 @@
 
 import { ProcessedData } from '@/constants/processedData';
 import { StyleSheet } from 'react-native';
-import { ThemedView } from '../ThemedView';
-import { ThemedText } from '../ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
 import color from '@/app/theme/color';
 
 const ReviewItem = ({ item }: { item: Partial<ProcessedData> }) => {

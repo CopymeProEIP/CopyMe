@@ -1,7 +1,7 @@
 /** @format */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useSegments } from 'expo-router';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { createContext, useContext, useEffect, useState } from 'react';
 
 // Types
@@ -24,8 +24,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const [user, setUser] = useState<User | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
-	const router = useRouter();
-	const segments = useSegments();
+	const navigation = useNavigation();
 
 	// Authenticated fetch function
 	const authFetch = async (url: string, options: RequestInit = {}) => {
@@ -56,23 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		loadToken();
 	}, []);
 
-	// Listen for segment changes to handle protected routes
-	useEffect(() => {
-		const verifyAuth = async () => {
-			const token = await AsyncStorage.getItem('userToken');
-			const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
-
-			if ((!user && !inAuthGroup && segments[0] !== undefined) || !token) {
-				// If user is not authenticated and not on an auth screen, redirect to login
-				router.replace('/login');
-			} else if (user && inAuthGroup) {
-				// If user is authenticated and on an auth screen, redirect to home
-				router.replace('/(tabs)');
-			}
-		};
-		if (!isLoading) verifyAuth();
-	}, [user, segments, isLoading]);
-
 	const signIn = async (token: string) => {
 		await AsyncStorage.setItem('userToken', token);
 		setUser({ token });
@@ -96,17 +78,18 @@ export const useAuth = () => useContext(AuthContext);
 // Hook to protect routes
 export function useProtectedRoute(isProtected: boolean) {
 	const { user, isLoading } = useAuth();
-	const segments = useSegments();
-	const router = useRouter();
+	const navigation = useNavigation();
+	const route = useRoute();
 
 	useEffect(() => {
 		if (!isLoading) {
-			const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+			const routeName = route.name;
+			const inAuthGroup = routeName === 'Login' || routeName === 'Register';
 			if (isProtected && !user) {
-				router.replace('/login');
+				(navigation as any).replace('Login');
 			}
 		}
-	}, [user, segments, isLoading]);
+	}, [user, route.name, isLoading]);
 }
 
 // Utility function to make authenticated API calls

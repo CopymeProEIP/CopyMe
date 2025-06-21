@@ -1,8 +1,7 @@
 /** @format */
 
-import color from '@/app/theme/color';
-import { ThemedText, ThemedTextProps } from './ThemedText';
-import { ThemedView } from './ThemedView';
+import { ThemedText, ThemedTextProps } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { StyleSheet } from 'react-native';
 import getTypeStyle from '@/app/theme/typeStyle';
 

@@ -4,14 +4,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { FilterChips, FilterOption } from '@/components/FilterChips';
 import { Activity } from 'lucide-react-native';
 import ReviewItem from '@/components/v1/ReviewItem';
-import color from '../theme/color';
+import color from '@/app/theme/color';
 import { ProcessedData } from '@/constants/processedData';
 import { useApi } from '@/utils/api';
-import useReviews from '../hooks/useReviews';
+import useReviews from '@/app/hooks/useReviews';
 
 // Filtres de date
 const dateFilters: FilterOption[] = [
@@ -21,7 +21,7 @@ const dateFilters: FilterOption[] = [
 ];
 
 export default function analysisListScreen() {
-	const router = useRouter();
+	const navigation = useNavigation();
 	const [selectedDateFilters, setSelectedDateFilters] = useState<string[]>(['all']);
 	const [customDate, setCustomDate] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
@@ -29,7 +29,7 @@ export default function analysisListScreen() {
 
 
 	const handleDateFilterToggle = (id: string) => {
-		if (id === 'custom') {-
+		if (id === 'custom') {
 			setShowDatePicker(true);
 		}
 
@@ -88,13 +88,10 @@ export default function analysisListScreen() {
 	}, [selectedDateFilters, customDate, reviews]);
 
 	const handleAnalysisPress = (analysis: ProcessedData) => {
-		router.push({
-			pathname: '/analyze/[id]',
-			params: {
-				id: analysis.id,
-				title: analysis.exercise.name,
-				exerciseName: analysis.exercise.name,
-			},
+		(navigation as any).navigate('Analyze', {
+			id: analysis.id,
+			title: analysis.exercise.name,
+			exerciseName: analysis.exercise.name,
 		});
 	};
 

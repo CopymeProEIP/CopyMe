@@ -1,7 +1,7 @@
 /** @format */
 
 import { StyleSheet } from 'react-native';
-import { ThemedView } from './ThemedView';
+import { ThemedView } from '@/components/ThemedView';
 import { ReactNode } from 'react';
 import { useTheme } from '@react-navigation/native';
 

@@ -1,9 +1,9 @@
 /** @format */
 
 import { StyleSheet, TouchableOpacity } from 'react-native';
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
-import { ReviewItem } from './ReviewItem';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { ReviewItem } from '@/components/ReviewItem';
 
 interface Review {
 	id: string;
