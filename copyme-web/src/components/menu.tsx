@@ -50,7 +50,7 @@ export default function NavigationMenuDemo() {
                         </NavigationMenuLink>
                       </li>
                     )}
-                    {item.content.items.map((subItem, subIndex) => (
+                    {item.content.items.map((subItem: { href: string; title: string; description: string }, subIndex) => (
                       <ListItem
                         key={subIndex}
                         href={subItem.href}
