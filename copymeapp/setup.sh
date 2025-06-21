@@ -14,11 +14,13 @@ cd ios
 pod install
 cd ..
 
+echo "Cleaning Xcode workspace..."
+xcodebuild clean -workspace ios/copymeapp.xcworkspace -scheme copymeapp
+
 echo "Cleaning Metro cache..."
 npx react-native start --reset-cache &
 METRO_PID=$!
 
-## xcodebuild clean -workspace copymeapp.xcworkspace -scheme copymeapp
 sleep 3
 kill $METRO_PID 2>/dev/null
 
