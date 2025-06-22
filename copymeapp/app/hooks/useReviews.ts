@@ -17,6 +17,7 @@ const useReviews = (limit = 2) => {
       const data = response as { data: ProcessedData[] };
       setReviews(data?.data || []);
     } catch (err) {
+      console.error('Error fetching reviews:', err);
       setError(err as Error);
     } finally {
       setLoading(false);

@@ -1,5 +1,4 @@
 /** @format */
-
 import { Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
@@ -32,7 +31,7 @@ export default function HomeScreen() {
           <ThemedView style={styles.container}>
             <ThemedView style={styles.titleContainer}>
               <ThemedText type='title'>Dashboard</ThemedText>
-              <HelloWave />
+              {/* <HelloWave /> */}
             </ThemedView>
             <Image
               source={require('@/assets/images/WelcomeCta2.png')}

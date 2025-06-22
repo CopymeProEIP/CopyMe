@@ -20,7 +20,7 @@ const dateFilters: FilterOption[] = [
 	{ id: 'older', label: 'Older' },
 ];
 
-export default function analysisListScreen() {
+export default function AnalysisListScreen() {
 	const navigation = useNavigation();
 	const [selectedDateFilters, setSelectedDateFilters] = useState<string[]>(['all']);
 	const [customDate, setCustomDate] = useState(new Date());
