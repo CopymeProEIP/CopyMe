@@ -62,7 +62,7 @@ export default function LoginForm() {
 			</CardHeader>
 			<CardContent>
 				<div className='grid gap-4'>
-					<Button
+					{/* <Button
 						variant='outline'
 						className='w-full'
 						onClick={() => handleProviderSignIn('google')}
@@ -85,7 +85,7 @@ export default function LoginForm() {
 						<div className='relative flex justify-center text-xs uppercase'>
 							<span className='bg-background px-2 text-muted-foreground'>Ou continuer avec</span>
 						</div>
-					</div>
+					</div> */}
 
 					<form onSubmit={handleSubmit} className='grid gap-4'>
 						<div className='grid gap-2'>

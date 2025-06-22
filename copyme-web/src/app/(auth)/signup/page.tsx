@@ -72,7 +72,7 @@ export default function SignupForm() {
 		<Card className='mx-auto max-w-sm'>
 			<CardHeader>
 				<CardTitle className='text-xl'>Inscription</CardTitle>
-				<CardDescription>Entrez vos informations pour créer un compte</CardDescription>
+				<CardDescription>Entrez vos informations pour créer un compte et rejoindre la Newsletter</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={handleSubmit} className='grid gap-4'>
@@ -134,7 +134,7 @@ export default function SignupForm() {
 						)}
 					</Button>
 
-					<div className='relative'>
+					{/* <div className='relative'>
 						<div className='absolute inset-0 flex items-center'>
 							<span className='w-full border-t' />
 						</div>
@@ -163,7 +163,7 @@ export default function SignupForm() {
 						disabled={isLoading}>
 						<Icons.apple className='w-4 h-4 mr-2' />
 						S&apos;inscrire avec Apple
-					</Button>
+					</Button> */}
 				</form>
 				<div className='mt-4 text-center text-sm'>
 					Vous avez déjà un compte ?{' '}

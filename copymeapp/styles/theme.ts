@@ -1,14 +1,16 @@
 /** @format */
 
+import color from "@/app/theme/color";
+
 export const theme = {
   colors: {
-    primary: 'gold',
+    primary: color.colors.primary, // gold
     secondary: '#36A2EB',
     danger: '#FF6384',
     background: '#FFFFFF',
     text: '#11181C',
     border: '#E5E5E5',
-    lightBackground: 'rgba(255,215,0,0.2)', // gold avec opacité
+    lightBackground: color.colors.primary, // gold avec opacité
   },
   spacing: {
     xs: 4,

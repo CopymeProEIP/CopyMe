@@ -4,6 +4,7 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { ReviewItem } from '@/components/ReviewItem';
+import color from '@/app/theme/color';
 
 interface Review {
 	id: string;
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
 		marginBottom: 16,
 	},
 	seeAll: {
-		color: 'gold',
+		color: color.colors.primary,
 	},
 	reviewsContainer: {
 		gap: 8,

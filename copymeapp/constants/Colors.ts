@@ -5,19 +5,21 @@
  * @format
  */
 
+import color from "@/app/theme/color";
+
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    principal: 'gold',
+    principal: color.colors.primary,
     text: '#11181C',
     background: '#fff',
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
-    accent: 'gold',
+    accent: color.colors.primary,
     border: '#E5E5E5',
   },
   dark: {
@@ -27,7 +29,7 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
-    accent: 'gold',
+    accent: color.colors.primary,
     border: '#D1D5DB',
   },
 };

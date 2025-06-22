@@ -20,6 +20,7 @@ import NotFoundScreen from '@/app/+not-found';
 
 import { AuthProvider } from '@/utils/auth';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import color from './app/theme/color';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -34,7 +35,7 @@ function TabNavigator() {
           borderTopWidth: 1,
           borderTopColor: '#e5e5e5',
         },
-        tabBarActiveTintColor: '#007AFF',
+        tabBarActiveTintColor: color.colors.primary,
         tabBarInactiveTintColor: '#8E8E93',
       }}
     >
