@@ -20,7 +20,7 @@ elif [ ! -z "$pip3" ]; then
     pip3 install -r requirements.txt
 else
     echo "pip or pip3 not found"
-    
+
     unameOut=$(uname -a)
     case "${unameOut}" in
         *Microsoft*)     OS="WSL";; #must be first since Windows subsystem for linux will have Linux in the name too
