@@ -30,6 +30,21 @@ instruction = "Rephrase this sentence in a more formal way."
 result = rephraser.rephrase(sentence, instruction)
 print(result)
 ```
+or with json file
+
+```python
+# Example usage:
+rephraser = MistralRephraser()
+feedback_json = {
+    "phase": "shot_release",
+    "corrections": [
+        {"joint": "elbow", "correction": 20, "unit": "deg"},
+        {"joint": "knee", "correction": -10, "unit": "deg"}
+    ]
+}
+instruction = "Rephrase this feedback in a motivating and clear way for the user."
+print(rephraser.rephrase(feedback_json, instruction))
+```
 
 ### 3. Change the model (optional)
 
