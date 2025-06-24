@@ -10,6 +10,8 @@ A simple Python class to rephrase sentences using the Mistral AI API. Perfect fo
 MISTRAL_API_KEY=your_mistral_api_key
 ```
 
+[Grab your api key here :)](https://console.mistral.ai)
+
 ## Usage
 
 ### 1. Import and create the rephraser
