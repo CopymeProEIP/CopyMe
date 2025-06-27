@@ -7,7 +7,7 @@ import cv2
 import os
 from ultralytics import YOLO
 from sys import platform
-from .utils import (
+from ..tools.utils import (
     load_labels,
     check_fileType,
     calculate_angle,

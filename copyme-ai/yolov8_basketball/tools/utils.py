@@ -3,7 +3,7 @@ import csv
 import os
 import numpy as np
 from enum import Enum
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request, Depends
+from fastapi import UploadFile, Request
 from config.db_models import DatabaseManager
 from pathlib import Path
 import shutil
@@ -12,11 +12,8 @@ import uuid
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .yolov8 import YOLOv8
-    from.phase_detection import Phase_Detection
+    from..phase_detection import PhaseDetection
 #----------------------------------------------------------
-
-# check if the file exists and load the labels
 
 def calculate_angle(a, b, c):
     # Calculate the angle between vectors ba and bc using the dot product formula
@@ -45,9 +42,6 @@ def load_phases(file_path):
             reader = csv.reader(file)
             labels = [row[0] for row in reader]
     return labels
-
-
-# check if the file is an image or video
 
 class FileType(Enum):
     IMAGE = 'image'
@@ -88,7 +82,7 @@ class Logger:
 def get_database(request: Request) -> DatabaseManager:
     return request.app.db
 
-def get_yolomodel(request: Request) -> YOLOv8:
+def get_yolomodel(request: Request) -> PhaseDetection:
     return request.app.yolo
 
 def save_uploaded_file(upload_file: UploadFile, destination: str, add_uuid: bool = False) -> Path:
@@ -107,3 +101,10 @@ def save_uploaded_file(upload_file: UploadFile, destination: str, add_uuid: bool
         shutil.copyfileobj(upload_file.file, buffer)
 
     return destination_path
+
+def merge_extremity_keypoints(yolo_kp: dict, mediapipe_kp: dict) -> dict:
+    merged = yolo_kp.copy()
+    for idx in [9, 10, 15, 16]:
+        if idx in mediapipe_kp and mediapipe_kp[idx] is not None:
+            merged[idx] = mediapipe_kp[idx]
+    return merged
