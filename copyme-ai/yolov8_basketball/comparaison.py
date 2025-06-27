@@ -20,6 +20,7 @@ class Improvement(BaseModel):
     direction: Direction  # Direction de correction
     magnitude: float  # Amplitude de la correction nécessaire
     priority: PriorityLevel  # Priorité de la correction
+    class_name: Optional[str] = None  # Nom de la classe associée
 
 class Comparaison:
     def __init__(self, model, dataset):
