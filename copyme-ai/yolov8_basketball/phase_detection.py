@@ -18,7 +18,7 @@ WINDOW_NAME = 'ShootAnalysis'
 DEFAULT_SAVE_PATH = 'feedback'
 DEFAULT_CAPTURE_INDEX = "0"
 DEFAULT_MODEL_PATH = 'model/yolov8m.pt'
-DEFAULT_KEYPOINT_MODEL_PATH = 'model/yolo11n-pose.pt'
+DEFAULT_KEYPOINT_MODEL_PATH = 'model/yolo11l-pose.pt'
 CONFIDENCE_THRESHOLD = 0.35
 
 class PhaseDetection(YOLOBase):
