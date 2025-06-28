@@ -30,8 +30,9 @@ def calculate_angle(a, b, c):
     ba = a - b
     bc = c - b
     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
-    angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0)) # Clip the value to prevent NaN
-    return np.degrees(angle) # Convert the angle from radians to degrees
+    angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+    angle_deg = np.degrees(angle)
+    return round(angle_deg, 1) if angle_deg is not None else None
 
 
 def load_phases(file_path):
@@ -57,27 +58,6 @@ def check_fileType(file_path: str):
         return FileType.UNKNOWN
 
 #----------------------------------------------------------
-
-class Mode(Enum):
-    DEBUG = 1
-    INFO = 2
-    WARNING = 3
-
-class Logger:
-    def __init__(self, enabled=True):
-        self.enabled = enabled
-
-    def enable(self, enabled=True):
-        self.enabled = enabled
-
-    def log(self, type=Mode.DEBUG, message=""):
-        if self.enabled:
-            if type == Mode.DEBUG:
-                print(f"[DEBUG]: {message}")
-            elif type == Mode.INFO:
-                print(f"[INFO]: {message}")
-            elif type == Mode.WARNING:
-                print(f"[WARNING]: {message}")
 
 def get_database(request: Request) -> DatabaseManager:
     return request.app.db

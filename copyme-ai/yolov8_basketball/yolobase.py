@@ -1,6 +1,7 @@
 import json
 import cv2
 import numpy as np
+from enum import Enum
 import torch
 from ultralytics import YOLO
 from sys import platform
