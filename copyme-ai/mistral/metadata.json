@@ -1,0 +1,15 @@
+{
+  "phase": "shot_release",
+  "corrections": [
+    {
+      "joint": "elbow",
+      "correction": 20,
+      "unit": "deg"
+    },
+    {
+      "joint": "knee",
+      "correction": -10,
+      "unit": "deg"
+    }
+  ]
+}
