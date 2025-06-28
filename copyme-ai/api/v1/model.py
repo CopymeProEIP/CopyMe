@@ -10,7 +10,13 @@ from config.db_models import ProcessedImage, DatabaseManager, FrameData
 from datetime import datetime, date
 from uuid import uuid4
 import json
-from yolov8_basketball.comparaison import Comparaison, Improvement, Direction, PriorityLevel
+from yolov8_basketball.comparaison.enums import Direction, PriorityLevel
+from yolov8_basketball.comparaison.models import Improvement
+from yolov8_basketball.comparaison.keypoints import KeypointUtils
+from yolov8_basketball.comparaison.angles import AngleUtils
+from yolov8_basketball.comparaison.display import Display
+from yolov8_basketball.comparaison.kalman import KalmanKeypointFilter
+from yolov8_basketball.comparaison.comparaison import Comparaison
 
 settings = get_variables()
 

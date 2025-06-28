@@ -109,7 +109,16 @@ class Display:
         frame_idx = 0
         n_frames = len(frames)
         last_update = time.time()
+
+        # Variables pour améliorer la réactivité du clavier
+        keys_pressed = {}
+        key_repeat_delay = 0.15 # Délai avant répétition (secondes)
+        key_repeat_interval = 0.05  # Intervalle entre répétitions (secondes)
+
         while running:
+            current_time = time.time()
+
+            # Traitement des événements avec priorité élevée
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -119,16 +128,37 @@ class Display:
                     elif event.key == pygame.K_RIGHT:
                         frame_idx = min(frame_idx + 1, n_frames - 1)
                         paused = True
+                        keys_pressed[pygame.K_RIGHT] = current_time
                     elif event.key == pygame.K_LEFT:
                         frame_idx = max(frame_idx - 1, 0)
                         paused = True
+                        keys_pressed[pygame.K_LEFT] = current_time
                     elif event.key == pygame.K_SPACE:
                         paused = not paused
-            if not paused and (time.time() - last_update > 1.0 / fps):
+                elif event.type == pygame.KEYUP:
+                    # Retirer la touche des touches pressées
+                    if event.key in keys_pressed:
+                        del keys_pressed[event.key]
+
+            # Gestion de la répétition des touches pour navigation fluide
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_RIGHT] and pygame.K_RIGHT in keys_pressed:
+                if current_time - keys_pressed[pygame.K_RIGHT] > key_repeat_delay:
+                    if (current_time - keys_pressed[pygame.K_RIGHT] - key_repeat_delay) % key_repeat_interval < 0.016:  # ~60fps
+                        frame_idx = min(frame_idx + 1, n_frames - 1)
+                        paused = True
+            if keys[pygame.K_LEFT] and pygame.K_LEFT in keys_pressed:
+                if current_time - keys_pressed[pygame.K_LEFT] > key_repeat_delay:
+                    if (current_time - keys_pressed[pygame.K_LEFT] - key_repeat_delay) % key_repeat_interval < 0.016:  # ~60fps
+                        frame_idx = max(frame_idx - 1, 0)
+                        paused = True
+
+            # Avancement automatique seulement si pas en pause
+            if not paused and (current_time - last_update > 1.0 / fps):
                 frame_idx += 1
                 if frame_idx >= n_frames:
                     frame_idx = 0
-                last_update = time.time()
+                last_update = current_time
             user_frame = frames[frame_idx]
             ref_frame = reference_frames[frame_idx] if frame_idx < len(reference_frames) else reference_frames[-1]
             # --- Affichage de la frame vidéo utilisateur dans une fenêtre OpenCV ---
@@ -207,8 +237,12 @@ class Display:
                     screen.blit(font_small.render(txt, True, color), (x_txt+10, y_txt))
                     y_txt += 18
             screen.blit(font_small.render("→/← : frame suivante/précédente  |  Espace : pause/play  |  ESC : quitter", True, DARK_GRAY), (20, WINDOW_HEIGHT - 25))
-            pygame.display.update(screen.get_rect())
-            clock.tick(60)
+
+            # Optimisation de l'affichage pour réduire la latence
+            pygame.display.flip()  # Plus rapide que update()
+
+            # Limiter le framerate pour éviter la surcharge CPU mais maintenir la réactivité
+            clock.tick(120)  # Augmentation du framerate pour meilleure réactivité
         if cap:
             cap.release()
         cv2.destroyAllWindows()

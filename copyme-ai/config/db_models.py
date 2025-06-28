@@ -55,10 +55,18 @@ class ProcessedImage(BaseModel):
 ProcessedImage.model_rebuild()
 
 class DatabaseManager:
-    def __init__(self, client: AsyncIOMotorClient):
-        self.client = client
-        self.collection = self.client["processed_data"]
-        self.analysis_collection = self.client["analysis_results"]
+    def __init__(self, client: AsyncIOMotorClient = None):
+        if client is None:
+            from config.setting import get_variables
+            settings = get_variables()
+            mongo_url = settings.MONGO_URI
+            self.client = AsyncIOMotorClient(mongo_url)
+            self.collection = self.client["CopyMe"]["processed_data"]
+            self.analysis_collection = self.client["CopyMe"]["analysis_results"]
+        else:
+            self.client = client
+            self.collection = self.client["processed_data"]
+            self.analysis_collection = self.client["analysis_results"]
 
     async def insert_new_entry(self, image_model: ProcessedImage):
         await self.collection.insert_one(image_model)
