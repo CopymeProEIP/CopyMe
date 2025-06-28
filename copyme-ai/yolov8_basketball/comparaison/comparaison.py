@@ -1,8 +1,8 @@
-from .enums import Direction, PriorityLevel
-from .models import Improvement
-from .kalman import KalmanKeypointFilter
-from .keypoints import KeypointUtils
-from .angles import AngleUtils
+from comparaison.enums import Direction, PriorityLevel
+from comparaison.models import Improvement
+from comparaison.kalman import KalmanKeypointFilter
+from comparaison.keypoints import KeypointUtils
+from comparaison.angles import AngleUtils
 from typing import List, Dict, Tuple, Optional
 
 class Comparaison:

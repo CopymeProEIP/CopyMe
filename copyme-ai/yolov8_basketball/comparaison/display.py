@@ -1,18 +1,21 @@
 import pygame
 import cv2
 import numpy as np
-from .kalman import KalmanKeypointFilter
-from .keypoints import KeypointUtils
-from .angles import AngleUtils
-from typing import List
+from comparaison.kalman import KalmanKeypointFilter
+from comparaison.keypoints import KeypointUtils
+from comparaison.angles import AngleUtils
+from comparaison.enums import PriorityLevel
+from typing import List, Dict
 import time
 
 class Display:
     def __init__(self, use_kalman=False):
         self.kalman_filter = KalmanKeypointFilter()
+        self.keypoint_utils = KeypointUtils()
+        self.angle_utils = AngleUtils()
         self.use_kalman = use_kalman
 
-    def display_keypoints_video(self, frames: List[Dict], reference_frames: List[Dict], class_name: str = "Unknown", fps: int = 10, use_kalman: bool = False):
+    def display_keypoints_video(self, frames: List[Dict], reference_frames: List[Dict], video_path: str, class_name: str = "Unknown", fps: int = 10, use_kalman: bool = False):
         """
         Affiche une séquence de frames (keypoints + data) comme une vidéo interactive avec pygame.
         Contrôles :
@@ -27,16 +30,20 @@ class Display:
         WINDOW_HEIGHT = 800
         KEYPOINT_PANEL_WIDTH = 800
         TEXT_PANEL_WIDTH = 400
-        BLACK = (0, 0, 0)
         WHITE = (255, 255, 255)
+        BLACK = (0, 0, 0)
         RED = (255, 0, 0)
         BLUE = (0, 0, 255)
         GREEN = (0, 255, 0)
         YELLOW = (255, 255, 0)
         LIGHT_GRAY = (200, 200, 200)
         DARK_GRAY = (64, 64, 64)
-
-        # Fonctions utilitaires (reprendre celles déjà dans display_keypoints_interface)
+        skeleton_connections = [
+            (0, 1), (0, 2), (1, 3), (2, 4),
+            (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),
+            (5, 11), (6, 12), (11, 12),
+            (11, 13), (13, 15), (12, 14), (14, 16)
+        ]
         def normalize_keypoints(keypoints, panel_width, panel_height, margin=50):
             if not keypoints:
                 return []
@@ -71,16 +78,27 @@ class Display:
                 if len(kp) >= 2 and kp[0] > 0 and kp[1] > 0:
                     pos = (int(kp[0] + offset_x), int(kp[1] + offset_y))
                     pygame.draw.circle(surface, color, pos, radius)
-        # ---
-        skeleton_connections = [
-            (0, 1), (0, 2), (1, 3), (2, 4),
-            (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),
-            (5, 11), (6, 12), (11, 12),
-            (11, 13), (13, 15), (12, 14), (14, 16)
-        ]
+        # --- Ouvrir la vidéo utilisateur ---
+        cap = None
+        if video_path:
+            cap = cv2.VideoCapture(video_path)
+            total_video_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        # --- Fonction de synchronisation frame keypoints <-> frame vidéo ---
+        def get_video_frame_idx(user_frame, idx, n_video_frames):
+            # 1. Si la frame possède un champ 'frame_index', l'utiliser
+            if 'frame_index' in user_frame:
+                return int(user_frame['frame_index'])
+            # 2. Si la frame possède un timestamp, faire une correspondance temporelle (optionnel)
+            # 3. Sinon, correspondance linéaire
+            n_keypoints_frames = n_frames
+            if n_keypoints_frames > 1 and n_video_frames > 1:
+                return int(idx * (n_video_frames - 1) / (n_keypoints_frames - 1))
+            return idx
+
         pygame.init()
         screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        pygame.display.set_caption(f"Vidéo Keypoints - {class_name}")
+        pygame.display.set_caption(f"Vidéo Keypoints - Multi-classes")
         font_large = pygame.font.Font(None, 24)
         font_medium = pygame.font.Font(None, 20)
         font_small = pygame.font.Font(None, 16)
@@ -106,16 +124,30 @@ class Display:
                         paused = True
                     elif event.key == pygame.K_SPACE:
                         paused = not paused
-            # Avancement automatique
             if not paused and (time.time() - last_update > 1.0 / fps):
                 frame_idx += 1
                 if frame_idx >= n_frames:
                     frame_idx = 0
                 last_update = time.time()
-            # Récupérer la frame courante
             user_frame = frames[frame_idx]
             ref_frame = reference_frames[frame_idx] if frame_idx < len(reference_frames) else reference_frames[-1]
-            # Conversion keypoints
+            # --- Affichage de la frame vidéo utilisateur dans une fenêtre OpenCV ---
+            if cap:
+                video_frame_idx = get_video_frame_idx(user_frame, frame_idx, total_video_frames)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, video_frame_idx)
+                ret, frame_bgr = cap.read()
+                if ret:
+                    cv2.imshow('Vidéo Utilisateur', frame_bgr)
+                    cv2.waitKey(1)
+                else:
+                    blank = np.ones((panel_height, KEYPOINT_PANEL_WIDTH, 3), dtype=np.uint8) * 255
+                    cv2.imshow('Vidéo Utilisateur', blank)
+                    cv2.waitKey(1)
+            # --- Affichage principal (analyse) ---
+            screen.fill(WHITE)
+            keypoint_rect = pygame.Rect(10, 50, KEYPOINT_PANEL_WIDTH, panel_height)
+            pygame.draw.rect(screen, WHITE, keypoint_rect)
+            pygame.draw.rect(screen, BLACK, keypoint_rect, 2)
             def dict_to_list(keypoints_dict):
                 keypoint_order = [
                     'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear',
@@ -133,29 +165,24 @@ class Display:
                 return keypoints_list
             current_keypoints = dict_to_list(user_frame['keypoints_positions'])
             reference_keypoints = dict_to_list(ref_frame['keypoints_positions'])
-            # --- Application du filtre Kalman si demandé ---
-            current_keypoints = self.filter_keypoints(current_keypoints)
-            reference_keypoints = self.filter_keypoints(reference_keypoints)
+            if use_kalman:
+                current_keypoints = self.kalman_filter.filter_keypoints(current_keypoints)
+                reference_keypoints = self.kalman_filter.filter_keypoints(reference_keypoints)
             # Normalisation
             current_normalized = normalize_keypoints(current_keypoints, KEYPOINT_PANEL_WIDTH, panel_height)
             reference_normalized = normalize_keypoints(reference_keypoints, KEYPOINT_PANEL_WIDTH, panel_height)
-            # Analyse
-            comparison_result = self.compare_keypoints(current_keypoints, reference_keypoints)
+
+            comparison_result = self.keypoint_utils.compare_keypoints(current_keypoints, reference_keypoints)
             improvements = []
             if 'angles' in user_frame and 'angles' in ref_frame:
-                # Construction du dict d'angles de référence
                 reference_angles = {}
                 for angle in ref_frame['angles']:
                     angle_name = str(angle.get('angle_name', ['unknown', 0])[0])
                     angle_value = angle.get('angle', 0)
                     reference_angles[angle_name] = {"ref": angle_value, "tolerance": 5.0}
-                improvements = self.compare_angles(user_frame['angles'], reference_angles)
-            # Affichage
-            screen.fill(WHITE)
-            keypoint_rect = pygame.Rect(10, 50, KEYPOINT_PANEL_WIDTH, panel_height)
-            pygame.draw.rect(screen, WHITE, keypoint_rect)
-            pygame.draw.rect(screen, BLACK, keypoint_rect, 2)
-            title = font_large.render(f"Frame {frame_idx+1}/{n_frames} - {class_name}", True, BLACK)
+                improvements = self.angle_utils.compare_angles(user_frame['angles'], reference_angles)
+            class_name = user_frame.get('__class_name', 'Unknown')
+            title = font_large.render(f"Frame {frame_idx+1}/{n_frames} - Classe: {class_name}", True, BLACK)
             screen.blit(title, (20, 20))
             if reference_normalized:
                 draw_skeleton(screen, reference_normalized, skeleton_connections, RED, 10, 50)
@@ -163,7 +190,6 @@ class Display:
             if current_normalized:
                 draw_skeleton(screen, current_normalized, skeleton_connections, BLUE, 10, 50)
                 draw_keypoints(screen, current_normalized, BLUE, 10, 50)
-            # Panel texte à droite
             pygame.draw.rect(screen, LIGHT_GRAY, (KEYPOINT_PANEL_WIDTH + 20, 50, TEXT_PANEL_WIDTH - 30, panel_height))
             pygame.draw.rect(screen, BLACK, (KEYPOINT_PANEL_WIDTH + 20, 50, TEXT_PANEL_WIDTH - 30, panel_height), 2)
             y_txt = 60
@@ -180,8 +206,10 @@ class Display:
                     txt = f"• Angle {imp.angle_index}: {imp.direction.value} {imp.magnitude:.1f}°"
                     screen.blit(font_small.render(txt, True, color), (x_txt+10, y_txt))
                     y_txt += 18
-            # Instructions
             screen.blit(font_small.render("→/← : frame suivante/précédente  |  Espace : pause/play  |  ESC : quitter", True, DARK_GRAY), (20, WINDOW_HEIGHT - 25))
-            pygame.display.flip()
+            pygame.display.update(screen.get_rect())
             clock.tick(60)
+        if cap:
+            cap.release()
+        cv2.destroyAllWindows()
         pygame.quit()

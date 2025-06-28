@@ -1,10 +1,10 @@
 from typing import List, Dict
-from .models import Improvement
-from .enums import Direction, PriorityLevel
+from comparaison.models import Improvement
+from comparaison.enums import Direction, PriorityLevel
 
 class AngleUtils:
     @staticmethod
-    def compare_angles(self, current_angles, reference_angles: Dict[str, Dict[str, float]]) -> List[Improvement]:
+    def compare_angles(current_angles, reference_angles: Dict[str, Dict[str, float]]) -> List[Improvement]:
         """
         Compare les angles actuels avec les angles de référence et génère des recommandations.
 

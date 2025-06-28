@@ -4,7 +4,7 @@ import cv2
 
 class KeypointUtils:
     @staticmethod
-    def compare_keypoints(self, current_keypoints: List[List[float]], reference_keypoints: List[List[float]]) -> Dict[str, any]:
+    def compare_keypoints(current_keypoints: List[List[float]], reference_keypoints: List[List[float]]) -> Dict[str, any]:
         """
         Compare directement deux ensembles de keypoints et identifie les différences principales.
 
@@ -72,7 +72,7 @@ class KeypointUtils:
                         'distance': float(distance),
                         'current_pos': [float(curr[0]), float(curr[1])],
                         'reference_pos': [float(ref[0]), float(ref[1])],
-                        'direction': self.get_movement_direction(curr, ref)
+                        'direction': KeypointUtils.get_movement_direction(curr, ref)
                     })
 
         # Trouver le keypoint avec la plus grande déviation
@@ -90,13 +90,13 @@ class KeypointUtils:
             results['alignment_score'] = max(0, min(100, 100 - (avg_distance * 2)))
 
             # Calculer la similarité de pose basée sur la corrélation des vecteurs de position
-            results['pose_similarity'] = self.calculate_pose_similarity(current_keypoints, reference_keypoints)
+            results['pose_similarity'] = KeypointUtils.calculate_pose_similarity(current_keypoints, reference_keypoints)
 
         return results
 
 
     @staticmethod
-    def get_movement_direction(self, current_pos: List[float], reference_pos: List[float]) -> Dict[str, str]:
+    def get_movement_direction(current_pos: List[float], reference_pos: List[float]) -> Dict[str, str]:
         """
         Détermine la direction du mouvement nécessaire pour passer de la position actuelle à la position de référence.
 
@@ -129,7 +129,7 @@ class KeypointUtils:
 
 
     @staticmethod
-    def calculate_pose_similarity(self, current_keypoints: List[List[float]], reference_keypoints: List[List[float]]) -> float:
+    def calculate_pose_similarity(current_keypoints: List[List[float]], reference_keypoints: List[List[float]]) -> float:
         """
         Calcule un score de similarité entre deux poses en utilisant la corrélation entre leurs vecteurs de position.
 
@@ -175,7 +175,7 @@ class KeypointUtils:
 
 
     @staticmethod
-    def smooth_trajectory(self, keypoint_id: int, window_size: int = 5) -> List[Tuple[float, float]]:
+    def smooth_trajectory(keypoint_id: int, keypoint_history, window_size: int = 5) -> List[Tuple[float, float]]:
         """
         Lisse la trajectoire d'un keypoint en utilisant une moyenne mobile.
 
@@ -186,10 +186,10 @@ class KeypointUtils:
         Returns:
             Liste des positions lissées [(x, y), ...]
         """
-        if keypoint_id not in self.keypoint_history or len(self.keypoint_history[keypoint_id]) < window_size:
-            return self.keypoint_history.get(keypoint_id, [])
+        if keypoint_id not in keypoint_history or len(keypoint_history[keypoint_id]) < window_size:
+            return keypoint_history.get(keypoint_id, [])
 
-        history = self.keypoint_history[keypoint_id]
+        history = keypoint_history[keypoint_id]
         smoothed = []
 
         for i in range(len(history) - window_size + 1):
@@ -202,7 +202,7 @@ class KeypointUtils:
 
 
     @staticmethod
-    def predict_future_position(self, keypoint_id: int, steps_ahead: int = 5) -> Optional[Tuple[float, float]]:
+    def predict_future_position(keypoint_id: int, kalman_filters, steps_ahead: int = 5) -> Optional[Tuple[float, float]]:
         """
         Prédit la position future d'un keypoint en utilisant le filtre de Kalman.
 
@@ -213,10 +213,10 @@ class KeypointUtils:
         Returns:
             Position prédite (x, y) ou None si le keypoint n'est pas suivi
         """
-        if keypoint_id not in self.kalman_filters:
+        if keypoint_id not in kalman_filters:
             return None
 
-        kalman = self.kalman_filters[keypoint_id]
+        kalman = kalman_filters[keypoint_id]
 
         # Copier l'état actuel du filtre pour ne pas perturber le suivi réel
         temp_kalman = cv2.KalmanFilter(4, 2)
