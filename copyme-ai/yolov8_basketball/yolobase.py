@@ -1,24 +1,25 @@
 import json
 import cv2
 import numpy as np
+from enum import Enum
 import torch
 from ultralytics import YOLO
 from sys import platform
-from .utils import calculate_angle
+from .tools.utils import calculate_angle
 import logging
 
-class YOLOv8Base:
+class YOLOBase:
     def __init__(self, model_path: str, verbose: bool = False):
         self.model_path = model_path
         self.verbose = verbose
-        self.device = self._get_device()
+        self.device = self.__device()
         self.model = None
         self.is_model_loaded = False
         self.version = 1
         self._load_model()
 
     # -------------------- Initialization Helpers --------------------
-    def _get_device(self) -> str:
+    def __device(self) -> str:
         """Determine the device to use for computation."""
         if torch.cuda.is_available():
             return 'cuda'
@@ -29,7 +30,6 @@ class YOLOv8Base:
             "device": self.device,
             "verbose": self.verbose,
             "model_path": self.model_path,
-            "model_loaded": self.is_model_loaded,
             "version": self.version,
         }
         return json.dumps(data, indent=4)
@@ -40,9 +40,9 @@ class YOLOv8Base:
         if self.verbose:
           logging.debug(f"Loading model from {self.model_path} on device {self.device}")
         self.model = YOLO(self.model_path, verbose=self.verbose).to(self.device)
-        self.CLASS_NAMES_DICT = self.model.model.names
         self.model.fuse()
         self.is_model_loaded = self.model is not None
+        self.CLASS_NAMES_DICT = self.model.model.names
 
     # -------------------- Inference --------------------
     def _infer(self, frame) -> YOLO:

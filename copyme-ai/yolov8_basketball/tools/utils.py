@@ -3,7 +3,7 @@ import csv
 import os
 import numpy as np
 from enum import Enum
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request, Depends
+from fastapi import UploadFile, Request
 from config.db_models import DatabaseManager
 from pathlib import Path
 import shutil
@@ -12,11 +12,8 @@ import uuid
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .yolov8 import YOLOv8
-    from.phase_detection import Phase_Detection
+    from..phase_detection import PhaseDetection
 #----------------------------------------------------------
-
-# check if the file exists and load the labels
 
 def calculate_angle(a, b, c):
     # Calculate the angle between vectors ba and bc using the dot product formula
@@ -33,8 +30,9 @@ def calculate_angle(a, b, c):
     ba = a - b
     bc = c - b
     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
-    angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0)) # Clip the value to prevent NaN
-    return np.degrees(angle) # Convert the angle from radians to degrees
+    angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+    angle_deg = np.degrees(angle)
+    return round(angle_deg, 1) if angle_deg is not None else None
 
 
 def load_phases(file_path):
@@ -45,9 +43,6 @@ def load_phases(file_path):
             reader = csv.reader(file)
             labels = [row[0] for row in reader]
     return labels
-
-
-# check if the file is an image or video
 
 class FileType(Enum):
     IMAGE = 'image'
@@ -64,31 +59,10 @@ def check_fileType(file_path: str):
 
 #----------------------------------------------------------
 
-class Mode(Enum):
-    DEBUG = 1
-    INFO = 2
-    WARNING = 3
-
-class Logger:
-    def __init__(self, enabled=True):
-        self.enabled = enabled
-
-    def enable(self, enabled=True):
-        self.enabled = enabled
-
-    def log(self, type=Mode.DEBUG, message=""):
-        if self.enabled:
-            if type == Mode.DEBUG:
-                print(f"[DEBUG]: {message}")
-            elif type == Mode.INFO:
-                print(f"[INFO]: {message}")
-            elif type == Mode.WARNING:
-                print(f"[WARNING]: {message}")
-
 def get_database(request: Request) -> DatabaseManager:
     return request.app.db
 
-def get_yolomodel(request: Request) -> YOLOv8:
+def get_yolomodel(request: Request) -> PhaseDetection:
     return request.app.yolo
 
 def save_uploaded_file(upload_file: UploadFile, destination: str, add_uuid: bool = False) -> Path:
@@ -107,3 +81,10 @@ def save_uploaded_file(upload_file: UploadFile, destination: str, add_uuid: bool
         shutil.copyfileobj(upload_file.file, buffer)
 
     return destination_path
+
+def merge_extremity_keypoints(yolo_kp: dict, mediapipe_kp: dict) -> dict:
+    merged = yolo_kp.copy()
+    for idx in [9, 10, 15, 16]:
+        if idx in mediapipe_kp and mediapipe_kp[idx] is not None:
+            merged[idx] = mediapipe_kp[idx]
+    return merged

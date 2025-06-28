@@ -10,7 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from yolov8_basketball.yolov8 import FrameData, AngleData
+    from yolov8_basketball.old.yolov8 import FrameData, AngleData
 
 class Direction(Enum):
     UNKNOWN = 0

@@ -4,15 +4,13 @@ from typing import Any, Dict, Tuple, List
 import uuid
 import cv2
 import numpy as np
-from ultralytics import YOLO
-from .utils import check_fileType, load_phases, FileType
+from .tools.utils import check_fileType, load_phases, FileType
 import logging
 import os
-from enum import Enum
 from filterpy.kalman import KalmanFilter
 import hashlib
 from config.db_models import FrameData
-from .yolov8_base import YOLOv8Base
+from .yolobase import YOLOBase
 from .pose_estimation import PoseEstimation
 import supervision as sv
 
@@ -20,10 +18,10 @@ WINDOW_NAME = 'ShootAnalysis'
 DEFAULT_SAVE_PATH = 'feedback'
 DEFAULT_CAPTURE_INDEX = "0"
 DEFAULT_MODEL_PATH = 'model/yolov8m.pt'
-DEFAULT_KEYPOINT_MODEL_PATH = 'model/yolov8l-pose.pt'
+DEFAULT_KEYPOINT_MODEL_PATH = 'model/yolo11l-pose.pt'
 CONFIDENCE_THRESHOLD = 0.35
 
-class PhaseDetection(YOLOv8Base):
+class PhaseDetection(YOLOBase):
     def __init__(self, input: str = DEFAULT_CAPTURE_INDEX,
                  model_path: str = DEFAULT_MODEL_PATH,
                  save_dir: str = DEFAULT_SAVE_PATH,
@@ -116,14 +114,12 @@ class PhaseDetection(YOLOv8Base):
 
     def _save_all_best_frames(self) -> List[Dict]:
         all_frames_metadata = []
-        # Save all frames (including the best ones) locally
-        logging.debug(f"LEN FRAME {len(self.all_frames)}")
         for res in self.all_frames:
             class_name = res.get('phase', 'unknown')
             phase_dir = os.path.join(self.save_dir, class_name)
             filename_save = f"{class_name}_{uuid.uuid4()}.jpg"
             frame_path = os.path.join(phase_dir, filename_save)
-            cv2.imwrite(frame_path, res['frame'])  # Save the frame
+            cv2.imwrite(frame_path, res['frame'])
             if self.verbose:
               logging.debug(f"Saved frame for class '{class_name}' to {frame_path}")
             res['results']['url_path_frame'] = frame_path
