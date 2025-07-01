@@ -1,25 +1,17 @@
 /** @format */
 
 import React, { useState } from 'react';
-import {
-	StyleSheet,
-	TouchableOpacity,
-	Image,
-	KeyboardAvoidingView,
-	Platform,
-	ScrollView,
-} from 'react-native';
+import { StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { Link, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { Mail, Lock, User } from 'lucide-react-native';
-import { Colors } from '@/constants/Colors';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
-import color from './theme/color';
+import color from '@/app/theme/color';
 
 export default function RegisterScreen() {
-	const router = useRouter();
+	const navigation = useNavigation();
 	const [name, setName] = useState('');
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
@@ -46,7 +38,7 @@ export default function RegisterScreen() {
 			const firstName = nameParts[0];
 			const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-			const response = await fetch('http://localhost:3000/api/auth/register', {
+			const response = await fetch('http://57.128.44.19:3000/api/auth/register', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -71,7 +63,7 @@ export default function RegisterScreen() {
 			// AsyncStorage.setItem('userToken', data.token);
 
 			// Navigate to the main app
-			router.replace('/(tabs)');
+			(navigation as any).replace('Main');
 		} catch (error) {
 			console.error('Registration error:', error);
 			setError(error instanceof Error ? error.message : 'Registration failed. Please try again.');
@@ -157,11 +149,9 @@ export default function RegisterScreen() {
 
 				<ThemedView style={styles.footer}>
 					<ThemedText type='default'>Already have an account? </ThemedText>
-					<Link href='/login' asChild>
-						<TouchableOpacity>
-							<ThemedText style={styles.loginLink}>Login</ThemedText>
-						</TouchableOpacity>
-					</Link>
+					<TouchableOpacity onPress={() => (navigation as any).navigate('Login')}>
+						<ThemedText style={styles.loginLink}>Login</ThemedText>
+					</TouchableOpacity>
 				</ThemedView>
 			</ThemedView>
 		</KeyboardAvoidingView>

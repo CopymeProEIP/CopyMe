@@ -1,17 +1,15 @@
-/** @format */
-
-module.exports = function (api) {
-	api.cache(true);
-	return {
-		presets: ['babel-preset-expo'],
-		plugins: [
-			[
-				'@babel/plugin-transform-runtime',
-				{
-					helpers: true,
-					regenerator: true,
-				},
-			],
-		],
-	};
+module.exports = {
+  presets: ['module:@react-native/babel-preset'],
+  plugins: [
+    [
+      'module-resolver',
+      {
+        root: ['./'],
+        alias: {
+          '@': './',
+        },
+      },
+    ],
+    'react-native-reanimated/plugin',
+  ],
 };

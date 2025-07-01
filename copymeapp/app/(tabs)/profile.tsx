@@ -5,10 +5,10 @@ import { StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { LogOut, User, Settings, Award, HelpCircle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import color from '../theme/color';
+import color from '@/app/theme/color';
 
 interface ProfileOptionProps {
 	icon: React.ReactNode;
@@ -28,7 +28,7 @@ const ProfileOption = ({ icon, title, subtitle, onPress }: ProfileOptionProps) =
 );
 
 export default function ProfileScreen() {
-	const router = useRouter();
+	const navigation = useNavigation();
 	const [userName, setUserName] = useState('John Doe');
 	const [userEmail, setUserEmail] = useState('john.doe@example.com');
 
@@ -49,7 +49,7 @@ export default function ProfileScreen() {
 							// Clear the authentication token
 							await AsyncStorage.removeItem('userToken');
 							// Navigate to the login screen
-							router.replace('/login');
+							(navigation as any).replace('Login');
 						} catch (error) {
 							console.error('Error during logout:', error);
 						}

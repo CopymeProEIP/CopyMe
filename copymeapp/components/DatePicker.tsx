@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View, Modal, ScrollView } from 'react-native';
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { CalendarIcon } from 'lucide-react-native';
 import { useTheme } from '@react-navigation/native';
-import { Card } from './Card';
+import { Card } from '@/components/Card';
+import color from '@/app/theme/color';
 
 interface DatePickerProps {
 	value: Date;
@@ -14,7 +15,6 @@ interface DatePickerProps {
 	label?: string;
 }
 
-// Mois de l'année
 const MONTHS = [
 	'January',
 	'February',
@@ -103,7 +103,7 @@ export function DatePicker({ value, onChange, label = 'Select date' }: DatePicke
 									{MONTHS[tempDate.getMonth()]} {tempDate.getFullYear()}
 								</ThemedText>
 								<TouchableOpacity onPress={handleSave}>
-									<ThemedText style={[styles.modalButton, { color: 'gold' }]}>Done</ThemedText>
+									<ThemedText style={[styles.modalButton, { color: color.colors.primary }]}>Done</ThemedText>
 								</TouchableOpacity>
 							</View>
 
@@ -118,7 +118,7 @@ export function DatePicker({ value, onChange, label = 'Select date' }: DatePicke
 										style={[
 											styles.monthItem,
 											tempDate.getMonth() === index && {
-												backgroundColor: 'gold',
+												backgroundColor: color.colors.primary,
 											},
 										]}
 										onPress={() => handleMonthSelect(index)}>
@@ -138,7 +138,7 @@ export function DatePicker({ value, onChange, label = 'Select date' }: DatePicke
 										style={[
 											styles.yearItem,
 											tempDate.getFullYear() === year && {
-												backgroundColor: 'gold',
+												backgroundColor: color.colors.primary,
 											},
 										]}
 										onPress={() => handleYearSelect(year)}>
@@ -157,7 +157,7 @@ export function DatePicker({ value, onChange, label = 'Select date' }: DatePicke
 										key={day}
 										style={[
 											styles.dayItem,
-											tempDate.getDate() === day && { backgroundColor: 'gold' },
+											tempDate.getDate() === day && { backgroundColor: color.colors.primary },
 										]}
 										onPress={() => handleDaySelect(day)}>
 										<ThemedText style={tempDate.getDate() === day ? styles.selectedItemText : {}}>

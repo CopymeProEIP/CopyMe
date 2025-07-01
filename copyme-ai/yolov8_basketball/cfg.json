@@ -3,5 +3,5 @@
   "save_dir": "feedback",
   "min_confidence": 0.7,
   "model_path": "/model/copyme.pt",
-  "keypoints_model_path": "/model/yolov11m.pt"
+  "keypoints_model_path": "/model/yolo11n-pose.pt"
 }

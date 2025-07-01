@@ -1,11 +1,12 @@
 /** @format */
 
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { LucideIcon } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
-import { Card } from './Card';
+import { Card } from '@/components/Card';
 import { useState } from 'react';
+import color from '@/app/theme/color';
 
 export function StatsBox(props: { title: string; value: string; icon: LucideIcon }) {
 	const [progress, setProgress] = useState(0.7);
@@ -16,7 +17,7 @@ export function StatsBox(props: { title: string; value: string; icon: LucideIcon
 			<ThemedView style={styles.content}>
 				<ThemedView style={styles.containerHeader}>
 					<ThemedView style={styles.containerTitle}>
-						<props.icon color={'gold'} size={24} />
+						<props.icon color={color.colors.primary} size={24} />
 						<ThemedText type='default'>{props.title}</ThemedText>
 					</ThemedView>
 					<ThemedText type='default'>{props.value}</ThemedText>
@@ -25,7 +26,7 @@ export function StatsBox(props: { title: string; value: string; icon: LucideIcon
 					{/* <ProgressCircle
 						style={styles.progressCircle}
 						progress={progress}
-						progressColor={'gold'}
+						progressColor={color.colors.primary}
 						backgroundColor={'rgba(255,215,0,0.2)'}
 						strokeWidth={8}
 					/> */}

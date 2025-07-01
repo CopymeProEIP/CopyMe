@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File,  UploadFile, Form, HTTPException, Request, Depends, APIRouter, Body
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Annotated, List, Dict
-from yolov8_basketball.utils import get_database, get_yolomodel, save_uploaded_file
+from yolov8_basketball.tools.utils import get_database, get_yolomodel, save_uploaded_file
 from recommendation_engine import analyze_phase
 import logging
 from config.setting import get_variables
@@ -10,7 +10,13 @@ from config.db_models import ProcessedImage, DatabaseManager, FrameData
 from datetime import datetime, date
 from uuid import uuid4
 import json
-from yolov8_basketball.comparaison import Comparaison, Improvement, Direction, PriorityLevel
+from yolov8_basketball.comparaison.enums import Direction, PriorityLevel
+from yolov8_basketball.comparaison.models import Improvement
+from yolov8_basketball.comparaison.keypoints import KeypointUtils
+from yolov8_basketball.comparaison.angles import AngleUtils
+from yolov8_basketball.comparaison.display import Display
+from yolov8_basketball.comparaison.kalman import KalmanKeypointFilter
+from yolov8_basketball.comparaison.comparaison import Comparaison
 
 settings = get_variables()
 
@@ -136,6 +142,7 @@ class AnalysisResponse(BaseModel):
     pose_similarity: float
     key_differences: List[Dict]
     improvements: List[Dict]
+    class_scores: Dict[str, Dict[str, float]]
     created_at: datetime
 
 @router.post("/analyze", response_model=AnalysisResponse)
@@ -178,45 +185,150 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
     if not user_frames or not reference_frames:
         raise HTTPException(status_code=400, detail="Données de frames insuffisantes pour l'analyse")
 
-    # Initialiser le comparateur
-    comparator = Comparaison(model=user_frames, dataset=reference_frames)
+    # Grouper les frames par class_name
+    def group_frames_by_class(frames):
+        grouped = {}
+        for frame in frames:
+            class_name = frame.get('class_name', 'unknown')
+            if class_name not in grouped:
+                grouped[class_name] = []
+            grouped[class_name].append(frame)
+        return grouped
 
-    # Préparer les données pour la comparaison
-    current_keypoints = []
-    reference_keypoints = []
+    user_frames_grouped = group_frames_by_class(user_frames)
+    reference_frames_grouped = group_frames_by_class(reference_frames)
 
-    # Sélectionner la frame la plus pertinente pour l'analyse (par exemple, le moment du tir)
-    # Pour simplifier, nous utilisons la première frame ici
+    logging.debug(f"User frames grouped: {list(user_frames_grouped.keys())}")
+    logging.debug(f"Reference frames grouped: {list(reference_frames_grouped.keys())}")
 
-    current_keypoints = user_frames[0]['keypoints_positions']
-    reference_keypoints = reference_frames[0]['keypoints_positions']
+    # Résultats de comparaison globaux
+    global_comparison_result = {
+        'alignment_score': 0,
+        'pose_similarity': 0,
+        'key_differences': [],
+        'class_comparisons': {}
+    }
+    all_improvements = []
 
-    # Comparer les keypoints
-    comparison_result = comparator.compare_keypoints(current_keypoints, reference_keypoints)
+    # Comparer chaque groupe de class_name
+    total_classes = 0
+    total_alignment = 0
+    total_similarity = 0
 
-    # Comparer les angles (si disponibles)
-    current_angles = {}
-    reference_angles = {}
+    for class_name in user_frames_grouped.keys():
+        if class_name not in reference_frames_grouped:
+            logging.warning(f"Class '{class_name}' not found in reference data")
+            continue
 
-    logging.debug(f"Current angles: {user_frames[0]}")
+        user_class_frames = user_frames_grouped[class_name]
+        reference_class_frames = reference_frames_grouped[class_name]
 
-    # Accès correct aux angles dans le dictionnaire
-    if 'angles' in user_frames[0]:
-        current_angles = user_frames[0]['angles']
+        logging.info(f"Comparing class '{class_name}': {len(user_class_frames)} user frames vs {len(reference_class_frames)} reference frames")
 
-    # Préparer les angles de référence avec des tolérances
-    if 'angles' in reference_frames[0]:
-        for angle in reference_frames[0]['angles']:
-            # Extraire l'information d'angle
-            angle_name = str(angle.get('angle_name', ['unknown', 0])[0])
-            angle_value = angle.get('angle', 0)
+        # Initialiser le comparateur pour cette classe
+        comparator = Comparaison(model=user_class_frames, dataset=reference_class_frames)
 
-            reference_angles[angle_name] = {
-                "ref": angle_value,
-                "tolerance": 5.0  # Tolérance de 5 degrés par défaut
-            }
+        # Utiliser la première frame de chaque groupe pour la comparaison
+        # (ou implémenter une logique plus sophistiquée selon vos besoins)
+        current_keypoints_raw = user_class_frames[0]['keypoints_positions']
+        reference_keypoints_raw = reference_class_frames[0]['keypoints_positions']
 
-    improvements = comparator.compare_angles(current_angles, reference_angles)
+        # Convertir les keypoints en float pour éviter les erreurs de type
+        def convert_keypoints_to_float(keypoints_dict):
+            converted = {}
+            for key, value in keypoints_dict.items():
+                try:
+                    converted[key] = float(value) if value is not None else 0.0
+                except (ValueError, TypeError):
+                    converted[key] = 0.0
+            return converted
+
+        # Convertir le format des keypoints de dictionnaire vers liste de tuples (x, y)
+        def convert_keypoints_to_list(keypoints_dict):
+            # Ordre des keypoints selon YOLO pose estimation
+            keypoint_order = [
+                'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear',
+                'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow',
+                'left_wrist', 'right_wrist', 'left_hip', 'right_hip',
+                'left_knee', 'right_knee', 'left_ankle', 'right_ankle'
+            ]
+
+            keypoints_list = []
+            for keypoint in keypoint_order:
+                x_key = f"{keypoint}_x"
+                y_key = f"{keypoint}_y"
+                x = keypoints_dict.get(x_key, 0.0)
+                y = keypoints_dict.get(y_key, 0.0)
+                keypoints_list.append([x, y])
+
+            return keypoints_list
+
+        current_keypoints_dict = convert_keypoints_to_float(current_keypoints_raw)
+        reference_keypoints_dict = convert_keypoints_to_float(reference_keypoints_raw)
+
+        # Convertir au format attendu par compare_keypoints (liste de tuples [x, y])
+        current_keypoints = convert_keypoints_to_list(current_keypoints_dict)
+        reference_keypoints = convert_keypoints_to_list(reference_keypoints_dict)
+
+        # Comparer les keypoints pour cette classe
+        class_comparison_result = comparator.compare_keypoints(current_keypoints, reference_keypoints)
+        logging.debug(f"Class '{class_name}' comparison result: {class_comparison_result}")
+
+        # Comparer les angles pour cette classe
+        current_angles = {}
+        reference_angles = {}
+
+        # Accès correct aux angles dans le dictionnaire
+        if 'angles' in user_class_frames[0]:
+            current_angles = user_class_frames[0]['angles']
+
+        # Préparer les angles de référence avec des tolérances
+        if 'angles' in reference_class_frames[0]:
+            for angle in reference_class_frames[0]['angles']:
+                # Extraire l'information d'angle
+                angle_name = str(angle.get('angle_name', ['unknown', 0])[0])
+                angle_value = angle.get('angle', 0)
+
+                reference_angles[angle_name] = {
+                    "ref": angle_value,
+                    "tolerance": 5.0  # Tolérance de 5 degrés par défaut
+                }
+
+        class_improvements = comparator.compare_angles(current_angles, reference_angles)
+
+        # Ajouter les informations de classe aux améliorations
+        for improvement in class_improvements:
+            # Ne pas modifier angle_index, ajouter class_name séparément
+            improvement.class_name = class_name
+
+        all_improvements.extend(class_improvements)
+
+        # Stocker les résultats par classe
+        global_comparison_result['class_comparisons'][class_name] = {
+            'alignment_score': class_comparison_result.get('alignment_score', 0),
+            'pose_similarity': class_comparison_result.get('pose_similarity', 0),
+            'key_differences': class_comparison_result.get('key_differences', []),
+            'improvements_count': len(class_improvements)
+        }
+
+        # Accumuler pour les moyennes globales
+        total_classes += 1
+        total_alignment += class_comparison_result.get('alignment_score', 0)
+        total_similarity += class_comparison_result.get('pose_similarity', 0)
+
+        # Ajouter les différences clés avec le nom de la classe
+        for diff in class_comparison_result.get('key_differences', []):
+            diff['class_name'] = class_name
+            global_comparison_result['key_differences'].append(diff)
+
+    # Calculer les moyennes globales
+    if total_classes > 0:
+        global_comparison_result['alignment_score'] = total_alignment / total_classes
+        global_comparison_result['pose_similarity'] = total_similarity / total_classes
+
+    # Utiliser les résultats globaux pour la compatibilité
+    comparison_result = global_comparison_result
+    improvements = all_improvements
 
     # Convertir les améliorations en dictionnaires pour la réponse
     improvement_list = []
@@ -226,7 +338,8 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
             "target_angle": imp.target_angle,
             "direction": imp.direction,
             "magnitude": imp.magnitude,
-            "priority": imp.priority
+            "priority": imp.priority,
+            "class_name": imp.class_name
         })
 
     # Construire la réponse
@@ -237,6 +350,14 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
         pose_similarity=comparison_result.get('pose_similarity', 0),
         key_differences=comparison_result.get('key_differences', []),
         improvements=improvement_list,
+        class_scores={
+            class_name: {
+                "alignment_score": scores["alignment_score"],
+                "pose_similarity": scores["pose_similarity"],
+                "improvements_count": scores["improvements_count"]
+            }
+            for class_name, scores in global_comparison_result['class_comparisons'].items()
+        },
         created_at=datetime.now()
     )
 
@@ -246,6 +367,14 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
         "video_id": user_video_id,
         "reference_id": reference_id,
         "comparison_result": comparison_result,
+        "class_scores": {
+            class_name: {
+                "alignment_score": scores["alignment_score"],
+                "pose_similarity": scores["pose_similarity"],
+                "improvements_count": scores["improvements_count"]
+            }
+            for class_name, scores in global_comparison_result['class_comparisons'].items()
+        },
         "improvements": improvement_list,
         "created_at": datetime.now()
     }

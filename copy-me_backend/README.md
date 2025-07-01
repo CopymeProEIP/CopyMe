@@ -24,7 +24,7 @@ npm install
 3. Configurer les variables d'environnement
 Créez un fichier `.env` à la racine du projet avec les variables suivantes :
 ```
-PORT=3000
+PORT=3001
 MONGODB_URI=mongodb://localhost:27017/copymedb
 JWT_SECRET=votre_secret_jwt_ultra_securise
 JWT_EXPIRES_IN=7d

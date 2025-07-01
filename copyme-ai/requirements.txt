@@ -19,3 +19,4 @@ fastapi[standard]>=0.115.7
 pydantic-settings
 supervision
 filterpy>=1.4.5
+mediapipe

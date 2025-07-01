@@ -1,6 +1,6 @@
 /** @format */
 
-import { Text, type TextProps } from 'react-native';
+import { Text, TextProps } from 'react-native';
 
 import { useThemeColor } from '@/hooks/useThemeColor';
 import getTypeStyle from '@/app/theme/typeStyle';

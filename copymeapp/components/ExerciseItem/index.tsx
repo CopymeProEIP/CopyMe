@@ -1,11 +1,11 @@
 /** @format */
 
 import { TouchableOpacity, View, Image } from 'react-native';
-import { ThemedText } from '../ThemedText';
-import { ThemedView } from '../ThemedView';
-import { Card } from '../Card';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Card } from '@/components/Card';
 import { useMemo } from 'react';
-import { styles } from './styles';
+import { styles } from '@/components/ExerciseItem/styles';
 import { theme } from '@/styles/theme';
 
 const exerciseImageUrls = [

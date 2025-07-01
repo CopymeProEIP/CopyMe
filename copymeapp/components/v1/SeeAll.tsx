@@ -1,8 +1,8 @@
 /** @format */
 
 import { ArrowRight } from 'lucide-react-native';
-import { ThemedText } from '../ThemedText';
-import { ThemedView } from '../ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { StyleSheet } from 'react-native';
 import color from '@/app/theme/color';
 

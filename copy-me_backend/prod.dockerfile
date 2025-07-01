@@ -36,7 +36,7 @@ COPY --from=builder /app/dist ./dist
 RUN mkdir -p uploads
 
 # Exposer le port
-EXPOSE 3000
+EXPOSE 3001
 
 # Commande de démarrage
-CMD ["node", "dist/server.js"] 
+CMD ["node", "dist/server.js"]
