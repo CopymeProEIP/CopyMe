@@ -15,6 +15,7 @@ jobs:
   build:
     name: Build Services
     runs-on: ubuntu-latest
+    environment: token
     strategy:
       matrix:
         include:
