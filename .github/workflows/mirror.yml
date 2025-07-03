@@ -8,6 +8,7 @@ on:
 jobs:
   mirror:
     runs-on: ubuntu-latest
+    environment: token
     steps:
       - name: Checkout all branches
         uses: actions/checkout@v3
