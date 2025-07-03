@@ -31,9 +31,9 @@ jobs:
       - name: Log in to Docker registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.CI_REGISTRY }}
-          username: ${{ secrets.CI_REGISTRY_USER }}
-          password: ${{ secrets.CI_JOB_TOKEN }}
+          registry: ghcr.io
+          username: mathias.ballot@epitech.eu
+          password: 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
 
       #- name: Get image tag
       #  id: image_tag
