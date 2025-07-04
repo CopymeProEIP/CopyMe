@@ -16,7 +16,10 @@ class Comparaison:
         print(f"Comparing {self.model} with {self.dataset}")
 
     def filter_keypoints(self, keypoints: List[List[float]]) -> List[List[float]]:
-        return self.kalman_filter.filter_keypoints(keypoints, self.use_kalman)
+        if self.use_kalman:
+            return self.kalman_filter.filter_keypoints(keypoints)
+        else:
+            return keypoints  # Retourne les keypoints sans filtrage
 
     def compare_keypoints(self, current_keypoints: List[List[float]], reference_keypoints: List[List[float]]):
         return KeypointUtils.compare_keypoints(current_keypoints, reference_keypoints)

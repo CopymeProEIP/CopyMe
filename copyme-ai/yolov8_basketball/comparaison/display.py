@@ -1,30 +1,31 @@
 import pygame
 import cv2
 import numpy as np
-from comparaison.kalman import KalmanKeypointFilter
-from comparaison.keypoints import KeypointUtils
-from comparaison.angles import AngleUtils
 from comparaison.enums import PriorityLevel
 from typing import List, Dict
 import time
 
 class Display:
-    def __init__(self, use_kalman=False):
-        self.kalman_filter = KalmanKeypointFilter()
-        self.keypoint_utils = KeypointUtils()
-        self.angle_utils = AngleUtils()
-        self.use_kalman = use_kalman
+    def __init__(self):
+        pass  # La classe Display ne fait que l'affichage
 
-    def display_keypoints_video(self, frames: List[Dict], reference_frames: List[Dict], video_path: str, class_name: str = "Unknown", fps: int = 10, use_kalman: bool = False):
+    def display_keypoints_video(self, frames: List[Dict], reference_frames: List[Dict], video_path: str, 
+                              calculated_results: List[Dict], class_name: str = "Unknown", fps: int = 10):
         """
         Affiche une séquence de frames (keypoints + data) comme une vidéo interactive avec pygame.
         Contrôles :
             - Flèche droite/gauche : frame suivante/précédente
             - Espace : pause/play
             - Échap : quitter
-        use_kalman : active le filtrage Kalman des keypoints
+
+        Args:
+            frames: Frames utilisateur
+            reference_frames: Frames de référence
+            video_path: Chemin vers la vidéo
+            calculated_results: Résultats pré-calculés pour chaque frame
+            class_name: Nom de la classe
+            fps: Fréquence d'affichage
         """
-        self.use_kalman = use_kalman
         # --- Constantes d'affichage ---
         WINDOW_WIDTH = 1200
         WINDOW_HEIGHT = 800
@@ -195,22 +196,22 @@ class Display:
                 return keypoints_list
             current_keypoints = dict_to_list(user_frame['keypoints_positions'])
             reference_keypoints = dict_to_list(ref_frame['keypoints_positions'])
-            if use_kalman:
-                current_keypoints = self.kalman_filter.filter_keypoints(current_keypoints)
-                reference_keypoints = self.kalman_filter.filter_keypoints(reference_keypoints)
+
+            # --- Récupération des résultats pré-calculés ---
+            frame_results = calculated_results[frame_idx] if frame_idx < len(calculated_results) else {}
+            
+            # Utiliser les keypoints filtrés si disponibles, sinon les originaux
+            if 'filtered_current_keypoints' in frame_results:
+                current_keypoints = frame_results['filtered_current_keypoints']
+            if 'filtered_reference_keypoints' in frame_results:
+                reference_keypoints = frame_results['filtered_reference_keypoints']
             # Normalisation
             current_normalized = normalize_keypoints(current_keypoints, KEYPOINT_PANEL_WIDTH, panel_height)
             reference_normalized = normalize_keypoints(reference_keypoints, KEYPOINT_PANEL_WIDTH, panel_height)
 
-            comparison_result = self.keypoint_utils.compare_keypoints(current_keypoints, reference_keypoints)
-            improvements = []
-            if 'angles' in user_frame and 'angles' in ref_frame:
-                reference_angles = {}
-                for angle in ref_frame['angles']:
-                    angle_name = str(angle.get('angle_name', ['unknown', 0])[0])
-                    angle_value = angle.get('angle', 0)
-                    reference_angles[angle_name] = {"ref": angle_value, "tolerance": 5.0}
-                improvements = self.angle_utils.compare_angles(user_frame['angles'], reference_angles)
+            # --- Récupération des résultats de comparaison pré-calculés ---
+            comparison_result = frame_results.get('comparison_result', {})
+            improvements = frame_results.get('improvements', [])
             class_name = user_frame.get('__class_name', 'Unknown')
             title = font_large.render(f"Frame {frame_idx+1}/{n_frames} - Classe: {class_name}", True, BLACK)
             screen.blit(title, (20, 20))
