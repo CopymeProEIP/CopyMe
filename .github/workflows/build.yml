@@ -20,7 +20,7 @@ jobs:
       matrix:
         include:
           - CONTEXT: "./copy-me_backend"
-            DOCKERFILE: "./copy-me_backend/Dockerfile"
+            DOCKERFILE: "./copy-me_backend/prod.dockerfile"
 
     steps:
       - name: Checkout repository
