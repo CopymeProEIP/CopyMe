@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  IMAGE_NAME: "ghcr.io/copymeproeip/copyme"
+  IMAGE_NAME: "ghcr.io/copymeproeip"
   SSH_PORT: ${{ secrets.SSH_PORT }}
   SSH_USER: ${{ secrets.SSH_USER }}
   DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
