@@ -1,8 +1,21 @@
-from comparaison.enums import Direction, PriorityLevel
-from comparaison.models import Improvement
-from comparaison.kalman import KalmanKeypointFilter
-from comparaison.keypoints import KeypointUtils
-from comparaison.angles import AngleUtils
+# Import enums with fallback for different import contexts
+try:
+    from .models import Improvement
+    from .kalman import KalmanKeypointFilter
+    from .keypoints import KeypointUtils
+    from .angles import AngleUtils
+except ImportError:
+    try:
+        from comparaison.models import Improvement
+        from comparaison.kalman import KalmanKeypointFilter
+        from comparaison.keypoints import KeypointUtils
+        from comparaison.angles import AngleUtils
+    except ImportError:
+        from models import Improvement
+        from kalman import KalmanKeypointFilter
+        from keypoints import KeypointUtils
+        from angles import AngleUtils
+
 from typing import List, Dict, Tuple, Optional
 
 class Comparaison:
@@ -19,12 +32,11 @@ class Comparaison:
         if self.use_kalman:
             return self.kalman_filter.filter_keypoints(keypoints)
         else:
-            return keypoints  # Retourne les keypoints sans filtrage
+            return keypoints
 
-    def compare_keypoints(self, current_keypoints: List[List[float]], reference_keypoints: List[List[float]]):
+    def compare_keypoints(self, current_keypoints: List[List[float]],
+                         reference_keypoints: List[List[float]]):
         return KeypointUtils.compare_keypoints(current_keypoints, reference_keypoints)
 
     def compare_angles(self, current_angles, reference_angles: Dict[str, Dict[str, float]]):
         return AngleUtils.compare_angles(current_angles, reference_angles)
-
-    # Ajoute ici d'autres méthodes si besoin (ex: display, etc.)

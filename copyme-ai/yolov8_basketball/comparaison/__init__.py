@@ -1,8 +1,7 @@
-# Package de comparaison et visualisation des mouvements de basket
+# Basketball movement comparison and visualization package
 
 from .comparaison import Comparaison
-from .display import Display
 from .enums import Direction, PriorityLevel
 from .models import Improvement
 
-__all__ = ['Comparaison', 'Display', 'Direction', 'PriorityLevel', 'Improvement']
+__all__ = ['Comparaison', 'Direction', 'PriorityLevel', 'Improvement']

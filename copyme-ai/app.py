@@ -20,7 +20,7 @@ reference_data = [
     },
     {
         "gender": "men",
-        "phase": "shot_realese",
+        "phase": "shot_release",
         "angles": {
             "hip": {"ref": 158.89, "tolerance": 6.16},
             "knee": {"ref": 116.7, "tolerance": 7.4},
@@ -129,7 +129,7 @@ def demo():
                 phase_data = None
                 if class_name == 'shot_position':
                     phase_data = reference_data[0]
-                elif class_name == 'shot_realese':
+                elif class_name == 'shot_release':
                     phase_data = reference_data[1]
                 else:
                     phase_data = reference_data[2]

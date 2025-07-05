@@ -61,11 +61,11 @@ def generate_feedback(angle_name: str, error: float):
     elif angle_name == "ankle":
         action = "augmenter la flexion plantaire" if error < 0 else "réduire la flexion plantaire"
         return f"Veuillez {action} de la cheville de {abs(error):.1f}° pour ajuster votre équilibre pendant le tir."
-    
+
     elif angle_name == "elbow":
         action = "augmenter la flexion" if error < 0 else "réduire la flexion"
         return f"Veuillez {action} au niveau du coude de {abs(error):.1f}° pour un meilleur alignement lors de la poussée du ballon."
-    
+
     else:
         return f"L'angle '{angle_name}' présente un écart de {abs(error):.1f}°, mais aucun conseil spécifique n'est disponible."
 
