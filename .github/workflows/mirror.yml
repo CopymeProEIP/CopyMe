@@ -9,6 +9,7 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     environment: token
+
     steps:
       - name: Checkout all branches
         uses: actions/checkout@v3
@@ -21,9 +22,8 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Add mirror remote and push
-        env:
-          MIRROR_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          git remote add mirror https://x-access-token:${MIRROR_TOKEN}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git
+          git remote add mirror "https://x-access-token:${{ secrets.ACCESS_TOKEN }}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git"
+          git remote -v
           git push mirror --all
           git push mirror --tags
