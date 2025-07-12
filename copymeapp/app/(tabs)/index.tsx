@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ProcessedData } from '@/constants/processedData';
 
 export default function HomeScreen() {
-  const { reviews, loading, error } = useReviews();
+  const { reviews, loading } = useReviews();
   const navigation = useNavigation();
 
   const handleAnalysisPress = (analysis: ProcessedData) => {
@@ -31,7 +31,7 @@ export default function HomeScreen() {
           <ThemedView style={styles.container}>
             <ThemedView style={styles.titleContainer}>
               <ThemedText type='title'>Dashboard</ThemedText>
-              {/* <HelloWave /> */}
+              <HelloWave />
             </ThemedView>
             <Image
               source={require('@/assets/images/WelcomeCta2.png')}

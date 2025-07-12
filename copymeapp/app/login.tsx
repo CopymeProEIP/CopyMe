@@ -1,15 +1,16 @@
 /** @format */
 
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useNavigation } from '@react-navigation/native';
 import { Mail, Lock } from 'lucide-react-native';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import color from '@/app/theme/color';
+import { API_URL } from '@env';
+import { useAuth } from '@/utils/auth';
 
 export default function LoginScreen() {
 	const navigation = useNavigation();
@@ -17,6 +18,7 @@ export default function LoginScreen() {
 	const [password, setPassword] = useState('qwerty');
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
+	const { signIn } = useAuth();
 
 	const handleLogin = async () => {
 		if (!email || !password) {
@@ -28,7 +30,7 @@ export default function LoginScreen() {
 		setIsLoading(true);
 
 		try {
-			const response = await fetch('http://57.128.44.19:3000/api/auth/login', {
+			const response = await fetch(API_URL + '/auth/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -48,13 +50,13 @@ export default function LoginScreen() {
 				throw new Error('No token received');
 			}
 			// Store the JWT token for future authenticated requests
-			await AsyncStorage.setItem('userToken', data.token);
+			await signIn(data.token);
 
 			// Navigate to the main app
 			(navigation as any).replace('Main');
-		} catch (error) {
-			console.error('Login error:', error);
-			setError(error instanceof Error ? error.message : 'Invalid email or password');
+		} catch (err) {
+			console.error('Login error:', err);
+			setError(err instanceof Error ? err.message : 'Invalid email or password');
 		} finally {
 			setIsLoading(false);
 		}

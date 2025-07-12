@@ -1,9 +1,11 @@
 /** @format */
 
 import { useAuthFetch } from './auth';
+import { API_URL } from '@env';
 
 // Base API URL
-const API_BASE_URL = 'http://57.128.44.19:3000/api'; // Adjust as needed
+const API_BASE_URL = API_URL; // Adjust as needed
+
 
 export function useApi() {
 	const authFetch = useAuthFetch();
@@ -11,7 +13,6 @@ export function useApi() {
 	// Generic GET request with authentication
 	const get = async <T,>(endpoint: string, headers?: any): Promise<T> => {
 		const response = await authFetch(`${API_BASE_URL}${endpoint}`, { headers: headers });
-
 		if (!response.ok) {
 			const error = await response.json();
 			throw new Error(error.message || 'Something went wrong');

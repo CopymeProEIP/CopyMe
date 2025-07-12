@@ -10,6 +10,10 @@ module.exports = {
         },
       },
     ],
+    ['dotenv-import', {
+      moduleName: '@env',
+      path: '.env',
+    }],
     'react-native-reanimated/plugin',
   ],
 };

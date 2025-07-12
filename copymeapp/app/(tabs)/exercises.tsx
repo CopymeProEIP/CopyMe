@@ -14,6 +14,7 @@ import styles from '../styles/exercisesTabs';
 import color from '@/app/theme/color';
 import { Exercise } from '@/constants/interface';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Button } from '@/components/Button';
 
 const levelFilters: FilterOption[] = [
   { id: 'all', label: 'All Levels' },
@@ -32,7 +33,9 @@ export default function ExercisesScreen() {
 
   const getExercises = async () => {
     try {
+      console.log('Fetching exercises from API...');
       const response = await api.get('/exercises');
+      console.log('Fetched exercises:', response);
       const data = response as { data: Exercise[] };
       setExercisesData(data?.data || []);
       setIsLoading(false);
@@ -132,6 +135,7 @@ export default function ExercisesScreen() {
             <ThemedText type="default" style={styles.emptyStateText}>
               Try adjusting your search or filters
             </ThemedText>
+            <Button title='Reload' onPress={getExercises} loading={isLoading} />
           </ThemedView>
         )}
       </ThemedSafeAreaView>

@@ -29,7 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	// Authenticated fetch function
 	const authFetch = async (url: string, options: RequestInit = {}) => {
 		const token = user?.token || (await AsyncStorage.getItem('userToken'));
-
 		// Merge headers with Authorization header
 		const headers = {
 			...options.headers,
