@@ -281,8 +281,7 @@ class BasketballAnalyzer:
                     calculated_results[i].update({
                         'advanced_metrics': advanced_result,
                         'pose_quality': advanced_result.get('pose_quality', {}),
-                        'technical_score': advanced_result.get('technical_score', 0),
-                        'recommendations': advanced_result.get('recommendations', [])
+                        'technical_score': advanced_result.get('technical_score', 0)
                     })
 
             # Create enhanced visualizations
@@ -324,27 +323,8 @@ class BasketballAnalyzer:
 
         try:
             avg_technical_score = sum(result.get('technical_score', 0) for result in advanced_results) / len(advanced_results)
-            total_recommendations = sum(len(result.get('recommendations', [])) for result in advanced_results)
-
             logger.info(f"Average Technical Score: {avg_technical_score:.1f}%")
-            logger.info(f"Total Recommendations: {total_recommendations}")
-
-            # Display top recommendations
-            if total_recommendations > 0:
-                logger.info("\nTop Recommendations:")
-                all_recommendations = []
-                for result in advanced_results:
-                    all_recommendations.extend(result.get('recommendations', []))
-
-                # Group by recommendation type
-                recommendation_counts = {}
-                for rec in all_recommendations:
-                    rec_type = rec.get('type', 'unknown')
-                    recommendation_counts[rec_type] = recommendation_counts.get(rec_type, 0) + 1
-
-                for rec_type, count in sorted(recommendation_counts.items(), key=lambda x: x[1], reverse=True)[:3]:
-                    logger.info(f"  - {rec_type}: {count} suggestions")
-
+            # Les recommandations ne sont plus affichées car elles sont gérées par Mistral
         except Exception as e:
             logger.error(f"Error displaying analysis summary: {e}")
 

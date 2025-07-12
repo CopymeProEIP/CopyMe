@@ -2,7 +2,7 @@ import pygame
 import cv2
 import numpy as np
 import logging
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Any
 import os
 import sys
 from mistral.mistral import MistralRephraser
@@ -261,34 +261,7 @@ class Display:
     def display_keypoints_video(self, frames: List[Dict], reference_frames: List[Dict],
                               video_path: str, calculated_results: List[Dict],
                               class_name: str = "Unknown", fps: int = 10) -> None:
-        """
-        Display interactive video visualization with integrated video and analysis.
 
-        This method provides a comprehensive visualization interface with:
-        - Video display in the same window (top section)
-        - Real-time pose comparison (bottom section)
-        - Advanced metrics display
-        - Interactive controls
-        - Performance charts
-        - Recommendations
-
-        Controls:
-            - Right/left arrow: Navigate frames
-            - Space: Play/pause
-            - R: Reset to beginning
-            - F: Fast forward
-            - S: Slow motion
-            - Escape: Quit
-
-        Args:
-            frames: User pose data frames
-            reference_frames: Reference pose data frames
-            video_path: Path to video file
-            calculated_results: Pre-calculated analysis results
-            class_name: Class name for display
-            fps: Display frame rate
-        """
-        # Display constants - Side-by-side layout
         WINDOW_WIDTH = self.config['window_width']
         WINDOW_HEIGHT = self.config['window_height']
         HEADER_HEIGHT = self.config['header_height']
@@ -506,30 +479,24 @@ class Display:
                     # Convert BGR to RGB
                     frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
-                    # Resize frame to fit video area
                     frame_resized = cv2.resize(frame_rgb, (VIDEO_WIDTH - 4, VIDEO_HEIGHT - 4))
 
-                    # Convert to pygame surface
                     frame_surface = pygame.surfarray.make_surface(frame_resized.swapaxes(0, 1))
 
-                    # Display video frame
                     screen.blit(frame_surface, (22, HEADER_HEIGHT + 22))
                 else:
-                    # Display blank frame if video read fails
                     blank_text = font_medium.render("Video not available", True, self.colors['dark'])
                     blank_rect = blank_text.get_rect(center=(20 + VIDEO_WIDTH//2, HEADER_HEIGHT + 20 + VIDEO_HEIGHT//2))
                     screen.blit(blank_text, blank_rect)
             else:
-                # Display message if video not loaded
                 no_video_text = font_medium.render("Video file not found", True, self.colors['dark'])
                 no_video_rect = no_video_text.get_rect(center=(20 + VIDEO_WIDTH//2, HEADER_HEIGHT + 20 + VIDEO_HEIGHT//2))
                 screen.blit(no_video_text, no_video_rect)
 
-            # Draw visualization section title
             visualization_title = font_medium.render("Pose Visualization", True, self.colors['dark'])
             screen.blit(visualization_title, (20, HEADER_HEIGHT + VIDEO_HEIGHT + 30))
 
-            # Draw visualization area in left side (bottom half)
+
             visualization_area = (20, HEADER_HEIGHT + VIDEO_HEIGHT + 50, VISUALIZATION_WIDTH,
                                 VISUALIZATION_HEIGHT)
             self.draw_rounded_rect(screen, visualization_area, self.colors['light'], 15)
@@ -592,18 +559,24 @@ class Display:
             self.draw_rounded_rect(screen, stats_rect, self.colors['light'], 15)
             pygame.draw.rect(screen, self.colors['dark'], stats_rect, 2)
 
-            # Draw statistics title
             stats_title = font_medium.render("Performance Statistics", True, self.colors['dark'])
             screen.blit(stats_title, (stats_x + 15, stats_y + 15))
 
-            # Get comparison results
             comparison_result = frame_results.get('comparison_result', {})
             improvements = frame_results.get('improvements', [])
 
             feedback_text = feedback_cache.get(frame_idx)
             if feedback_text is None and improvements:
                 try:
-                    instruction = "Generate a brief but motivating feedback for the user based on these basketball posture corrections. Start with a short encouragement, then list the key corrections to make, using the actual angle names. Keep the advice clear and actionable, but do not go into technical details."
+                    instruction = (
+                        "Generate a brief, direct, and actionable feedback for the user's basketball pose. "
+                        "Do not start with phrases like 'Based on feedback', 'According to the analysis', or similar. "
+                        "Do not end with generic encouragement unless the user's performance is clearly good or improving. "
+                        "Use the real angle names (e.g., 'elbow angle', 'knee angle') and be specific. "
+                        "Avoid technical jargon and long explanations. "
+                        "For each correction, add a short explanation of why or how this adjustment will help improve the shot. "
+                        "If encouragement is deserved, add a short, motivating phrase at the end; otherwise, end the feedback directly."
+                    )
                     improvements_dict = [imp.dict() if hasattr(imp, 'dict') else dict(imp) for imp in improvements]
                     feedback_text = mistral.rephrase(improvements_dict, instruction)
                 except Exception as e:
@@ -627,11 +600,10 @@ class Display:
                 return lines
 
             y_offset = stats_y + 40
-            card_width = (stats_width - 40) // 2  # plus large
+            card_width = (stats_width - 40) // 2
             card_height = 60
             font_metric = pygame.font.Font(None, 32)
 
-            # Draw alignment score (left card)
             alignment_score = comparison_result.get('alignment_score', 0)
             alignment_color = (self.colors['success'] if alignment_score > 70
                               else self.colors['warning'] if alignment_score > 50
@@ -639,7 +611,6 @@ class Display:
             self.draw_metric_card(screen, "Alignment", alignment_score, "%",
                                  alignment_color, (stats_x + 15, y_offset, card_width, card_height), card_height)
 
-            # Draw pose similarity (right card)
             pose_similarity = comparison_result.get('pose_similarity', 0)
             similarity_color = (self.colors['success'] if pose_similarity > 70
                                else self.colors['warning'] if pose_similarity > 50
@@ -657,8 +628,12 @@ class Display:
                 for i, imp in enumerate(improvements[:max_improvements]):
                     if y_offset + 34 < stats_y + stats_height - 20:
                         angle_label = None
-                        if hasattr(imp, 'angle_name') and getattr(imp, 'angle_name'):
+                        if hasattr(imp, 'class_name') and getattr(imp, 'class_name'):
+                            angle_label = getattr(imp, 'class_name')
+                        elif hasattr(imp, 'angle_name') and getattr(imp, 'angle_name'):
                             angle_label = getattr(imp, 'angle_name')
+                        elif isinstance(imp, dict) and 'class_name' in imp and imp['class_name']:
+                            angle_label = imp['class_name']
                         elif isinstance(imp, dict) and 'angle_name' in imp and imp['angle_name']:
                             angle_label = imp['angle_name']
                         elif hasattr(imp, 'metric') and getattr(imp, 'metric'):
@@ -667,7 +642,7 @@ class Display:
                             angle_label = imp['metric']
                         else:
                             angle_label = 'Unknown angle'
-                        angle_label = angle_label.replace('_', ' ').title()
+                        angle_label = str(angle_label).replace('_', ' ').title()
                         text = f"{angle_label}: {imp.direction.value[:3]} {imp.magnitude:.1f}°"
                         font = pygame.font.Font(None, 20)
                         text_surface = font.render(text, True, self.colors['dark'])

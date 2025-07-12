@@ -26,11 +26,9 @@ class RecommendationPriority(Enum):
     MEDIUM = "medium"
     LOW = "low"
 
-
 class AdvancedComparison:
 
     def __init__(self):
-        # Define keypoint indices for different body parts
         self.keypoint_indices = {
             'head': [0, 1, 2, 3, 4],  # nose, eyes, ears
             'torso': [5, 6, 11, 12],  # shoulders, hips
@@ -67,9 +65,6 @@ class AdvancedComparison:
             # Calculate technical precision
             technical_precision = self._calculate_technical_precision(current_keypoints, reference_keypoints)
 
-            # Generate recommendations
-            recommendations = self._generate_recommendations(pose_quality, movement_analysis, technical_precision)
-
             # Calculate overall technical score
             technical_score = self._calculate_technical_score(pose_quality, movement_analysis, technical_precision)
 
@@ -77,7 +72,6 @@ class AdvancedComparison:
                 'pose_quality': pose_quality,
                 'movement_analysis': movement_analysis,
                 'technical_precision': technical_precision,
-                'recommendations': recommendations,
                 'technical_score': technical_score
             }
 
@@ -331,7 +325,6 @@ class AdvancedComparison:
 
             for curr, ref in zip(current_keypoints, reference_keypoints):
                 if len(curr) >= 2 and len(ref) >= 2:
-                    # Simple energy calculation based on distance
                     distance = np.sqrt((curr[0] - ref[0])**2 + (curr[1] - ref[1])**2)
                     energy = distance ** 2  # Square distance as energy
                     total_energy += energy
@@ -463,16 +456,12 @@ class AdvancedComparison:
 
     def _calculate_timing_precision(self, current_keypoints: List[List[float]],
                                   reference_keypoints: List[List[float]]) -> float:
-
-        # This would require temporal data across multiple frames
-        # For now, return a default score
         return 0.7
 
     def _calculate_form_precision(self, current_keypoints: List[List[float]],
                                 reference_keypoints: List[List[float]]) -> float:
 
         try:
-            # Calculate form score based on key anatomical relationships
             form_scores = []
 
             # Check shoulder alignment
@@ -556,88 +545,6 @@ class AdvancedComparison:
             logger.error(f"Error calculating hip form: {e}")
             return 0.5
 
-    def _generate_recommendations(self, pose_quality: Dict[str, float],
-                                movement_analysis: Dict[str, float],
-                                technical_precision: Dict[str, float]) -> List[Dict[str, Any]]:
-
-        recommendations = []
-
-        try:
-            # Generate pose quality recommendations
-            for metric, score in pose_quality.items():
-                if score < self.quality_thresholds.get(metric, 0.7):
-                    # Map metric names to enum values (all lowercase)
-                    metric_mapping = {
-                        'balance': RecommendationType.BALANCE,
-                        'symmetry': RecommendationType.SYMMETRY,
-                        'stability': RecommendationType.STABILITY,
-                        'alignment': RecommendationType.ALIGNMENT
-                    }
-                    rec_type = metric_mapping.get(metric, RecommendationType.TECHNIQUE)
-                    recommendation = self._create_recommendation(
-                        metric, score, rec_type
-                    )
-                    recommendations.append(recommendation)
-
-            # Generate movement recommendations
-            for metric, score in movement_analysis.items():
-                if score < 0.6:  # Movement threshold
-                    recommendation = self._create_recommendation(
-                        metric, score, RecommendationType.TECHNIQUE
-                    )
-                    recommendations.append(recommendation)
-
-            # Generate technical precision recommendations
-            for metric, score in technical_precision.items():
-                if score < 0.7:  # Technical threshold
-                    recommendation = self._create_recommendation(
-                        metric, score, RecommendationType.TECHNIQUE
-                    )
-                    recommendations.append(recommendation)
-
-            # Sort recommendations by priority
-            recommendations.sort(key=lambda x: x['priority'].value, reverse=True)
-
-            return recommendations[:5]  # Return top 5 recommendations
-
-        except Exception as e:
-            logger.error(f"Error generating recommendations: {e}")
-            return []
-
-    def _create_recommendation(self, metric: str, score: float,
-                             rec_type: RecommendationType) -> Dict[str, Any]:
-
-        # Determine priority based on score
-        if score < 0.4:
-            priority = RecommendationPriority.HIGH
-        elif score < 0.6:
-            priority = RecommendationPriority.MEDIUM
-        else:
-            priority = RecommendationPriority.LOW
-
-        # Generate message based on metric and type
-        messages = {
-            'balance': "Improve body balance by centering your weight",
-            'symmetry': "Maintain better left-right body symmetry",
-            'stability': "Increase pose stability and reduce movement",
-            'smoothness': "Make movements smoother and more fluid",
-            'efficiency': "Improve movement efficiency and reduce wasted motion",
-            'consistency': "Maintain consistent form throughout the movement",
-            'alignment': "Better align your body with the reference position",
-            'timing': "Improve timing and rhythm of your movements",
-            'form': "Maintain proper form and technique"
-        }
-
-        message = messages.get(metric, f"Improve {metric} for better performance")
-
-        return {
-            'type': rec_type.value,
-            'metric': metric,
-            'score': score,
-            'priority': priority,
-            'message': message
-        }
-
     def _calculate_technical_score(self, pose_quality: Dict[str, float],
                                  movement_analysis: Dict[str, float],
                                  technical_precision: Dict[str, float]) -> float:
@@ -675,6 +582,5 @@ class AdvancedComparison:
             'pose_quality': {'balance': 0.5, 'symmetry': 0.5, 'stability': 0.5},
             'movement_analysis': {'smoothness': 0.5, 'efficiency': 0.5, 'consistency': 0.5},
             'technical_precision': {'alignment': 0.5, 'timing': 0.5, 'form': 0.5},
-            'recommendations': [],
             'technical_score': 50.0
         }

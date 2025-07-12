@@ -52,12 +52,12 @@ class AngleUtils:
                         target_angle=reference,
                         direction=direction,
                         magnitude=abs_diff,
-                        priority=priority
+                        priority=priority,
+                        class_name=angle_name
                     )
 
                     improvements.append(improvement)
 
-        # Handle current_angles as dictionary (original behavior)
         elif isinstance(current_angles, dict):
             for idx, (angle_name, current) in enumerate(current_angles.items()):
                 if angle_name in reference_angles:
@@ -85,7 +85,8 @@ class AngleUtils:
                         target_angle=reference,
                         direction=direction,
                         magnitude=abs_diff,
-                        priority=priority
+                        priority=priority,
+                        class_name=angle_name
                     )
 
                     improvements.append(improvement)
