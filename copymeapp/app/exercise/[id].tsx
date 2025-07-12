@@ -140,15 +140,16 @@ export default function ExerciseDetailScreen() {
         <ThemedText type="subtitle" style={styles.sectionTitle}>
           Previous Sessions
         </ThemedText>
-
-        {reviews.map((review, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={() => handleAnalysisPress(review)}
-          >
-            <ReviewItem item={review} />
-          </TouchableOpacity>
-        ))}
+				<ThemedView style={{ flex: 1, gap: 8 }}>
+					{reviews.map((review, index) => (
+						<TouchableOpacity
+							key={index}
+							onPress={() => handleAnalysisPress(review)}
+						>
+							<ReviewItem item={review} />
+						</TouchableOpacity>
+					))}
+      	</ThemedView>
       </ThemedView>
     </ParallaxScrollView>
   );

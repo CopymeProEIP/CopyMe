@@ -3,21 +3,22 @@
 import { ArrowRight } from 'lucide-react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import color from '@/app/theme/color';
-
-const SeeAll = ({ text, cta='See All' }: { text: string, cta?: string }) => {
+import { useNavigation } from '@react-navigation/native';
+const SeeAll = ({ text, cta='See All', goTo }: { text: string, cta?: string, goTo: string }) => {
+	const navigation = useNavigation();
 	return (
 		<ThemedView style={styles.container}>
 			<ThemedText type='defaultSemiBold' style={styles.text}>
 				{text}
 			</ThemedText>
-			<ThemedView style={styles.seeAllContainer}>
+			<TouchableOpacity style={styles.seeAllContainer} onPress={() => (goTo ? navigation.navigate(goTo as never) : null)}>
 				<ThemedText type='primary' style={styles.text}>
 					{cta}
 				</ThemedText>
 				<ArrowRight color={color.colors.primary} />
-			</ThemedView>
+			</TouchableOpacity>
 		</ThemedView>
 	);
 };

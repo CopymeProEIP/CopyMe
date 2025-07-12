@@ -39,7 +39,7 @@ export default function HomeScreen() {
             />
 
             <ThemedView style={styles.reviewContainer}>
-              <SeeAll text='Last reviews' />
+              <SeeAll text='Last reviews' goTo='Analysis'/>
               <ThemedView style={{ flex: 1, gap: 8 }}>
                 {reviews.length > 0 ? (
                   loading ? (
@@ -60,7 +60,7 @@ export default function HomeScreen() {
               </ThemedView>
             </ThemedView>
             <ThemedView style={styles.reviewContainer}>
-              <SeeAll text='Overall Stats' cta='See More' />
+              <SeeAll text='Overall Stats' cta='See More' goTo=''/>
               <OverallStats />
             </ThemedView>
           </ThemedView>

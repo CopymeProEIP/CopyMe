@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -25,6 +25,18 @@ import color from './app/theme/color';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const HomeIcon = ({ color: iconColor, size }: { color: string; size: number }) => 
+  <Home color={iconColor} size={size} />;
+
+const DumbbellIcon = ({ color: iconColor, size }: { color: string; size: number }) => 
+  <Dumbbell color={iconColor} size={size} />;
+
+const BarChartIcon = ({ color: iconColor, size }: { color: string; size: number }) => 
+  <BarChart3 color={iconColor} size={size} />;
+
+const UserIcon = ({ color: iconColor, size }: { color: string; size: number }) => 
+  <User color={iconColor} size={size} />;
+
 function TabNavigator() {
   return (
     <Tab.Navigator
@@ -44,9 +56,7 @@ function TabNavigator() {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Accueil',
-          tabBarIcon: ({ color, size }) => (
-            <Home color={color} size={size} />
-          ),
+          tabBarIcon: HomeIcon,
         }}
       />
       <Tab.Screen
@@ -54,9 +64,7 @@ function TabNavigator() {
         component={ExercisesScreen}
         options={{
           tabBarLabel: 'Exercices',
-          tabBarIcon: ({ color, size }) => (
-            <Dumbbell color={color} size={size} />
-          ),
+          tabBarIcon: DumbbellIcon,
         }}
       />
       <Tab.Screen
@@ -64,9 +72,7 @@ function TabNavigator() {
         component={AnalysisScreen}
         options={{
           tabBarLabel: 'Analyse',
-          tabBarIcon: ({ color, size }) => (
-            <BarChart3 color={color} size={size} />
-          ),
+          tabBarIcon: BarChartIcon,
         }}
       />
       <Tab.Screen
@@ -74,9 +80,7 @@ function TabNavigator() {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profil',
-          tabBarIcon: ({ color, size }) => (
-            <User color={color} size={size} />
-          ),
+          tabBarIcon: UserIcon,
         }}
       />
     </Tab.Navigator>
@@ -98,10 +102,66 @@ export default function App() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
             <Stack.Screen name="Main" component={TabNavigator} />
-            <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
-            <Stack.Screen name="ExerciseSession" component={ExerciseSessionScreen} />
-            <Stack.Screen name="ExerciseResults" component={ExerciseResultsScreen} />
-            <Stack.Screen name="Analyze" component={AnalyzeScreen} />
+            <Stack.Screen
+              name="ExerciseDetail"
+              component={ExerciseDetailScreen}
+              options={{
+                headerShown: true,
+                title: "Détail de l'exercice",
+                headerStyle: {
+                  backgroundColor: color.colors.background,
+                },
+                headerTintColor: color.colors.textPrimary,
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+            <Stack.Screen
+              name="ExerciseSession"
+              component={ExerciseSessionScreen}
+              options={{
+                headerShown: true,
+                title: "Session d'exercice",
+                headerStyle: {
+                  backgroundColor: color.colors.background,
+                },
+                headerTintColor: color.colors.textPrimary,
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+            <Stack.Screen
+              name="ExerciseResults"
+              component={ExerciseResultsScreen}
+              options={{
+                headerShown: true,
+                title: 'Résultats',
+                headerStyle: {
+                  backgroundColor: color.colors.background,
+                },
+                headerTintColor: color.colors.textPrimary,
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+            <Stack.Screen
+              name="Analyze"
+              component={AnalyzeScreen}
+              options={{
+                headerShown: true,
+                title: 'Analyse',
+                headerStyle: {
+                  backgroundColor: color.colors.background,
+                },
+                headerTintColor: color.colors.textPrimary,
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }}
+            />
             <Stack.Screen name="NotFound" component={NotFoundScreen} />
           </Stack.Navigator>
         </AuthProvider>

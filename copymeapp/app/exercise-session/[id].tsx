@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, Image, Alert, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Camera, Upload, X, VideoIcon } from 'lucide-react-native';
@@ -144,7 +144,7 @@ export default function ExerciseSessionScreen() {
 	};
 
 	return (
-		<ThemedView style={styles.container}>
+		<ThemedSafeAreaView style={styles.container}>
 			<ScrollView style={styles.content}>
 				<Card style={styles.uploadCard}>
 					{!uploadedVideo ? (
@@ -193,7 +193,7 @@ export default function ExerciseSessionScreen() {
 					</TouchableOpacity>
 				)}
 			</ScrollView>
-		</ThemedView>
+		</ThemedSafeAreaView>
 	);
 }
 
