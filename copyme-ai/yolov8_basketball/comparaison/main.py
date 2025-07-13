@@ -57,14 +57,11 @@ class BasketballAnalyzer:
             while i < total_frames and frames[i].get("class_name", "unknown") == current_class:
                 chunk.append(frames[i])
                 i += 1
-
-            # Only include chunks with sufficient frames and valid phase names
             if len(chunk) >= min_frames_per_phase and current_class != "unknown":
                 stable_chunks.append((current_class, chunk))
 
         logger.info(f"Detected phases: {[class_name for class_name, _ in stable_chunks]}")
 
-        # Find the first valid sequence of required phases
         required_phases = BASKETBALL_CONFIG['phases']
         sequence = []
         phases_found = set()
@@ -74,7 +71,6 @@ class BasketballAnalyzer:
             expected_phase_index = len(phases_found)
             expected_phase = required_phases[expected_phase_index]
 
-            # Handle both variants for shot_release (backward compatibility)
             is_valid_phase = False
             if expected_phase == "shot_release":
                 is_valid_phase = class_name in ["shot_release", "shot_realese"]
@@ -324,7 +320,6 @@ class BasketballAnalyzer:
         try:
             avg_technical_score = sum(result.get('technical_score', 0) for result in advanced_results) / len(advanced_results)
             logger.info(f"Average Technical Score: {avg_technical_score:.1f}%")
-            # Les recommandations ne sont plus affichées car elles sont gérées par Mistral
         except Exception as e:
             logger.error(f"Error displaying analysis summary: {e}")
 

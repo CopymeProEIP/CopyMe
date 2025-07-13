@@ -181,7 +181,6 @@ class Display:
         title_text = font_title.render("Advanced Analysis", True, self.colors['dark'])
         surface.blit(title_text, (x + 10, y + 8))
 
-        # Technical score (ligne compacte)
         if 'technical_score' in advanced_metrics:
             score = advanced_metrics['technical_score']
             score_color = (self.colors['success'] if score >= 80 else self.colors['warning'] if score >= 60 else self.colors['danger'])
@@ -189,7 +188,6 @@ class Display:
             tech_text = font_tech.render(f"Technical: {score:.1f}", True, score_color)
             surface.blit(tech_text, (x + 10, y + 32))
 
-        # Sous-métriques côte à côte (Balance/Symmetry)
         if 'pose_quality' in advanced_metrics:
             pose_quality = advanced_metrics['pose_quality']
             # On récupère les deux premiers (ex: Balance, Symmetry)
@@ -199,13 +197,10 @@ class Display:
             font_metric = pygame.font.Font(None, sub_font_size + 4)
             for i, (metric_name, value) in enumerate(metrics):
                 mx = x + 10 + i * (metric_w + 10)
-                # Label
                 label = font_metric.render(metric_name.title(), True, self.colors['dark'])
                 surface.blit(label, (mx, metric_y))
-                # Valeur
                 val = font_metric.render(f"{value:.2f}", True, self.colors['primary'])
                 surface.blit(val, (mx + metric_w - 40, metric_y))
-                # Barre de progression
                 bar_val = min(1.0, max(0.0, float(value)))
                 bar_rect = (mx, metric_y + 28, metric_w - 10, bar_height)
                 self.draw_rounded_rect(surface, bar_rect, self.colors['primary'], bar_height // 2)
