@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from comparaison.enums import Direction, PriorityLevel
+from .enums import Direction, PriorityLevel
 
 class Improvement(BaseModel):
     angle_index: int  # Index correspondant dans le tableau angles

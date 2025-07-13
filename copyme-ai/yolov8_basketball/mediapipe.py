@@ -8,13 +8,22 @@ class MediaPipe:
 
     def get_keypoints(self, image):
         results = self.pose.process(image)
-        if not hasattr(results, 'pose_landmarks'):
+
+        if results.pose_landmarks is None:
+            print("[WARN] Aucun landmark détecté")
             return None
+
         landmarks = results.pose_landmarks.landmark
         keypoints = {}
+
         for idx in [19, 20, 31, 32]:
             if idx < len(landmarks):
                 lm = landmarks[idx]
-                if lm.visibility > 0.5:
+                if hasattr(lm, "visibility") and lm.visibility > 0.5:
                     keypoints[idx] = (lm.x, lm.y, lm.z)
-        return keypoints if keypoints else None
+
+        if not keypoints:
+            print("[INFO] Aucun point suffisamment visible")
+            return None
+
+        return keypoints

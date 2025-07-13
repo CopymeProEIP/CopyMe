@@ -1,6 +1,6 @@
 from typing import List, Dict
-from comparaison.models import Improvement
-from comparaison.enums import Direction, PriorityLevel
+from .models import Improvement
+from .enums import Direction, PriorityLevel
 
 class AngleUtils:
     @staticmethod

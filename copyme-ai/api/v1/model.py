@@ -17,6 +17,8 @@ from yolov8_basketball.comparaison.angles import AngleUtils
 from yolov8_basketball.comparaison.display import Display
 from yolov8_basketball.comparaison.kalman import KalmanKeypointFilter
 from yolov8_basketball.comparaison.comparaison import Comparaison
+import math
+from typing import Optional, List
 
 settings = get_variables()
 
@@ -32,6 +34,18 @@ class ProcessRequest(BaseModel):
     processedDataId: str = Field(..., examples=["680a1e190ceb2230eeb132b6"])
     allow_training: Optional[bool] = False
 
+def clean(obj):
+    if isinstance(obj, float):
+        return 0.0 if (math.isnan(obj) or math.isinf(obj)) else obj
+    elif isinstance(obj, dict):
+        return {k: clean(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean(v) for v in obj]
+    elif hasattr(obj, "model_dump"):
+        return clean(obj.model_dump())
+    return obj
+
+
 @router.post("/process", response_model=ProcessResponse)
 async def process(
     request: Request,
@@ -40,11 +54,6 @@ async def process(
     allow_training: Optional[bool] = Form(False),
     processedDataId: str = Form(...)
 ) -> ProcessResponse:
-    """
-    Traite une vidéo ou une image pour l'analyse de mouvements de basket.
-    Met à jour un document existant identifié par processedDataId.
-    """
-    # Créer l'objet de formulaire à partir des champs individuels
     form_data = ProcessRequest(
         userId=userId,
         processedDataId=processedDataId,
@@ -52,38 +61,21 @@ async def process(
     )
 
     yolo_basket: PhaseDetection = get_yolomodel(request)
-    logging.debug(f"YOLOv8 object :\n{yolo_basket}")
-
     db_model: DatabaseManager = get_database(request)
 
     file_path = save_uploaded_file(files, settings.UPLOAD_DIR, True)
+    raw_results: List[FrameData] = yolo_basket.run(str(file_path))
 
-    results: List[FrameData] = yolo_basket.run(str(file_path))
-    logging.info("YOLO processing completed.")
-
-    result = "["
-    for i, res in enumerate(results):
-        result += res.model_dump_json(indent=4)
-        if i < len(results) - 1:
-            result += ","
-    result += "]"
-    logging.debug(f"result dump : \n{result}")
+    # Clean all results for JSON compatibility
+    cleaned_results = [FrameData(**clean(frame)) for frame in raw_results]
 
     try:
-        # Vérifier si le document existe
         existing_doc = await db_model.get_by_id(processedDataId)
 
         if existing_doc:
-            logging.info(f"Document with ID {processedDataId} found, updating...")
-            # Mettre à jour le document existant
+            logging.info(f"Updating document ID {processedDataId}...")
 
-            # Sérialiser et désérialiser les frames de manière sécurisée
-            frames_data = []
-            for frame in results:
-                # Utiliser directement model_dump_json et loads pour éviter les problèmes avec mappingproxy
-                frame_json = frame.model_dump_json()
-                frame_dict = json.loads(frame_json)
-                frames_data.append(frame_dict)
+            frames_data = [clean(frame.model_dump()) for frame in cleaned_results]
 
             update_data = {
                 "url": str(file_path),
@@ -92,38 +84,36 @@ async def process(
             }
 
             await db_model.update_entry(processedDataId, update_data)
-            logging.debug("Document updated successfully.")
 
-            # Construire la réponse
             response_model = ProcessResponse(
-                frames=results,
+                frames=cleaned_results,
                 created_at=existing_doc.get("created_at", datetime.now()),
                 version=existing_doc.get("version", 1) + 1
             )
         else:
-            logging.warning(f"Document with ID {processedDataId} not found, creating new document...")
-            # Créer un nouveau document
+            logging.warning(f"Document ID {processedDataId} not found. Creating new one...")
+
             collection_insert = ProcessedImage(
                 url=str(file_path),
-                frames=results,
+                frames=cleaned_results,
                 userId=form_data.userId,
                 created_at=datetime.combine(date.today(), datetime.min.time()),
-                version=1,
+                version=1
             )
 
-            await db_model.insert_new_entry(json.loads(collection_insert.model_dump_json()))
-            logging.debug("New document created successfully.")
+            await db_model.insert_new_entry(clean(collection_insert.model_dump()))
 
             response_model = ProcessResponse(
                 frames=collection_insert.frames,
                 created_at=collection_insert.created_at,
                 version=collection_insert.version
             )
+
     except Exception as e:
-        logging.error(f"Database operation error: {str(e)}")
-        # Créer une réponse minimale en cas d'échec
+        #logging.error(f"Database error: {str(e)}")
+
         response_model = ProcessResponse(
-            frames=results,
+            frames=cleaned_results,
             created_at=datetime.combine(date.today(), datetime.min.time()),
             version=1
         )

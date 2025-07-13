@@ -1,10 +1,10 @@
 import pygame
 import cv2
 import numpy as np
-from comparaison.kalman import KalmanKeypointFilter
-from comparaison.keypoints import KeypointUtils
-from comparaison.angles import AngleUtils
-from comparaison.enums import PriorityLevel
+from .kalman import KalmanKeypointFilter
+from .keypoints import KeypointUtils
+from .angles import AngleUtils
+from .enums import PriorityLevel
 from typing import List, Dict
 import time
 
