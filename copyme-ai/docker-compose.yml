@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  copyme-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: copyme-ai-app
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=${MONGO_URI:-mongodb://mongodb:27017}
+      - FLASK_ENV=production
+      - UPLOAD_DIR=/app/uploads
+      - MODEL_DIR=/app/model
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./model:/app/model
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - copyme-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mongodb:
+    image: mongo:7.0
+    container_name: copyme-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-password}
+      - MONGO_INITDB_DATABASE=${MONGO_DB_NAME:-CopyMe}
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - copyme-network
+
+  # Optionnel: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: copyme-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/ssl
+    depends_on:
+      - copyme-ai
+    restart: unless-stopped
+    networks:
+      - copyme-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  copyme-network:
+    driver: bridge
