@@ -13,10 +13,10 @@ if PARENT not in sys.path:
     sys.path.insert(0, PARENT)
 
 from config.db_models import DatabaseManager
-from comparaison import Comparaison
-from advanced_comparison import AdvancedComparison
-from visualization_enhancer import VisualizationEnhancer
-from ui_config import (
+from .comparaison import Comparaison
+from .advanced_comparison import AdvancedComparison
+from .visualization_enhancer import VisualizationEnhancer
+from .ui_config import (
     ADVANCED_METRICS_CONFIG,
     COMPARISON_CONFIG,
     BASKETBALL_CONFIG

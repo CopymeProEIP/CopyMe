@@ -5,11 +5,12 @@ import logging
 from typing import List, Dict, Tuple, Any
 import os
 import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from mistral.mistral import MistralRephraser
 
 # Import enhanced modules
-from visualization_enhancer import VisualizationEnhancer
-from ui_config import UI_CONFIG, ANIMATION_CONFIG, ADVANCED_METRICS_CONFIG
+from .visualization_enhancer import VisualizationEnhancer
+from .ui_config import UI_CONFIG, ANIMATION_CONFIG, ADVANCED_METRICS_CONFIG
 
 # Configure loggingcl
 logger = logging.getLogger(__name__)
