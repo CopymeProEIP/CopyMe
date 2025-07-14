@@ -8,7 +8,7 @@ class MediaPipe:
 
     def get_keypoints(self, image):
         results = self.pose.process(image)
-        if not hasattr(results, 'pose_landmarks'):
+        if not hasattr(results, 'pose_landmarks') or results.pose_landmarks is None:
             return None
         landmarks = results.pose_landmarks.landmark
         keypoints = {}

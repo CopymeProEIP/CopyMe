@@ -17,6 +17,10 @@ gunicorn
 pydantic>=2.10.6
 fastapi[standard]>=0.115.7
 pydantic-settings
-supervision
 filterpy>=1.4.5
+motor
+pygame
+colorlog
+supervision
+mistralai
 mediapipe

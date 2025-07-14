@@ -162,6 +162,7 @@ class PhaseDetection(YOLOBase):
                 class_id = int(box.cls)
                 confidence = float(box.conf)
                 current_phase = self.CLASS_NAMES_DICT[class_id]
+                current_phase = "shot_release" if current_phase == "shot_realese" else current_phase
             else:
                 confidence = 0.0
                 current_phase = "unknown"

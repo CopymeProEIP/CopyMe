@@ -19,14 +19,16 @@ class Settings(BaseSettings):
     MONGO_ARGS: str
     MONGO_URI: str
     UPLOAD_DIR: str
+    MISTRAL_API_KEY: str
 
     class Config:
         env_file = get_environment()
+        extra = 'ignore'  # Ignore extra fields instead of raising an error
 
 def get_variables():
     try:
         settings = Settings()
+        return settings
     except Exception as e:
-        raise exception_class.SettingsException("Errors: ENV variable not found !")
-
+        raise exception_class.SettingsException(f"Errors: ENV variable not found! Details: {str(e)}")
     return settings

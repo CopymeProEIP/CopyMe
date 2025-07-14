@@ -8,7 +8,7 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--model', type=str, default="model/copyme.pt", help='model path')
-    parser.add_argument("-i", "--input", type=str, default="../assets/pos.jpg", help="path to image or video")
+    parser.add_argument("-i", "--input", type=str, default="../assets/sample_video.mp4", help="path to image or video")
     parser.add_argument("-o", "--output", type=str, default="../feedback", help="path to output directory")
     parser.add_argument("-m", "--mode", type=str, default="debug", help="mode to run the model")
     args = parser.parse_args()
