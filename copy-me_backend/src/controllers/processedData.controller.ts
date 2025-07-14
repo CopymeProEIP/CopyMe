@@ -216,12 +216,30 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 		formData.append('exerciseId', exercise_id);
 		formData.append('fileType', fileType);
 
-		await fetch(`${process.env.AI_API_URL}/process`, {
+		const response = await fetch(`${process.env.AI_API_URL}/process`, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${process.env.AI_API_KEY}`,
 			},
 			body: formData,
+		});
+
+		const responseData = await response.json();
+		console.log('Response from AI API:', responseData.frames.length);
+		ProcessedData.updateOne(
+			{ _id: processedData.id },
+			{
+				$set: {
+					frames: responseData.frames || [],
+				},
+			},
+		).catch((error) => {
+			logger.error('Erreur lors de la mise à jour de la processed data:', error);
+			return res.status(500).json({
+				success: false,
+				message: 'Erreur lors de la mise à jour de la processed data',
+				error: error instanceof Error ? error.message : 'Erreur inconnue',
+			});
 		});
 
 		return res.status(201).json({
@@ -233,6 +251,47 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 		return res.status(500).json({
 			success: false,
 			message: 'Erreur lors du téléchargement du média',
+			error: error instanceof Error ? error.message : 'Erreur inconnue',
+		});
+	}
+};
+
+export const analyzeProcessedData = async (req: AuthenticatedRequest, res: Response) => {
+	try {
+		console.log('Analyse des données traitées:', req.body);
+		const response = await fetch(`${process.env.AI_API_URL}/analyze`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${process.env.AI_API_KEY}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				email: req.body.email,
+				video_id: req.body.video_id,
+				reference_id: req.body.reference_id,
+			}),
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			logger.error('Erreur lors de l\'analyse des données traitées:', errorText);
+			return res.status(response.status).json({
+				success: false,
+				message: 'Erreur lors de l\'analyse des données traitées',
+				error: errorText,
+			});
+		}
+		const responseData = await response.json();
+
+		return res.status(201).json({
+			success: true,
+			data: responseData,
+		});
+	} catch (error) {
+		logger.error("Erreur lors de l'analyse des données traitées:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Erreur lors de l'analyse des données traitées",
 			error: error instanceof Error ? error.message : 'Erreur inconnue',
 		});
 	}
