@@ -17,10 +17,10 @@ from yolov8_basketball.comparaison.angles import AngleUtils
 from yolov8_basketball.comparaison.display import Display
 from yolov8_basketball.comparaison.kalman import KalmanKeypointFilter
 from yolov8_basketball.comparaison.comparaison import Comparaison
+from yolov8_basketball.comparaison import BasketballAPIAnalyzer
+from typing import Any, Dict
 import math
-from typing import Optional, List
-
-settings = get_variables()
+from .basketball_analysis_model import BasketballAnalysisDB, BasketballAnalysisModel
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -52,30 +52,34 @@ async def process(
     files: UploadFile = File(...),
     userId: str = Form(...),
     allow_training: Optional[bool] = Form(False),
-    processedDataId: str = Form(...)
+    processedDataId: Optional[str] = Form(None)
 ) -> ProcessResponse:
-    form_data = ProcessRequest(
-        userId=userId,
-        processedDataId=processedDataId,
-        allow_training=allow_training
-    )
-
+    """
+    Traite une vidéo ou une image pour l'analyse de mouvements de basket.
+    Met à jour un document existant si processedDataId est fourni, sinon en crée un nouveau.
+    """
+    
+    # Initialiser les settings ici au lieu du niveau module
+    settings = get_variables()
+    
     yolo_basket: PhaseDetection = get_yolomodel(request)
     db_model: DatabaseManager = get_database(request)
 
     file_path = save_uploaded_file(files, settings.UPLOAD_DIR, True)
-    raw_results: List[FrameData] = yolo_basket.run(str(file_path))
+    results: List[FrameData] = yolo_basket.run(str(file_path))
+    logging.info("YOLO processing completed.")
 
-    # Clean all results for JSON compatibility
-    cleaned_results = [FrameData(**clean(frame)) for frame in raw_results]
+    # Sanitize frames correctement pour la base de données
+    frames_data = [sanitize_float_values(sanitize_frame(f)) for f in results]
+
+    # Créer des objets FrameData propres pour la réponse
+    clean_frames = [create_clean_frame_data(sanitize_frame(f)) for f in results]
 
     try:
-        existing_doc = await db_model.get_by_id(processedDataId)
+        existing_doc = await db_model.get_by_id(processedDataId) if processedDataId else None
 
         if existing_doc:
             logging.info(f"Updating document ID {processedDataId}...")
-
-            frames_data = [clean(frame.model_dump()) for frame in cleaned_results]
 
             update_data = {
                 "url": str(file_path),
@@ -85,40 +89,40 @@ async def process(
 
             await db_model.update_entry(processedDataId, update_data)
 
-            response_model = ProcessResponse(
-                frames=cleaned_results,
+            return ProcessResponse(
+                frames=clean_frames,
                 created_at=existing_doc.get("created_at", datetime.now()),
                 version=existing_doc.get("version", 1) + 1
             )
         else:
-            logging.warning(f"Document ID {processedDataId} not found. Creating new one...")
+            logging.info("Creating new document...")
 
+            created_at = datetime.combine(date.today(), datetime.min.time())
             collection_insert = ProcessedImage(
                 url=str(file_path),
-                frames=cleaned_results,
-                userId=form_data.userId,
-                created_at=datetime.combine(date.today(), datetime.min.time()),
+                frames=frames_data,
+                userId=userId,
+                allow_training=allow_training,
+                created_at=created_at,
+                version=1,
+            )
+
+            await db_model.insert_new_entry(json.loads(collection_insert.model_dump_json()))
+
+            return ProcessResponse(
+                frames=clean_frames,
+                created_at=created_at,
                 version=1
             )
 
-            await db_model.insert_new_entry(clean(collection_insert.model_dump()))
-
-            response_model = ProcessResponse(
-                frames=collection_insert.frames,
-                created_at=collection_insert.created_at,
-                version=collection_insert.version
-            )
-
     except Exception as e:
-        #logging.error(f"Database error: {str(e)}")
-
-        response_model = ProcessResponse(
-            frames=cleaned_results,
+        logging.error(f"Database operation error: {str(e)}")
+        return ProcessResponse(
+            frames=clean_frames,
             created_at=datetime.combine(date.today(), datetime.min.time()),
             version=1
         )
 
-    return response_model
 
 class AnalysisRequest(BaseModel):
     email: EmailStr = Field(..., examples=["email@exemple.com"])
@@ -128,11 +132,15 @@ class AnalysisRequest(BaseModel):
 class AnalysisResponse(BaseModel):
     email: EmailStr
     video_id: str
+    analysis_id: Optional[str] = None
     alignment_score: float
     pose_similarity: float
     key_differences: List[Dict]
     improvements: List[Dict]
-    class_scores: Dict[str, Dict[str, float]]
+    class_scores: Dict[str, int]  # Changé de Dict[str, Dict[str, float]] à Dict[str, int]
+    global_feedback: Optional[str] = None
+    analysis_summary: Optional[Dict] = None
+    metadata: Optional[Dict] = None
     created_at: datetime
 
 @router.post("/analyze", response_model=AnalysisResponse)
@@ -140,238 +148,146 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
     """
     Analyse un mouvement en comparant des frames capturées avec des références et fournit des recommandations.
     """
-    db_model: DatabaseManager = get_database(request)
+    try:
+        analyser = BasketballAPIAnalyzer()
+        result = await analyser.analyze_basketball_sequence_api(analysis_data.video_id)
 
-    # Récupérer les données de l'utilisateur
-    user_video_id = analysis_data.video_id
-    if not user_video_id:
-        # Si aucun ID n'est fourni, récupérer le dernier enregistrement pour cet email
-        user_data = await db_model.get_latest_by_email(analysis_data.email)
-        if not user_data:
-            raise HTTPException(status_code=404, detail="Aucune donnée trouvée pour cet email")
-        user_video_id = user_data.get("_id", "")
+        # Initialiser la base de données pour les analyses
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+
+        # Sauvegarder l'analyse complète dans MongoDB
+        analysis_id = None
+        try:
+            analysis_id = await analysis_db.save_analysis(result)
+            logging.info(f"Analysis saved with ID: {analysis_id}")
+        except Exception as save_error:
+            logging.error(f"Failed to save analysis to database: {save_error}")
+            # Continuer même si la sauvegarde échoue
+
+        # Extraire les données pour une meilleure structuration
+        analysis_summary = result.get("analysis_summary", {})
+        summary_data = analysis_summary.get("summary", {})
+        frame_analysis = result.get("frame_analysis", [])        # Extraire les améliorations spécifiques
+        improvements = []
+        key_differences = []
+        
+        for frame in frame_analysis:
+            if frame.get("improvements"):
+                # Convertir les objets Improvement en dictionnaires
+                frame_improvements = frame["improvements"]
+                for improvement in frame_improvements:
+                    if hasattr(improvement, 'model_dump'):
+                        # Si c'est un objet Pydantic, utiliser model_dump()
+                        improvements.append(improvement.model_dump())
+                    elif hasattr(improvement, 'dict'):
+                        # Si c'est un objet Pydantic v1, utiliser dict()
+                        improvements.append(improvement.dict())
+                    elif isinstance(improvement, dict):
+                        # Si c'est déjà un dictionnaire
+                        improvements.append(improvement)
+                    else:
+                        # Sinon, tenter de convertir les attributs en dictionnaire
+                        improvement_dict = {
+                            'angle_index': getattr(improvement, 'angle_index', 0),
+                            'target_angle': getattr(improvement, 'target_angle', 0.0),
+                            'direction': str(getattr(improvement, 'direction', 'unknown')),
+                            'magnitude': getattr(improvement, 'magnitude', 0.0),
+                            'priority': str(getattr(improvement, 'priority', 'low')),
+                            'class_name': getattr(improvement, 'class_name', None)
+                        }
+                        improvements.append(improvement_dict)
+
+            if frame.get("comparison_result"):
+                key_differences.append({
+                    "frame_index": frame.get("frame_index", 0),
+                    "phase": frame.get("phase", "unknown"),
+                    "comparison_result": frame["comparison_result"],
+                    "technical_score": frame.get("technical_score", 0)
+                })
+
+        # Convertir le résultat en format AnalysisResponse
+        return AnalysisResponse(
+            email=analysis_data.email,
+            video_id=analysis_data.video_id or "unknown",
+            analysis_id=analysis_id,
+            alignment_score=summary_data.get("average_technical_score", 0.0) / 100.0,
+            pose_similarity=summary_data.get("average_technical_score", 0.0),
+            key_differences=key_differences,
+            improvements=improvements,
+            class_scores=summary_data.get("improvement_breakdown", {}),
+            global_feedback=result.get("global_feedback"),
+            analysis_summary=analysis_summary,
+            metadata=result.get("metadata"),
+            created_at=datetime.now()
+        )
+    except Exception as e:
+        logging.error(f"Error during movement analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+def sanitize_float_values(data: Any) -> Any:
+    if isinstance(data, dict):
+        return {k: sanitize_float_values(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_float_values(item) for item in data]
+    elif isinstance(data, float):
+        if math.isnan(data) or math.isinf(data):
+            return 0.0
+        return data
     else:
-        # Récupérer les données spécifiques à l'ID fourni
-        user_data = await db_model.get_by_id(user_video_id)
-        if not user_data:
-            raise HTTPException(status_code=404, detail="Vidéo non trouvée")
+        return data
 
-    # Récupérer les données de référence
-    reference_id = analysis_data.reference_id
-    if not reference_id:
-        # Utiliser une référence par défaut ou la plus récente
-        reference_data = await db_model.get_reference_data()
-        if not reference_data:
-            raise HTTPException(status_code=404, detail="Aucune référence disponible")
-    else:
-        reference_data = await db_model.get_by_id(reference_id)
-        if not reference_data:
-            raise HTTPException(status_code=404, detail="Référence non trouvée")
+def sanitize_frame(frame: FrameData) -> Dict:
+    frame_dict = frame.model_dump()
 
-    # Extraire les frames pour l'analyse
-    user_frames = user_data.get("frames", [])
-    reference_frames = reference_data.get("frames", [])
+    # Nettoyer les angles
+    for angle in frame_dict.get("angles", []):
+        if angle.get("angle") is None or math.isnan(angle.get("angle")) or math.isinf(angle.get("angle")):
+            angle["angle"] = 0.0
 
-    if not user_frames or not reference_frames:
-        raise HTTPException(status_code=400, detail="Données de frames insuffisantes pour l'analyse")
+    # S'assurer que feedback est un dict
+    if not isinstance(frame_dict.get("feedback"), dict):
+        frame_dict["feedback"] = {}
 
-    # Grouper les frames par class_name
-    def group_frames_by_class(frames):
-        grouped = {}
-        for frame in frames:
-            class_name = frame.get('class_name', 'unknown')
-            if class_name not in grouped:
-                grouped[class_name] = []
-            grouped[class_name].append(frame)
-        return grouped
+    # Puis on nettoie récursivement les float "louches" partout
+    frame_dict = sanitize_float_values(frame_dict)
 
-    user_frames_grouped = group_frames_by_class(user_frames)
-    reference_frames_grouped = group_frames_by_class(reference_frames)
+    return frame_dict
 
-    logging.debug(f"User frames grouped: {list(user_frames_grouped.keys())}")
-    logging.debug(f"Reference frames grouped: {list(reference_frames_grouped.keys())}")
-
-    # Résultats de comparaison globaux
-    global_comparison_result = {
-        'alignment_score': 0,
-        'pose_similarity': 0,
-        'key_differences': [],
-        'class_comparisons': {}
-    }
-    all_improvements = []
-
-    # Comparer chaque groupe de class_name
-    total_classes = 0
-    total_alignment = 0
-    total_similarity = 0
-
-    for class_name in user_frames_grouped.keys():
-        if class_name not in reference_frames_grouped:
-            logging.warning(f"Class '{class_name}' not found in reference data")
-            continue
-
-        user_class_frames = user_frames_grouped[class_name]
-        reference_class_frames = reference_frames_grouped[class_name]
-
-        logging.info(f"Comparing class '{class_name}': {len(user_class_frames)} user frames vs {len(reference_class_frames)} reference frames")
-
-        # Initialiser le comparateur pour cette classe
-        comparator = Comparaison(model=user_class_frames, dataset=reference_class_frames)
-
-        # Utiliser la première frame de chaque groupe pour la comparaison
-        # (ou implémenter une logique plus sophistiquée selon vos besoins)
-        current_keypoints_raw = user_class_frames[0]['keypoints_positions']
-        reference_keypoints_raw = reference_class_frames[0]['keypoints_positions']
-
-        # Convertir les keypoints en float pour éviter les erreurs de type
-        def convert_keypoints_to_float(keypoints_dict):
-            converted = {}
-            for key, value in keypoints_dict.items():
-                try:
-                    converted[key] = float(value) if value is not None else 0.0
-                except (ValueError, TypeError):
-                    converted[key] = 0.0
-            return converted
-
-        # Convertir le format des keypoints de dictionnaire vers liste de tuples (x, y)
-        def convert_keypoints_to_list(keypoints_dict):
-            # Ordre des keypoints selon YOLO pose estimation
-            keypoint_order = [
-                'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear',
-                'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow',
-                'left_wrist', 'right_wrist', 'left_hip', 'right_hip',
-                'left_knee', 'right_knee', 'left_ankle', 'right_ankle'
-            ]
-
-            keypoints_list = []
-            for keypoint in keypoint_order:
-                x_key = f"{keypoint}_x"
-                y_key = f"{keypoint}_y"
-                x = keypoints_dict.get(x_key, 0.0)
-                y = keypoints_dict.get(y_key, 0.0)
-                keypoints_list.append([x, y])
-
-            return keypoints_list
-
-        current_keypoints_dict = convert_keypoints_to_float(current_keypoints_raw)
-        reference_keypoints_dict = convert_keypoints_to_float(reference_keypoints_raw)
-
-        # Convertir au format attendu par compare_keypoints (liste de tuples [x, y])
-        current_keypoints = convert_keypoints_to_list(current_keypoints_dict)
-        reference_keypoints = convert_keypoints_to_list(reference_keypoints_dict)
-
-        # Comparer les keypoints pour cette classe
-        class_comparison_result = comparator.compare_keypoints(current_keypoints, reference_keypoints)
-        logging.debug(f"Class '{class_name}' comparison result: {class_comparison_result}")
-
-        # Comparer les angles pour cette classe
-        current_angles = {}
-        reference_angles = {}
-
-        # Accès correct aux angles dans le dictionnaire
-        if 'angles' in user_class_frames[0]:
-            current_angles = user_class_frames[0]['angles']
-
-        # Préparer les angles de référence avec des tolérances
-        if 'angles' in reference_class_frames[0]:
-            for angle in reference_class_frames[0]['angles']:
-                # Extraire l'information d'angle
-                angle_name = str(angle.get('angle_name', ['unknown', 0])[0])
-                angle_value = angle.get('angle', 0)
-
-                reference_angles[angle_name] = {
-                    "ref": angle_value,
-                    "tolerance": 5.0  # Tolérance de 5 degrés par défaut
-                }
-
-        class_improvements = comparator.compare_angles(current_angles, reference_angles)
-
-        # Ajouter les informations de classe aux améliorations
-        for improvement in class_improvements:
-            # Ne pas modifier angle_index, ajouter class_name séparément
-            improvement.class_name = class_name
-
-        all_improvements.extend(class_improvements)
-
-        # Stocker les résultats par classe
-        global_comparison_result['class_comparisons'][class_name] = {
-            'alignment_score': class_comparison_result.get('alignment_score', 0),
-            'pose_similarity': class_comparison_result.get('pose_similarity', 0),
-            'key_differences': class_comparison_result.get('key_differences', []),
-            'improvements_count': len(class_improvements)
-        }
-
-        # Accumuler pour les moyennes globales
-        total_classes += 1
-        total_alignment += class_comparison_result.get('alignment_score', 0)
-        total_similarity += class_comparison_result.get('pose_similarity', 0)
-
-        # Ajouter les différences clés avec le nom de la classe
-        for diff in class_comparison_result.get('key_differences', []):
-            diff['class_name'] = class_name
-            global_comparison_result['key_differences'].append(diff)
-
-    # Calculer les moyennes globales
-    if total_classes > 0:
-        global_comparison_result['alignment_score'] = total_alignment / total_classes
-        global_comparison_result['pose_similarity'] = total_similarity / total_classes
-
-    # Utiliser les résultats globaux pour la compatibilité
-    comparison_result = global_comparison_result
-    improvements = all_improvements
-
-    # Convertir les améliorations en dictionnaires pour la réponse
-    improvement_list = []
-    for imp in improvements:
-        improvement_list.append({
-            "angle_index": imp.angle_index,
-            "target_angle": imp.target_angle,
-            "direction": imp.direction,
-            "magnitude": imp.magnitude,
-            "priority": imp.priority,
-            "class_name": imp.class_name
-        })
-
-    # Construire la réponse
-    response = AnalysisResponse(
-        email=analysis_data.email,
-        video_id=user_video_id,
-        alignment_score=comparison_result.get('alignment_score', 0),
-        pose_similarity=comparison_result.get('pose_similarity', 0),
-        key_differences=comparison_result.get('key_differences', []),
-        improvements=improvement_list,
-        class_scores={
-            class_name: {
-                "alignment_score": scores["alignment_score"],
-                "pose_similarity": scores["pose_similarity"],
-                "improvements_count": scores["improvements_count"]
-            }
-            for class_name, scores in global_comparison_result['class_comparisons'].items()
-        },
-        created_at=datetime.now()
-    )
-
-    # Enregistrer les résultats d'analyse dans la base de données
-    analysis_record = {
-        "email": analysis_data.email,
-        "video_id": user_video_id,
-        "reference_id": reference_id,
-        "comparison_result": comparison_result,
-        "class_scores": {
-            class_name: {
-                "alignment_score": scores["alignment_score"],
-                "pose_similarity": scores["pose_similarity"],
-                "improvements_count": scores["improvements_count"]
-            }
-            for class_name, scores in global_comparison_result['class_comparisons'].items()
-        },
-        "improvements": improvement_list,
-        "created_at": datetime.now()
-    }
-
-    await db_model.insert_analysis_result(analysis_record)
-
-    return response
+def create_clean_frame_data(frame_dict: Dict) -> FrameData:
+    """
+    Crée un objet FrameData propre à partir d'un dictionnaire nettoyé
+    """
+    try:
+        # Nettoyer d'abord le dictionnaire
+        clean_dict = sanitize_float_values(frame_dict)
+        
+        # S'assurer que les champs requis existent
+        if 'frame_number' not in clean_dict:
+            clean_dict['frame_number'] = 0
+        if 'timestamp' not in clean_dict:
+            clean_dict['timestamp'] = 0.0
+        if 'keypoints_positions' not in clean_dict:
+            clean_dict['keypoints_positions'] = {}
+        if 'angles' not in clean_dict:
+            clean_dict['angles'] = []
+        if 'class_name' not in clean_dict:
+            clean_dict['class_name'] = 'unknown'
+        if 'feedback' not in clean_dict:
+            clean_dict['feedback'] = {}
+            
+        return FrameData(**clean_dict)
+    except Exception as e:
+        logging.warning(f"Erreur lors de la création d'un FrameData propre: {e}")
+        # Retourner un objet minimal en cas d'erreur
+        return FrameData(
+            frame_number=0,
+            timestamp=0.0,
+            keypoints_positions={},
+            angles=[],
+            class_name='unknown',
+            feedback={}
+        )
 
 @router.get("/image")
 def serve_image_with_param():
@@ -380,3 +296,83 @@ def serve_image_with_param():
 @router.get("/latest-angle-collection")
 def latest_angle_collection():
     return {"status": "success", "message": "Latest angle collection."}
+
+@router.get("/analysis/{analysis_id}")
+async def get_analysis(request: Request, analysis_id: str):
+    """
+    Récupérer une analyse spécifique par son ID.
+    """
+    try:
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+        
+        analysis = await analysis_db.get_analysis(analysis_id)
+        
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        
+        return analysis
+    except Exception as e:
+        logging.error(f"Error retrieving analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve analysis: {str(e)}")
+
+@router.get("/analyses/video/{video_id}")
+async def get_analyses_by_video(request: Request, video_id: str):
+    """
+    Récupérer toutes les analyses d'une vidéo spécifique.
+    """
+    try:
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+        
+        analyses = await analysis_db.get_analyses_by_video_id(video_id)
+        
+        return {
+            "video_id": video_id,
+            "total_analyses": len(analyses),
+            "analyses": analyses
+        }
+    except Exception as e:
+        logging.error(f"Error retrieving analyses for video {video_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve analyses: {str(e)}")
+
+@router.get("/statistics/{video_id}")
+async def get_user_statistics(request: Request, video_id: str):
+    """
+    Obtenir les statistiques d'un utilisateur pour une vidéo.
+    """
+    try:
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+        
+        stats = await analysis_db.get_user_statistics(video_id)
+        
+        if not stats:
+            return {
+                "video_id": video_id,
+                "message": "No statistics found for this video"
+            }
+        
+        return stats
+    except Exception as e:
+        logging.error(f"Error retrieving statistics for video {video_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve statistics: {str(e)}")
+
+@router.delete("/analysis/{analysis_id}")
+async def delete_analysis(request: Request, analysis_id: str):
+    """
+    Supprimer une analyse spécifique.
+    """
+    try:
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+        
+        success = await analysis_db.delete_analysis(analysis_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Analysis not found or could not be deleted")
+        
+        return {"message": "Analysis deleted successfully", "analysis_id": analysis_id}
+    except Exception as e:
+        logging.error(f"Error deleting analysis {analysis_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete analysis: {str(e)}")

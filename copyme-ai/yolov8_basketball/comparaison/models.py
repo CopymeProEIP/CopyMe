@@ -1,11 +1,18 @@
 from pydantic import BaseModel
 from typing import Optional
-from .enums import Direction, PriorityLevel
+
+try:
+    from .enums import Direction, PriorityLevel
+except ImportError:
+    try:
+        from comparaison.enums import Direction, PriorityLevel
+    except ImportError:
+        from enums import Direction, PriorityLevel
 
 class Improvement(BaseModel):
-    angle_index: int  # Index correspondant dans le tableau angles
-    target_angle: float  # Angle cible à atteindre
-    direction: Direction  # Direction de correction
-    magnitude: float  # Amplitude de la correction nécessaire
-    priority: PriorityLevel  # Priorité de la correction
-    class_name: Optional[str] = None  # Nom de la classe associée
+    angle_index: int
+    target_angle: float
+    direction: Direction
+    magnitude: float
+    priority: PriorityLevel
+    class_name: Optional[str] = None

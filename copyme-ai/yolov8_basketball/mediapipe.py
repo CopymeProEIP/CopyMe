@@ -8,9 +8,7 @@ class MediaPipe:
 
     def get_keypoints(self, image):
         results = self.pose.process(image)
-
-        if results.pose_landmarks is None:
-            print("[WARN] Aucun landmark détecté")
+        if not hasattr(results, 'pose_landmarks') or results.pose_landmarks is None:
             return None
 
         landmarks = results.pose_landmarks.landmark
