@@ -1,16 +1,11 @@
 /** @format */
 
-import React, { useState } from 'react';
-import {
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
-import { VideoRef } from 'react-native-video';
+import Video, { VideoRef } from 'react-native-video';
 import { useRoute } from '@react-navigation/native';
 import {
   Lightbulb,
@@ -20,8 +15,9 @@ import {
   Play,
   Pause,
 } from 'lucide-react-native';
-import { mockupProcessedData } from '@/constants/Mockup';
+import { ProcessedData } from '@/constants/processedData';
 import color from '@/app/theme/color';
+import { useApi } from '@/utils/api';
 
 type RouteParams = {
   id: string;
@@ -49,7 +45,32 @@ export default function AnalysisDetailScreen() {
   const [frame, setFrame] = useState(0);
   const [tipsExpanded, setTipsExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [processedData, setProcessedData] = useState<ProcessedData | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = React.useRef<VideoRef>(null);
+  const api = useApi();
+
+  useEffect(() => {
+    const fetchProcessedData = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching processed data for ID:', id);
+        const data = (await api.get(`/analysis/${id}`)) as ProcessedData;
+        console.log('Fetched processed data:', data);
+        setProcessedData(data);
+      } catch (err) {
+        console.error('Error fetching processed data:', err);
+        setError('Failed to load analysis data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProcessedData();
+  }, []);
 
   const scrollToSelected = (index: number) => {
     if (scrollViewRef.current) {
@@ -64,18 +85,29 @@ export default function AnalysisDetailScreen() {
     setTimeout(() => scrollToSelected(newFrame), 100);
   };
 
-  const togglePlayPause = async () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.seek(0);
-        setIsPlaying(false);
-      } else {
-        setIsPlaying(true);
-      }
-    }
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
   };
 
-  const feedbacks = mockupProcessedData.frames[frame].persons[0].feedback;
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText type="title">Loading analysis...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (error || !processedData) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText type="title">
+          Error: {error || 'No data available'}
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const feedbacks = processedData.frames[frame]?.persons[0]?.feedback || [];
   const tipCount = feedbacks.length;
 
   return (
@@ -120,14 +152,27 @@ export default function AnalysisDetailScreen() {
         </Card>
         <ThemedView>
           <ThemedView style={styles.videoContainer}>
-            <Image
-              source={require('@/assets/images/placeholder.png')}
-              style={styles.video}
-              resizeMode="contain"
-            />
+            {processedData.url ? (
+              <Video
+                ref={videoRef}
+                source={{ uri: processedData.url }}
+                style={styles.video}
+                controls={true}
+                resizeMode="contain"
+                paused={!isPlaying}
+                onLoad={() => console.log('Video loaded')}
+                onError={videoError =>
+                  console.error('Video error:', videoError)
+                }
+              />
+            ) : (
+              <Image
+                source={require('@/assets/images/placeholder.png')}
+                style={styles.video}
+                resizeMode="contain"
+              />
+            )}
           </ThemedView>
-
-          <ThemedView style={styles.videoContainer}></ThemedView>
         </ThemedView>
 
         <ThemedView style={styles.buttonContainer}>
@@ -149,7 +194,7 @@ export default function AnalysisDetailScreen() {
               style={styles.positionScroll}
               contentContainerStyle={styles.positionScrollContent}
             >
-              {mockupProcessedData.frames.map((frameData, idx) => (
+              {processedData.frames.map((frameData, idx) => (
                 <TouchableOpacity
                   key={idx}
                   style={[
@@ -173,7 +218,7 @@ export default function AnalysisDetailScreen() {
             style={[styles.button, styles.navButton]}
             onPress={() => {
               const newFrame = Math.min(
-                mockupProcessedData.frames.length - 1,
+                processedData.frames.length - 1,
                 frame + 1,
               );
               updateFrame(newFrame);
@@ -219,7 +264,7 @@ export default function AnalysisDetailScreen() {
                 style={styles.controlButton}
                 onPress={() => {
                   const newFrame = Math.min(
-                    mockupProcessedData.frames.length - 1,
+                    processedData.frames.length - 1,
                     frame + 1,
                   );
                   updateFrame(newFrame);

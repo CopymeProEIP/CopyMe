@@ -16,6 +16,7 @@ import { Exercise } from '@/constants/interface';
 import { useApi } from '@/utils/api';
 import useReviews from '@/app/hooks/useReviews';
 import { ProcessedData } from '@/constants/processedData';
+import SeeAll from '@/components/v1/SeeAll';
 
 type RouteParams = {
   id: string;
@@ -137,9 +138,7 @@ export default function ExerciseDetailScreen() {
           </ThemedText>
         </Card>
 
-        <ThemedText type="subtitle" style={styles.sectionTitle}>
-          Previous Sessions
-        </ThemedText>
+        <SeeAll text='Last reviews' goTo='Analysis'/>
 				<ThemedView style={{ flex: 1, gap: 8 }}>
 					{reviews.map((review, index) => (
 						<TouchableOpacity
