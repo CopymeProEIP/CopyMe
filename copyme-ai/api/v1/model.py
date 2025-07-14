@@ -20,6 +20,7 @@ from yolov8_basketball.comparaison.comparaison import Comparaison
 from yolov8_basketball.comparaison import BasketballAPIAnalyzer
 from typing import Any, Dict
 import math
+from .basketball_analysis_model import BasketballAnalysisDB, BasketballAnalysisModel
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -119,11 +120,15 @@ class AnalysisRequest(BaseModel):
 class AnalysisResponse(BaseModel):
     email: EmailStr
     video_id: str
+    analysis_id: Optional[str] = None
     alignment_score: float
     pose_similarity: float
     key_differences: List[Dict]
     improvements: List[Dict]
-    class_scores: Dict[str, Dict[str, float]]
+    class_scores: Dict[str, int]  # Changé de Dict[str, Dict[str, float]] à Dict[str, int]
+    global_feedback: Optional[str] = None
+    analysis_summary: Optional[Dict] = None
+    metadata: Optional[Dict] = None
     created_at: datetime
 
 @router.post("/analyze", response_model=AnalysisResponse)
@@ -135,15 +140,73 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
         analyser = BasketballAPIAnalyzer()
         result = await analyser.analyze_basketball_sequence_api(analysis_data.video_id)
 
+        # Initialiser la base de données pour les analyses
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+
+        # Sauvegarder l'analyse complète dans MongoDB
+        analysis_id = None
+        try:
+            analysis_id = await analysis_db.save_analysis(result)
+            logging.info(f"Analysis saved with ID: {analysis_id}")
+        except Exception as save_error:
+            logging.error(f"Failed to save analysis to database: {save_error}")
+            # Continuer même si la sauvegarde échoue
+
+        # Extraire les données pour une meilleure structuration
+        analysis_summary = result.get("analysis_summary", {})
+        summary_data = analysis_summary.get("summary", {})
+        frame_analysis = result.get("frame_analysis", [])        # Extraire les améliorations spécifiques
+        improvements = []
+        key_differences = []
+        
+        for frame in frame_analysis:
+            if frame.get("improvements"):
+                # Convertir les objets Improvement en dictionnaires
+                frame_improvements = frame["improvements"]
+                for improvement in frame_improvements:
+                    if hasattr(improvement, 'model_dump'):
+                        # Si c'est un objet Pydantic, utiliser model_dump()
+                        improvements.append(improvement.model_dump())
+                    elif hasattr(improvement, 'dict'):
+                        # Si c'est un objet Pydantic v1, utiliser dict()
+                        improvements.append(improvement.dict())
+                    elif isinstance(improvement, dict):
+                        # Si c'est déjà un dictionnaire
+                        improvements.append(improvement)
+                    else:
+                        # Sinon, tenter de convertir les attributs en dictionnaire
+                        improvement_dict = {
+                            'angle_index': getattr(improvement, 'angle_index', 0),
+                            'target_angle': getattr(improvement, 'target_angle', 0.0),
+                            'direction': str(getattr(improvement, 'direction', 'unknown')),
+                            'magnitude': getattr(improvement, 'magnitude', 0.0),
+                            'priority': str(getattr(improvement, 'priority', 'low')),
+                            'class_name': getattr(improvement, 'class_name', None)
+                        }
+                        improvements.append(improvement_dict)
+
+            if frame.get("comparison_result"):
+                key_differences.append({
+                    "frame_index": frame.get("frame_index", 0),
+                    "phase": frame.get("phase", "unknown"),
+                    "comparison_result": frame["comparison_result"],
+                    "technical_score": frame.get("technical_score", 0)
+                })
+
         # Convertir le résultat en format AnalysisResponse
         return AnalysisResponse(
             email=analysis_data.email,
             video_id=analysis_data.video_id or "unknown",
-            alignment_score=result.get("analysis_summary", {}).get("summary", {}).get("average_technical_score", 0.0) / 100.0,
-            pose_similarity=result.get("analysis_summary", {}).get("summary", {}).get("average_technical_score", 0.0),
-            key_differences=result.get("frame_analysis", []),
-            improvements=result.get("frame_analysis", []),
-            class_scores={},
+            analysis_id=analysis_id,
+            alignment_score=summary_data.get("average_technical_score", 0.0) / 100.0,
+            pose_similarity=summary_data.get("average_technical_score", 0.0),
+            key_differences=key_differences,
+            improvements=improvements,
+            class_scores=summary_data.get("improvement_breakdown", {}),
+            global_feedback=result.get("global_feedback"),
+            analysis_summary=analysis_summary,
+            metadata=result.get("metadata"),
             created_at=datetime.now()
         )
     except Exception as e:
@@ -221,3 +284,83 @@ def serve_image_with_param():
 @router.get("/latest-angle-collection")
 def latest_angle_collection():
     return {"status": "success", "message": "Latest angle collection."}
+
+@router.get("/analysis/{analysis_id}")
+async def get_analysis(request: Request, analysis_id: str):
+    """
+    Récupérer une analyse spécifique par son ID.
+    """
+    try:
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+        
+        analysis = await analysis_db.get_analysis(analysis_id)
+        
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        
+        return analysis
+    except Exception as e:
+        logging.error(f"Error retrieving analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve analysis: {str(e)}")
+
+@router.get("/analyses/video/{video_id}")
+async def get_analyses_by_video(request: Request, video_id: str):
+    """
+    Récupérer toutes les analyses d'une vidéo spécifique.
+    """
+    try:
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+        
+        analyses = await analysis_db.get_analyses_by_video_id(video_id)
+        
+        return {
+            "video_id": video_id,
+            "total_analyses": len(analyses),
+            "analyses": analyses
+        }
+    except Exception as e:
+        logging.error(f"Error retrieving analyses for video {video_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve analyses: {str(e)}")
+
+@router.get("/statistics/{video_id}")
+async def get_user_statistics(request: Request, video_id: str):
+    """
+    Obtenir les statistiques d'un utilisateur pour une vidéo.
+    """
+    try:
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+        
+        stats = await analysis_db.get_user_statistics(video_id)
+        
+        if not stats:
+            return {
+                "video_id": video_id,
+                "message": "No statistics found for this video"
+            }
+        
+        return stats
+    except Exception as e:
+        logging.error(f"Error retrieving statistics for video {video_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve statistics: {str(e)}")
+
+@router.delete("/analysis/{analysis_id}")
+async def delete_analysis(request: Request, analysis_id: str):
+    """
+    Supprimer une analyse spécifique.
+    """
+    try:
+        db_model: DatabaseManager = get_database(request)
+        analysis_db = BasketballAnalysisDB(db_model)
+        
+        success = await analysis_db.delete_analysis(analysis_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Analysis not found or could not be deleted")
+        
+        return {"message": "Analysis deleted successfully", "analysis_id": analysis_id}
+    except Exception as e:
+        logging.error(f"Error deleting analysis {analysis_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete analysis: {str(e)}")
