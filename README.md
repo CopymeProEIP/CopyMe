@@ -78,6 +78,13 @@ This project focuses on detecting the different phases of a basketball shot usin
 
 ---
 
+## Start programming in development environment with docker compose
+
+``` bash
+chmod +x development.sh
+./development.sh
+```
+
 ## References
 
 - [YOLOv8](https://docs.ultralytics.com/)
