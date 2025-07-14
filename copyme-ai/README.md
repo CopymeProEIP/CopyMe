@@ -100,6 +100,10 @@ Run the backend API that run the model in local:
 uvicorn --reload main:app
 ```
 
+You can accces the API documentation like this
+
+[Documentation API](http://localhost)
+
 > A feedback directory will be created during execution.
 
 ### Production Deployment

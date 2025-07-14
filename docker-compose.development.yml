@@ -52,8 +52,7 @@ services:
     container_name: copyme-backend
     build:
       context: ./copy-me_backend
-      dockerfile: Dockerfile
-    image: ${CI_REGISTRY_IMAGE}/orchestrator-service:${TAG}
+      dockerfile: dev.dockerfile
     ports:
       - "3000:${COPYME_BACKEND_PORT}" 
     environment:
@@ -63,12 +62,37 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
     volumes:
+      - ./copy-me_backend:/app
+      - /app/node_modules
       - ./uploads:/app/uploads
     depends_on:
       - mongodb
     restart: always
     networks:
       - backend_net
+
+  copyme-ai:
+    build:
+      context: ./copyme-ai/
+      dockerfile: development.dockerfile
+    container_name: copyme-ai
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./copyme-ai:/app
+      - ./copyme-ai/model:/app/model
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true
 
   
   

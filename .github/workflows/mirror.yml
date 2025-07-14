@@ -8,21 +8,31 @@ on:
 jobs:
   mirror:
     runs-on: ubuntu-latest
+    environment: token
+
     steps:
       - name: Checkout all branches
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ github.ref }}
 
-      - name: Mirror all branches
-        env:
-          MIRROR_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git remote add mirror https://x-access-token:${MIRROR_TOKEN}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git
-          git remote -v 
-          git push mirror --all  # push all branches
-          git push mirror --tags  # push all the tags
+      - name: Add mirror remote and push
+        run: |
+          REMOTE_URL="https://x-access-token:${{ secrets.ACCESS_TOKEN }}@github.com/EpitechPromo2026/G-EIP-700-RUN-7-1-eip-lucas.arnassalom.git"
+
+          echo "Ajout du remote mirror..."
+          git remote add mirror "$REMOTE_URL"
+
+          echo "Liste des remotes :"
+          git remote -v
+
+          echo "Push des branches..."
+          git push mirror --all
+
+          echo "Push des tags..."
+          git push mirror --tags
