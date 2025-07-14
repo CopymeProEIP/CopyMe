@@ -23,6 +23,9 @@ importers:
       '@react-navigation/stack':
         specifier: ^7.3.6
         version: 7.3.6(@react-navigation/native@7.1.13(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0))(react-native-gesture-handler@2.24.0(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0))(react-native-safe-area-context@5.4.0(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0))(react-native-screens@4.11.1(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0))(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0)
+      cloudinary:
+        specifier: ^2.7.0
+        version: 2.7.0
       lucide-react-native:
         specifier: ^0.483.0
         version: 0.483.0(react-native-svg@15.11.2(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0))(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0)
@@ -41,6 +44,9 @@ importers:
       react-native-charts-wrapper:
         specifier: ^0.3.0
         version: 0.3.1
+      react-native-config:
+        specifier: ^1.5.5
+        version: 1.5.5
       react-native-gesture-handler:
         specifier: ~2.24.0
         version: 2.24.0(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0)
@@ -48,7 +54,7 @@ importers:
         specifier: ^2.0.0
         version: 2.3.3(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))
       react-native-image-picker:
-        specifier: ^7.1.0
+        specifier: ^7.2.3
         version: 7.2.3(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0)
       react-native-reanimated:
         specifier: ~3.17.5
@@ -68,6 +74,9 @@ importers:
       react-native-video:
         specifier: ^6.11.0
         version: 6.15.0(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0)
+      react-native-webview:
+        specifier: ^13.15.0
+        version: 13.15.0(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0)
     devDependencies:
       '@babel/core':
         specifier: ^7.26.10
@@ -108,9 +117,15 @@ importers:
       '@types/react':
         specifier: ^19.1.8
         version: 19.1.8
+      '@types/react-native-dotenv':
+        specifier: ^0.2.2
+        version: 0.2.2
       '@types/react-test-renderer':
         specifier: ^18.3.1
         version: 18.3.1
+      babel-plugin-dotenv-import:
+        specifier: ^3.0.1
+        version: 3.0.1
       babel-plugin-module-resolver:
         specifier: ^5.0.2
         version: 5.0.2
@@ -1254,6 +1269,9 @@ packages:
   '@types/prop-types@15.7.15':
     resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
 
+  '@types/react-native-dotenv@0.2.2':
+    resolution: {integrity: sha512-YDgO2hdTK5PaxZrIFtVXrjeFOhJ+7A9a8VDUK4QmHCPGIB5i6DroLG9IpItX5qCshz7aPsQfgy9X3w82Otd4HA==}
+
   '@types/react-test-renderer@18.3.1':
     resolution: {integrity: sha512-vAhnk0tG2eGa37lkU9+s5SoroCsRI08xnsWFiAXOuPH2jqzMbcXvKExXViPi1P5fIklDeCvXqyrdmipFaSkZrA==}
 
@@ -1602,6 +1620,9 @@ packages:
     peerDependencies:
       '@babel/core': ^7.11.0
 
+  babel-plugin-dotenv-import@3.0.1:
+    resolution: {integrity: sha512-kW01sNKBc3maCTQZN7LhHf9YtwQUXv/NPLhPHu6Yuxiwn+C0AOFBNE4BfRSmft2NFjfqtpb6HUalJe9Z5DQENA==}
+
   babel-plugin-istanbul@6.1.1:
     resolution: {integrity: sha512-Y1IQok9821cC9onCx5otgFfRm7Lm+I+wwxOx738M/WLPZ9Q42m4IG5W0FNX8WLL2gYMZo3JkuXIH2DOpWM+qwA==}
     engines: {node: '>=8'}
@@ -1796,6 +1817,10 @@ packages:
   clone@1.0.4:
     resolution: {integrity: sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==}
     engines: {node: '>=0.8'}
+
+  cloudinary@2.7.0:
+    resolution: {integrity: sha512-qrqDn31+qkMCzKu1GfRpzPNAO86jchcNwEHCUiqvPHNSFqu7FTNF9FuAkBUyvM1CFFgFPu64NT0DyeREwLwK0w==}
+    engines: {node: '>=9'}
 
   co@4.6.0:
     resolution: {integrity: sha512-QVb0dM5HvG+uaxitm8wONl7jltx8dqhfU33DcqtOZcLSVIKSDDLDi7+0LbAKiyI8hD9u42m2YxXSkMGWThaecQ==}
@@ -1999,6 +2024,10 @@ packages:
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
+
+  dotenv@16.6.1:
+    resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -3405,6 +3434,14 @@ packages:
   pure-rand@7.0.1:
     resolution: {integrity: sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ==}
 
+  q@1.5.1:
+    resolution: {integrity: sha512-kV/CThkXo6xyFEZUugw/+pIOywXcDbFYgSct5cT3gqlbkBE1SJdwy6UQoZvodiWF/ckQLZyDE/Bu1M6gVu5lVw==}
+    engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
+    deprecated: |-
+      You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
+
+      (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
+
   qs@6.13.0:
     resolution: {integrity: sha512-+38qI9SOr8tfZ4QmJNplMUxqjbe7LKvvZgWdExBOmd+egZTtjLB67Gu0HRX3u/XOq7UU2Nx6nsjvS16Z9uwfpg==}
     engines: {node: '>=0.6'}
@@ -3462,6 +3499,14 @@ packages:
   react-native-charts-wrapper@0.3.1:
     resolution: {integrity: sha512-CJaAdJ+TBkIAM0dBfju/wX6VycBjcN5DA6BPeo1exsgSl+fnGIMXwl2TucmMGQTMUtGEuoSmz+zlcf2I/sZyhg==}
 
+  react-native-config@1.5.5:
+    resolution: {integrity: sha512-dGdLnBU0cd5xL5bF0ROTmHYbsstZnQKOEPfglvZi1vStvAjpld14X25K6mY3KGPTMWAzx6TbjKeq5dR+ILuMMA==}
+    peerDependencies:
+      react-native-windows: '>=0.61'
+    peerDependenciesMeta:
+      react-native-windows:
+        optional: true
+
   react-native-gesture-handler@2.24.0:
     resolution: {integrity: sha512-ZdWyOd1C8axKJHIfYxjJKCcxjWEpUtUWgTOVY2wynbiveSQDm8X/PDyAKXSer/GOtIpjudUbACOndZXCN3vHsw==}
     peerDependencies:
@@ -3516,6 +3561,12 @@ packages:
 
   react-native-video@6.15.0:
     resolution: {integrity: sha512-zgaNCMA50uS5hvgySmX1GhB0gJUke1iYhBGcXtIYhvYVtUb9Wp7enrazABb3D5xZOer5kpRraS9V79UpedxBGg==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
+  react-native-webview@13.15.0:
+    resolution: {integrity: sha512-Vzjgy8mmxa/JO6l5KZrsTC7YemSdq+qB01diA0FqjUTaWGAGwuykpJ73MDj3+mzBSlaDxAEugHzTtkUQkQEQeQ==}
     peerDependencies:
       react: '*'
       react-native: '*'
@@ -5800,6 +5851,8 @@ snapshots:
 
   '@types/prop-types@15.7.15': {}
 
+  '@types/react-native-dotenv@0.2.2': {}
+
   '@types/react-test-renderer@18.3.1':
     dependencies:
       '@types/react': 18.3.23
@@ -6176,6 +6229,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  babel-plugin-dotenv-import@3.0.1:
+    dependencies:
+      dotenv: 16.6.1
+
   babel-plugin-istanbul@6.1.1:
     dependencies:
       '@babel/helper-plugin-utils': 7.27.1
@@ -6444,6 +6501,11 @@ snapshots:
 
   clone@1.0.4: {}
 
+  cloudinary@2.7.0:
+    dependencies:
+      lodash: 4.17.21
+      q: 1.5.1
+
   co@4.6.0: {}
 
   collect-v8-coverage@1.0.2: {}
@@ -6643,6 +6705,8 @@ snapshots:
       dom-serializer: 2.0.0
       domelementtype: 2.3.0
       domhandler: 5.0.3
+
+  dotenv@16.6.1: {}
 
   dunder-proto@1.0.1:
     dependencies:
@@ -8462,6 +8526,8 @@ snapshots:
 
   pure-rand@7.0.1: {}
 
+  q@1.5.1: {}
+
   qs@6.13.0:
     dependencies:
       side-channel: 1.1.0
@@ -8524,6 +8590,8 @@ snapshots:
   react-native-charts-wrapper@0.3.1:
     dependencies:
       prop-types: 15.8.1
+
+  react-native-config@1.5.5: {}
 
   react-native-gesture-handler@2.24.0(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0):
     dependencies:
@@ -8595,6 +8663,13 @@ snapshots:
 
   react-native-video@6.15.0(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0):
     dependencies:
+      react: 19.0.0
+      react-native: 0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0)
+
+  react-native-webview@13.15.0(react-native@0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0):
+    dependencies:
+      escape-string-regexp: 4.0.0
+      invariant: 2.2.4
       react: 19.0.0
       react-native: 0.79.3(@babel/core@7.27.4)(@react-native-community/cli@19.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0)
 

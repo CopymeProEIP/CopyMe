@@ -7,8 +7,8 @@ import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useNavigation } from '@react-navigation/native';
 import { LogOut, User, Settings, Award, HelpCircle } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import color from '@/app/theme/color';
+import { useAuth } from '@/utils/auth';
 
 interface ProfileOptionProps {
 	icon: React.ReactNode;
@@ -31,6 +31,7 @@ export default function ProfileScreen() {
 	const navigation = useNavigation();
 	const [userName, setUserName] = useState('John Doe');
 	const [userEmail, setUserEmail] = useState('john.doe@example.com');
+	const { signOut } = useAuth();
 
 	const handleLogout = async () => {
 		Alert.alert(
@@ -46,9 +47,7 @@ export default function ProfileScreen() {
 					style: 'destructive',
 					onPress: async () => {
 						try {
-							// Clear the authentication token
-							await AsyncStorage.removeItem('userToken');
-							// Navigate to the login screen
+							await signOut();
 							(navigation as any).replace('Login');
 						} catch (error) {
 							console.error('Error during logout:', error);

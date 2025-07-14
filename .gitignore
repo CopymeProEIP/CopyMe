@@ -185,3 +185,4 @@ shoot.jpg
 node_modules
 .mongodb
 vendor
+app.log.*

@@ -34,6 +34,18 @@ class ProcessRequest(BaseModel):
     processedDataId: str = Field(..., examples=["680a1e190ceb2230eeb132b6"])
     allow_training: Optional[bool] = False
 
+def clean(obj):
+    if isinstance(obj, float):
+        return 0.0 if (math.isnan(obj) or math.isinf(obj)) else obj
+    elif isinstance(obj, dict):
+        return {k: clean(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean(v) for v in obj]
+    elif hasattr(obj, "model_dump"):
+        return clean(obj.model_dump())
+    return obj
+
+
 @router.post("/process", response_model=ProcessResponse)
 async def process(
     request: Request,

@@ -1,7 +1,7 @@
 /** @format */
 
 import React from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import { StyleSheet, ScrollView, View, TouchableOpacity, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
