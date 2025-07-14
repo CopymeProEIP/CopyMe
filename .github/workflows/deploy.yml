@@ -69,6 +69,6 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./copyme-ai/
-          file: ./src/pre-prod.dockerfile
+          file: ./copyme-ai/pre-prod.dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_BACKEND }}:${{ env.TAG }}
