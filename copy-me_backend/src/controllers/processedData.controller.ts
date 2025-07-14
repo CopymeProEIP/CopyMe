@@ -225,26 +225,13 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 		});
 
 		const responseData = await response.json();
-		console.log('Response from AI API:', responseData.frames.length);
-		ProcessedData.updateOne(
-			{ _id: processedData.id },
-			{
-				$set: {
-					frames: responseData.frames || [],
-				},
-			},
-		).catch((error) => {
-			logger.error('Erreur lors de la mise à jour de la processed data:', error);
-			return res.status(500).json({
-				success: false,
-				message: 'Erreur lors de la mise à jour de la processed data',
-				error: error instanceof Error ? error.message : 'Erreur inconnue',
-			});
-		});
+
+		console.log('Réponse de l\'API IA:', responseData.frames.length);
 
 		return res.status(201).json({
 			success: true,
 			data: processedData,
+			ai_frames: responseData.frames || [],
 		});
 	} catch (error) {
 		logger.error('Erreur lors du téléchargement du média:', error);
@@ -274,10 +261,10 @@ export const analyzeProcessedData = async (req: AuthenticatedRequest, res: Respo
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			logger.error('Erreur lors de l\'analyse des données traitées:', errorText);
+			logger.error("Erreur lors de l'analyse des données traitées:", errorText);
 			return res.status(response.status).json({
 				success: false,
-				message: 'Erreur lors de l\'analyse des données traitées',
+				message: "Erreur lors de l'analyse des données traitées",
 				error: errorText,
 			});
 		}
