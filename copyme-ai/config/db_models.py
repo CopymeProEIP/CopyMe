@@ -54,6 +54,31 @@ class ProcessedImage(BaseModel):
 
 ProcessedImage.model_rebuild()
 
+def frame_to_dict(frame: Any) -> dict:
+    # Si c'est déjà un dict avec angle_name string, on ne touche pas
+    if isinstance(frame, dict) and frame.get("angles"):
+        for angle in frame["angles"]:
+            name, direction = angle.get("angle_name", ("", ""))
+            # Si direction est déjà un str, rien à faire
+            if isinstance(direction, str):
+                continue
+            if hasattr(direction, "name"):
+                angle["angle_name"] = (name, direction.name)
+            else:
+                angle["angle_name"] = (name, str(direction))
+        return frame
+    # Si c'est un objet FrameData
+    if isinstance(frame, FrameData):
+        frame_dict = frame.model_dump()
+        for angle in frame_dict.get("angles", []):
+            name, direction = angle.get("angle_name", ("", ""))
+            if hasattr(direction, "name"):
+                angle["angle_name"] = (name, direction.name)
+            else:
+                angle["angle_name"] = (name, str(direction))
+        return frame_dict
+    return frame
+
 class DatabaseManager:
     def __init__(self, client: AsyncIOMotorClient = None):
         if client is None:
@@ -69,7 +94,10 @@ class DatabaseManager:
             self.analysis_collection = self.client["analysis_results"]
 
     async def insert_new_entry(self, image_model: ProcessedImage):
-        await self.collection.insert_one(image_model)
+        image_dict = image_model.model_dump()
+        # Conversion unique, pas de duplication
+        image_dict["frames"] = [frame_to_dict(f) for f in image_dict.get("frames", [])]
+        await self.collection.insert_one(image_dict)
 
     async def count_documents(self, capture_index: str) -> int:
         return await self.collection.count_documents({"url": capture_index})
@@ -115,9 +143,11 @@ class DatabaseManager:
             return None
 
     async def update_entry(self, id_str: str, update_data: Dict) -> bool:
-        """Met à jour un document existant par son ID"""
         from bson.objectid import ObjectId
         try:
+            # Conversion unique, pas de duplication
+            if "frames" in update_data:
+                update_data["frames"] = [frame_to_dict(f) for f in update_data["frames"]]
             result = await self.collection.update_one(
                 {"_id": ObjectId(id_str)},
                 {"$set": update_data}

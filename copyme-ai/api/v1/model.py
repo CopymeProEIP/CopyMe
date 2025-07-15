@@ -152,6 +152,11 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
         analyser = BasketballAPIAnalyzer()
         result = await analyser.analyze_basketball_sequence_api(analysis_data.video_id)
 
+        # Vérifier si le backend IA a retourné une erreur
+        if isinstance(result, dict) and "error" in result:
+            logging.error(f"Erreur backend IA: {result['error']}")
+            raise HTTPException(status_code=400, detail=f"AI error: {result['error']}")
+
         # Initialiser la base de données pour les analyses
         db_model: DatabaseManager = get_database(request)
         analysis_db = BasketballAnalysisDB(db_model)
