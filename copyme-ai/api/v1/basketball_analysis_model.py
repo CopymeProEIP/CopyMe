@@ -153,9 +153,10 @@ class BasketballAnalysisModel(BaseModel):
 class BasketballAnalysisDB:
     def __init__(self, database_manager):
         self.db_manager = database_manager
-        # Utiliser directement le client MongoDB du DatabaseManager
-        self.db = database_manager.client["CopyMe"]
-        self.collection = self.db["analysis_results"]
+        # Utiliser directement le client MongoDB sans spécifier de base de données
+        self.client = database_manager.client
+        # Accéder directement à la collection sans passer par une base de données intermédiaire
+        self.collection = self.client.analysis_results
 
     async def save_analysis(self, analysis_data: Dict) -> str:
         """Sauvegarder une analyse dans MongoDB"""

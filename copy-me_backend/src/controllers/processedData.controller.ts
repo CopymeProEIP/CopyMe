@@ -8,6 +8,7 @@ import { logger } from '../config/logger';
 import { ProcessedData } from '../models/ProcessedData';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { Exercise } from '../models/Exercise';
+import { AnalysisResult } from '../models/AnalysisResult';
 
 // Configuration de multer pour le stockage des fichiers
 const storage = multer.diskStorage({
@@ -130,9 +131,12 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 export const getProcessedDataById = async (req: AuthenticatedRequest, res: Response) => {
 	try {
-		const processedData = await ProcessedData.findById(req.params.id)
-			.select('-__v -user_id')
-			.populate({ path: 'exercise_id', select: '-user_id -_id' });
+		const processedDataId = req.params.id;
+
+		const processedData = await ProcessedData.findById(processedDataId)
+			.select('-__v')
+			.populate({ path: 'exercise_id', select: '-user_id -_id' })
+			.populate({ path: 'analysis_id', select: '-__v -createdAt -updatedAt' });
 
 		if (!processedData) {
 			return res.status(404).json({
@@ -143,7 +147,7 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 
 		if (
 			req.user?.role !== 'admin' &&
-			processedData.user_id.toString() !== req.user?.id.toString()
+			(!processedData.user_id || processedData.user_id.toString() !== req.user?.id?.toString())
 		) {
 			return res.status(403).json({
 				success: false,
@@ -151,14 +155,11 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 			});
 		}
 
-		const itemObj = processedData.toObject() as any;
-		itemObj.exercise = itemObj.exercise_id;
-		delete itemObj.exercise_id;
-		const transformedData = itemObj;
-
+		const raw = await ProcessedData.findById(processedDataId);
+console.log('RAW analysis_id:', raw?.analysis_id);
 		return res.status(200).json({
 			success: true,
-			data: transformedData,
+			data: processedData
 		});
 	} catch (error) {
 		logger.error('Erreur lors de la récupération de la processed data:', error);
@@ -226,7 +227,7 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 		const responseData = await response.json();
 
-		console.log('Réponse de l\'API IA:', responseData.frames.length);
+		console.log("Réponse de l'API IA:", responseData.frames.length);
 
 		return res.status(201).json({
 			success: true,
@@ -245,7 +246,8 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 export const analyzeProcessedData = async (req: AuthenticatedRequest, res: Response) => {
 	try {
-		console.log('Analyse des données traitées:', req.body);
+		const { video_id, reference_id, email } = req.body;
+		console.log('Analyse des données traitées:', video_id, reference_id, email);
 		const response = await fetch(`${process.env.AI_API_URL}/analyze`, {
 			method: 'POST',
 			headers: {
@@ -253,32 +255,72 @@ export const analyzeProcessedData = async (req: AuthenticatedRequest, res: Respo
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({
-				email: req.body.email,
-				video_id: req.body.video_id,
-				reference_id: req.body.reference_id,
+				email: email,
+				video_id: video_id,
+				reference_id: reference_id,
 			}),
 		});
+		const data = await response.json();
+
+		if (!data || !data.analysis_id) {
+			logger.error('Analyse des données traitées échouée, réponse invalide:', data);
+			return res.status(400).json({
+				success: false,
+				message: 'Analyse des données traitées échouée, réponse invalide',
+			});
+		}
+
+		await ProcessedData.updateOne(
+			{ _id: video_id },
+			{
+				$set: {
+					analysis_id: data.analysis_id,
+				},
+			},
+		);
 
 		if (!response.ok) {
-			const errorText = await response.text();
-			logger.error("Erreur lors de l'analyse des données traitées:", errorText);
+			logger.error("Erreur lors de l'analyse des données traitées:", data);
 			return res.status(response.status).json({
 				success: false,
 				message: "Erreur lors de l'analyse des données traitées",
-				error: errorText,
+				error: data,
 			});
 		}
-		const responseData = await response.json();
 
 		return res.status(201).json({
 			success: true,
-			data: responseData,
+			data: data,
 		});
 	} catch (error) {
 		logger.error("Erreur lors de l'analyse des données traitées:", error);
 		return res.status(500).json({
 			success: false,
 			message: "Erreur lors de l'analyse des données traitées",
+			error: error instanceof Error ? error.message : 'Erreur inconnue',
+		});
+	}
+};
+
+export const getAnalysisResultByVideoId = async (req: AuthenticatedRequest, res: Response) => {
+	try {
+		const { video_id } = req.params;
+		const analysis = await AnalysisResult.findOne({ video_id });
+		if (!analysis) {
+			return res.status(404).json({
+				success: false,
+				message: "Aucun résultat d'analyse trouvé pour cette vidéo",
+			});
+		}
+		return res.status(200).json({
+			success: true,
+			data: analysis,
+		});
+	} catch (error) {
+		logger.error("Erreur lors de la récupération du résultat d'analyse:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Erreur lors de la récupération du résultat d'analyse",
 			error: error instanceof Error ? error.message : 'Erreur inconnue',
 		});
 	}
