@@ -47,6 +47,7 @@ class ProcessedImage(BaseModel):
     uuid: UUID = uuid4()
     url: str
     frames: List["FrameData"]
+    exercise_id: str
     userId: str
     allow_training: Optional[bool] = False
     created_at: datetime = datetime.utcnow()
@@ -55,6 +56,10 @@ class ProcessedImage(BaseModel):
 ProcessedImage.model_rebuild()
 
 def frame_to_dict(frame: Any) -> dict:
+    """
+    Convertit un objet frame en dictionnaire, en gérant correctement 
+    les valeurs d'angle qui peuvent être des enum ou des strings.
+    """
     # Si c'est déjà un dict avec angle_name string, on ne touche pas
     if isinstance(frame, dict) and frame.get("angles"):
         for angle in frame["angles"]:
@@ -68,16 +73,38 @@ def frame_to_dict(frame: Any) -> dict:
                 angle["angle_name"] = (name, str(direction))
         return frame
     # Si c'est un objet FrameData
-    if isinstance(frame, FrameData):
-        frame_dict = frame.model_dump()
-        for angle in frame_dict.get("angles", []):
-            name, direction = angle.get("angle_name", ("", ""))
-            if hasattr(direction, "name"):
-                angle["angle_name"] = (name, direction.name)
-            else:
-                angle["angle_name"] = (name, str(direction))
-        return frame_dict
+    if hasattr(frame, "model_dump"):
+        try:
+            frame_dict = frame.model_dump()
+            for angle in frame_dict.get("angles", []):
+                name, direction = angle.get("angle_name", ("", ""))
+                if hasattr(direction, "name"):
+                    angle["angle_name"] = (name, direction.name)
+                else:
+                    angle["angle_name"] = (name, str(direction))
+            return frame_dict
+        except Exception as e:
+            logging.error(f"Error converting frame to dict with model_dump: {e}")
+            # Fallback si model_dump échoue
+            if hasattr(frame, "__dict__"):
+                return frame.__dict__
+    
+    # Fallback en dernier recours
+    if hasattr(frame, "__dict__"):
+        return frame.__dict__
     return frame
+
+def is_frames_list_dicts(frames_list):
+    """
+    Vérifie si une liste de frames est déjà une liste de dictionnaires
+    """
+    if not frames_list or not isinstance(frames_list, list):
+        return False
+    
+    # Vérifier si au moins 80% des éléments sont des dictionnaires
+    dict_count = sum(1 for f in frames_list if isinstance(f, dict))
+    return dict_count >= len(frames_list) * 0.8  # 80% de seuil pour être robuste
+
 
 class DatabaseManager:
     def __init__(self, client: AsyncIOMotorClient = None):
@@ -93,11 +120,37 @@ class DatabaseManager:
             self.collection = self.client["processed_data"]
             self.analysis_collection = self.client["analysis_results"]
 
-    async def insert_new_entry(self, image_model: ProcessedImage):
-        image_dict = image_model.model_dump()
-        # Conversion unique, pas de duplication
-        image_dict["frames"] = [frame_to_dict(f) for f in image_dict.get("frames", [])]
-        await self.collection.insert_one(image_dict)
+    async def insert_new_entry(self, image_data: Dict):
+        """
+        Insère une nouvelle entrée dans la collection
+        
+        Args:
+            image_data: Un dictionnaire contenant les données à insérer
+        """
+        # Si c'est un objet ProcessedImage, le convertir en dictionnaire
+        if hasattr(image_data, 'model_dump'):
+            image_dict = image_data.model_dump()
+        else:
+            # Vérifier que c'est bien un dictionnaire
+            if not isinstance(image_data, dict):
+                logging.error(f"Expected dict or Pydantic model, got {type(image_data)}")
+                # Tentative de conversion en dict si possible
+                try:
+                    image_dict = dict(image_data)
+                except:
+                    logging.error(f"Failed to convert {type(image_data)} to dict")
+                    raise TypeError(f"image_data must be a dict or Pydantic model, got {type(image_data)}")
+            else:
+                image_dict = image_data
+            
+        # Ne pas convertir à nouveau les frames si elles sont déjà des dictionnaires
+        if "frames" in image_dict and image_dict["frames"] and not is_frames_list_dicts(image_dict["frames"]):
+            image_dict["frames"] = [frame_to_dict(f) for f in image_dict.get("frames", [])]
+            logging.debug("Frames converties en dictionnaires")
+        else:
+            logging.debug("Frames déjà en format dictionnaire, pas de conversion nécessaire")
+            
+        return await self.collection.insert_one(image_dict)
 
     async def count_documents(self, capture_index: str) -> int:
         return await self.collection.count_documents({"url": capture_index})
@@ -145,9 +198,13 @@ class DatabaseManager:
     async def update_entry(self, id_str: str, update_data: Dict) -> bool:
         from bson.objectid import ObjectId
         try:
-            # Conversion unique, pas de duplication
-            if "frames" in update_data:
+            # Ne pas convertir à nouveau les frames si elles sont déjà des dictionnaires
+            if "frames" in update_data and update_data["frames"] and not is_frames_list_dicts(update_data["frames"]):
                 update_data["frames"] = [frame_to_dict(f) for f in update_data["frames"]]
+                logging.debug("Frames converties en dictionnaires pour update")
+            else:
+                logging.debug("Frames déjà en format dictionnaire pour update, pas de conversion nécessaire")
+                
             result = await self.collection.update_one(
                 {"_id": ObjectId(id_str)},
                 {"$set": update_data}

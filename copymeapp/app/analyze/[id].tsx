@@ -1,28 +1,31 @@
 /** @format */
 
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Platform,
+} from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
-import Video, { VideoRef } from 'react-native-video';
+import { WebView } from 'react-native-webview';
+import Video from 'react-native-video';
 import { useRoute } from '@react-navigation/native';
-import {
-  Lightbulb,
-  RotateCcw,
-  SkipBack,
-  SkipForward,
-  Play,
-  Pause,
-} from 'lucide-react-native';
-import { ProcessedData } from '@/constants/processedData';
+import { Lightbulb } from 'lucide-react-native';
 import color from '@/app/theme/color';
-import { useApi } from '@/utils/api';
+import { useProcessedData } from '@/hooks/useProcessedData';
+import AnalysisInfoCard from '@/components/v1/AnalysisInfoCard';
+import FrameNavigator from '@/components/v1/FrameNavigator';
+import VideoControls from '@/components/v1/VideoControls';
 
 type RouteParams = {
   id: string;
   title?: string;
   exerciseName?: string;
+  originalVideoUrl?: string;
 };
 
 function Feedback({ feedbacks }: { feedbacks: string[] }) {
@@ -40,53 +43,139 @@ function Feedback({ feedbacks }: { feedbacks: string[] }) {
 
 export default function AnalysisDetailScreen() {
   const route = useRoute();
-  const { id, title, exerciseName } = route.params as RouteParams;
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const { id, originalVideoUrl } = route.params as RouteParams;
+  const frameNavigatorRef = React.useRef<any>(null);
   const [frame, setFrame] = useState(0);
   const [tipsExpanded, setTipsExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [processedData, setProcessedData] = useState<ProcessedData | null>(
-    null,
+  const [useNativeVideo, setUseNativeVideo] = useState(
+    Platform.OS === 'ios' && originalVideoUrl?.startsWith('file://'),
   );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const videoRef = React.useRef<VideoRef>(null);
-  const api = useApi();
+  const webViewRef = React.useRef<WebView>(null);
 
-  useEffect(() => {
-    const fetchProcessedData = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching processed data for ID:', id);
-        const data = (await api.get(`/analysis/${id}`)) as ProcessedData;
-        console.log('Fetched processed data:', data);
-        setProcessedData(data);
-      } catch (err) {
-        console.error('Error fetching processed data:', err);
-        setError('Failed to load analysis data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Référence à la vidéo native pour contrôler la lecture
+  const videoRef = React.useRef<any>(null);
 
-    fetchProcessedData();
-  }, []);
-
+  // Fonction pour faire défiler jusqu'au frame sélectionné
   const scrollToSelected = (index: number) => {
-    if (scrollViewRef.current) {
-      const itemWidth = 150;
-      const position = index * itemWidth;
-      scrollViewRef.current.scrollTo({ x: position, animated: true });
+    if (
+      frameNavigatorRef.current &&
+      frameNavigatorRef.current.scrollToSelected
+    ) {
+      frameNavigatorRef.current.scrollToSelected(index);
     }
   };
 
+  // Fonction pour mettre à jour le frame courant et déclencher le défilement
   const updateFrame = (newFrame: number): void => {
     setFrame(newFrame);
     setTimeout(() => scrollToSelected(newFrame), 100);
   };
 
+  // Utilisation du hook useProcessedData
+  const { data: processedData, loading, error, refresh } = useProcessedData(id);
+
+  const generateVideoHTML = (videoUrl: string) => {
+    // Correction pour les URLs de fichiers locaux
+    let formattedUrl = videoUrl;
+
+    // Vérifier si c'est une URL de fichier local (commence par "file://")
+    if (videoUrl.startsWith('file://')) {
+      // Sur iOS, les URL file:// ne fonctionnent pas directement dans les WebViews
+      console.log("Utilisation d'une URL de fichier local:", videoUrl);
+
+      // Si c'est iOS, nous utiliserons le composant Video natif à la place
+      if (Platform.OS === 'ios') {
+        setUseNativeVideo(true);
+      }
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <style>
+          body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+            overflow: hidden;
+          }
+          .video-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+          }
+          .error-message {
+            color: red;
+            text-align: center;
+            padding: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="video-container">
+          <video id="videoPlayer" controls playsinline webkit-playsinline>
+            <source src="${formattedUrl}" type="video/mp4">
+            <div class="error-message">
+              Votre navigateur ne supporte pas la lecture de vidéos ou l'URL est invalide.
+            </div>
+          </video>
+        </div>
+        <script>
+          const video = document.getElementById('videoPlayer');
+          
+          video.addEventListener('play', function() {
+            window.ReactNativeWebView.postMessage('play');
+          });
+          
+          video.addEventListener('pause', function() {
+            window.ReactNativeWebView.postMessage('pause');
+          });
+          
+          video.addEventListener('ended', function() {
+            window.ReactNativeWebView.postMessage('ended');
+          });
+          
+          // Ajouter la gestion des erreurs
+          video.addEventListener('error', function(e) {
+            console.error('Erreur de chargement vidéo:', e);
+            window.ReactNativeWebView.postMessage('video-error:' + e.target.error.code);
+          });
+        </script>
+      </body>
+      </html>
+    `;
+  };
+
   const togglePlayPause = () => {
-    setIsPlaying(!isPlaying);
+    const newPlayingState = !isPlaying;
+    setIsPlaying(newPlayingState);
+
+    if (useNativeVideo && videoRef.current) {
+      // Si on utilise le composant Video natif
+      if (newPlayingState) {
+        videoRef.current.resume && videoRef.current.resume();
+      } else {
+        videoRef.current.pause && videoRef.current.pause();
+      }
+    } else if (webViewRef.current) {
+      // Si on utilise WebView, injecter du JavaScript pour contrôler la vidéo
+      const script = newPlayingState
+        ? 'document.getElementById("videoPlayer").play(); true;'
+        : 'document.getElementById("videoPlayer").pause(); true;';
+      webViewRef.current.injectJavaScript(script);
+    }
   };
 
   if (loading) {
@@ -101,13 +190,17 @@ export default function AnalysisDetailScreen() {
     return (
       <ThemedView style={styles.container}>
         <ThemedText type="title">
-          Error: {error || 'No data available'}
+          Error: {error ? error.message : 'No data available'}
         </ThemedText>
+        <TouchableOpacity style={styles.playButton} onPress={refresh}>
+          <ThemedText type="button">Réessayer</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     );
   }
 
-  const feedbacks = processedData.frames[frame]?.persons[0]?.feedback || [];
+  const feedbacks = processedData.frames?.[frame]?.persons?.[0]?.feedback || [];
+  const framesArray = processedData.frames || [];
   const tipCount = feedbacks.length;
 
   return (
@@ -119,9 +212,7 @@ export default function AnalysisDetailScreen() {
             disabled={tipCount === 0}
             onPress={() => setTipsExpanded(!tipsExpanded)}
           >
-            <ThemedView
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-            >
+            <ThemedView style={styles.headerView}>
               <Lightbulb color={color.colors.primary} />
               <ThemedText type="subtitle">Improvement</ThemedText>
             </ThemedView>
@@ -137,34 +228,65 @@ export default function AnalysisDetailScreen() {
             </TouchableOpacity>
           </TouchableOpacity>
 
-          {
-            tipsExpanded && (
-              <ThemedView style={styles.tipsContainer}>
-                <Feedback feedbacks={feedbacks} />
-              </ThemedView>
-            )
-            //  : (
-            // 	<ThemedText type='description' style={{ width: '100%', textAlign: 'center' }}>
-            // 		{tipCount} tips available
-            // 	</ThemedText>
-            // )
-          }
+          {tipsExpanded && (
+            <ThemedView style={styles.tipsContainer}>
+              <Feedback feedbacks={feedbacks} />
+            </ThemedView>
+          )}
         </Card>
         <ThemedView>
           <ThemedView style={styles.videoContainer}>
-            {processedData.url ? (
-              <Video
-                ref={videoRef}
-                source={{ uri: processedData.url }}
-                style={styles.video}
-                controls={true}
-                resizeMode="contain"
-                paused={!isPlaying}
-                onLoad={() => console.log('Video loaded')}
-                onError={videoError =>
-                  console.error('Video error:', videoError)
-                }
-              />
+            {originalVideoUrl || processedData.url ? (
+              useNativeVideo ? (
+                // Utiliser un composant Video natif pour les fichiers locaux sur iOS
+                <Video
+                  ref={videoRef}
+                  source={{ uri: originalVideoUrl || '' }}
+                  style={styles.video}
+                  controls={true}
+                  resizeMode="contain"
+                  paused={!isPlaying}
+                  onLoad={() => console.log('Video loaded')}
+                  onError={videoErr => {
+                    console.error('Video error:', videoErr);
+                    // Si le Video natif échoue, essayons WebView
+                    setUseNativeVideo(false);
+                  }}
+                />
+              ) : (
+                <WebView
+                  ref={webViewRef}
+                  source={{
+                    html: generateVideoHTML(
+                      originalVideoUrl || processedData.url || '',
+                    ),
+                  }}
+                  style={styles.video}
+                  allowsFullscreenVideo={true}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  mediaPlaybackRequiresUserAction={false}
+                  originWhitelist={['*']}
+                  startInLoadingState={true}
+                  onMessage={event => {
+                    const { data } = event.nativeEvent;
+                    if (data === 'play') {
+                      setIsPlaying(true);
+                    } else if (data === 'pause' || data === 'ended') {
+                      setIsPlaying(false);
+                    } else if (data.startsWith('video-error:')) {
+                      console.error(
+                        'WebView video error code:',
+                        data.split(':')[1],
+                      );
+                    }
+                  }}
+                  onError={syntheticEvent => {
+                    const { nativeEvent } = syntheticEvent;
+                    console.error('WebView error:', nativeEvent);
+                  }}
+                />
+              )
             ) : (
               <Image
                 source={require('@/assets/images/placeholder.png')}
@@ -175,119 +297,42 @@ export default function AnalysisDetailScreen() {
           </ThemedView>
         </ThemedView>
 
-        <ThemedView style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.navButton]}
-            onPress={() => {
-              const newFrame = Math.max(0, frame - 1);
-              updateFrame(newFrame);
-            }}
-          >
-            <ThemedText type="defaultSemiBold">{'<'}</ThemedText>
-          </TouchableOpacity>
+        {/* Navigation des frames */}
+        <FrameNavigator
+          ref={frameNavigatorRef}
+          frames={framesArray}
+          currentFrame={frame}
+          onFrameChange={newFrame => {
+            setFrame(newFrame);
+            setTimeout(() => scrollToSelected(newFrame), 100);
+          }}
+        />
 
-          <ThemedView style={styles.frameIndicator}>
-            <ScrollView
-              ref={scrollViewRef}
-              horizontal={true}
-              showsHorizontalScrollIndicator={false}
-              style={styles.positionScroll}
-              contentContainerStyle={styles.positionScrollContent}
-            >
-              {processedData.frames.map((frameData, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[
-                    styles.positionItem,
-                    frame === idx ? styles.activePositionItem : null,
-                  ]}
-                  onPress={() => updateFrame(idx)}
-                >
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={frame === idx ? styles.activePositionText : null}
-                  >
-                    {idx + 1}. {frameData.persons[0]?.step_position || '-'}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </ThemedView>
+        <VideoControls
+          currentFrame={frame}
+          totalFrames={framesArray.length}
+          frames={framesArray}
+          isPlaying={isPlaying}
+          onPreviousFrame={() => {
+            const newFrame = Math.max(0, frame - 1);
+            updateFrame(newFrame);
+          }}
+          onNextFrame={() => {
+            const newFrame = Math.min(framesArray.length - 1, frame + 1);
+            updateFrame(newFrame);
+          }}
+          onResetFrame={() => {
+            updateFrame(0);
+          }}
+          onPlayPauseToggle={togglePlayPause}
+          onJumpToFrame={updateFrame}
+        />
 
-          <TouchableOpacity
-            style={[styles.button, styles.navButton]}
-            onPress={() => {
-              const newFrame = Math.min(
-                processedData.frames.length - 1,
-                frame + 1,
-              );
-              updateFrame(newFrame);
-            }}
-          >
-            <ThemedText type="defaultSemiBold">{'>'}</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-        <ThemedView style={styles.controlBox}>
-          <ThemedView style={styles.controlLeft}>
-            <ThemedText
-              type="default"
-              style={{
-                borderBottomWidth: 1,
-                borderBottomColor: color.colors.border,
-                width: '90%',
-                textAlign: 'center',
-              }}
-            >
-              Step
-            </ThemedText>
-            <ThemedView style={styles.controlButtons}>
-              <TouchableOpacity
-                style={styles.controlButton}
-                onPress={() => {
-                  const newFrame = Math.max(0, frame - 1);
-                  updateFrame(newFrame);
-                }}
-              >
-                <SkipBack size={32} color={color.colors.primary} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.controlButton}
-                onPress={() => {
-                  updateFrame(0);
-                }}
-              >
-                <RotateCcw size={32} color={color.colors.primary} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.controlButton}
-                onPress={() => {
-                  const newFrame = Math.min(
-                    processedData.frames.length - 1,
-                    frame + 1,
-                  );
-                  updateFrame(newFrame);
-                }}
-              >
-                <SkipForward size={32} color={color.colors.primary} />
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
-
-          <ThemedView style={styles.controlRight}>
-            <TouchableOpacity
-              style={styles.playButton}
-              onPress={togglePlayPause}
-            >
-              {isPlaying ? (
-                <Pause color={color.colors.primary} size={32} />
-              ) : (
-                <Play color={color.colors.primary} size={32} />
-              )}
-            </TouchableOpacity>
-          </ThemedView>
-        </ThemedView>
+        {/* Section d'informations sur les données */}
+        <AnalysisInfoCard
+          analysisData={processedData.analysis_id}
+          onHeaderPress={() => {}}
+        />
       </ScrollView>
     </ThemedView>
   );
@@ -335,29 +380,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Frame indicator and scroll
-  frameIndicator: {
-    flex: 1,
-    height: 50,
-  },
-  positionScroll: {
-    width: '100%',
-  },
-  positionScrollContent: {
-    alignItems: 'center',
-  },
-  positionItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginHorizontal: 4,
-    borderRadius: 8,
-  },
-  activePositionItem: {
-    backgroundColor: color.colors.primaryForeground,
-  },
-  activePositionText: {
-    color: color.colors.primary,
-  },
   // Tips card
   tipsCard: {
     gap: 8,
@@ -369,6 +391,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+  },
+  headerView: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   seeMoreButton: {
     paddingVertical: 4,
@@ -396,41 +423,31 @@ const styles = StyleSheet.create({
   tipText: {
     flex: 1,
   },
-  // Control box
-  controlBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
+  // Data Info Card
+  dataInfoCard: {
+    padding: 16,
+    marginBottom: 16,
   },
-  controlLeft: {
-    width: '80%',
-    height: '100%',
-    borderWidth: 1,
-    borderRadius: 12,
-    borderColor: color.colors.border,
-    flexDirection: 'column',
-    alignItems: 'center',
+  dataInfoHeader: {
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: color.colors.border,
+    paddingBottom: 8,
   },
-  controlRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  controlButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  dataInfoContent: {
     gap: 8,
   },
-  controlButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  dataInfoItem: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  dataInfoLabel: {
+    minWidth: 120,
+    color: color.colors.primary,
+  },
+  dataInfoValue: {
+    flex: 1,
   },
   playButton: {
     width: 50,
@@ -464,5 +481,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 16,
+  },
+  stepText: {
+    borderBottomWidth: 1,
+    borderBottomColor: color.colors.border,
+    width: '90%',
+    textAlign: 'center',
   },
 });

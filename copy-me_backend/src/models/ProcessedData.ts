@@ -11,6 +11,7 @@ interface ProcessedData {
 	role: 'pro' | 'client' | 'ia';
 	media_type: 'image' | 'video';
 	frames: Frame[];
+	analysis_id?: mongoose.Types.ObjectId;
 }
 
 interface Frame {
@@ -72,6 +73,7 @@ const ProcessedDataSchema = new Schema<ProcessedData>(
 		url: { type: String, required: true },
 		exercise_id: { type: 'ObjectId', ref: 'Exercise', required: true },
 		user_id: { type: 'ObjectId', ref: 'Users', required: true },
+		analysis_id: { type: 'ObjectId', ref: 'AnalysisResult' },
 		role: { type: String, enum: ['pro', 'client', 'ia'], required: true },
 		media_type: { type: String, enum: ['image', 'video'], required: true, default: 'image' },
 		frames: [

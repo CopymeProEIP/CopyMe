@@ -153,35 +153,31 @@ class BasketballAnalysisModel(BaseModel):
 class BasketballAnalysisDB:
     def __init__(self, database_manager):
         self.db_manager = database_manager
-        # Utiliser directement le client MongoDB du DatabaseManager
-        self.db = database_manager.client["CopyMe"]
-        self.collection = self.db["analysis_results"]
+        self.client = database_manager.client
+        self.collection = self.client.analysis_results
 
     async def save_analysis(self, analysis_data: Dict) -> str:
         """Sauvegarder une analyse dans MongoDB"""
         try:
             # Préprocesser les données pour convertir les objets Improvement
             cleaned_data = self._clean_analysis_data(analysis_data)
-            
             # Convertir les données en modèle Pydantic
             analysis_model = BasketballAnalysisModel(**cleaned_data)
-            
             # Convertir en dictionnaire pour MongoDB
             analysis_dict = analysis_model.model_dump(by_alias=True, exclude_unset=True)
-            
-            # Insérer dans la collection
+
             result = await self.collection.insert_one(analysis_dict)
-            
+
             return str(result.inserted_id)
-            
+
         except Exception as e:
             raise Exception(f"Erreur lors de la sauvegarde: {e}")
-    
+
     def _clean_analysis_data(self, data: Dict) -> Dict:
         """Nettoie les données d'analyse en convertissant les objets Improvement en dictionnaires"""
         import copy
         cleaned_data = copy.deepcopy(data)
-        
+
         # Nettoyer frame_analysis
         if 'frame_analysis' in cleaned_data:
             for frame in cleaned_data['frame_analysis']:

@@ -16,6 +16,7 @@ const useReviews = (limit = 2) => {
       const response = await api.get(`/process?limit=${limit}`);
       const data = response as { data: ProcessedData[] };
       setReviews(data?.data || []);
+      console.log('--------Reviews:', data?.data);
     } catch (err) {
       console.error('Error fetching reviews:', err);
       setError(err as Error);

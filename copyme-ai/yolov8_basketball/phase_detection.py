@@ -228,6 +228,11 @@ class PhaseDetection(YOLOBase):
 
     def run(self, filename: str = None) -> List[FrameData]:
         self.input = filename if filename else self.input
+        # Réinitialiser les listes à chaque appel pour éviter l'accumulation des frames
+        self.all_frames = []
+        self.best_frames = []
+        self.frame_count = 0
+
         file_type = check_fileType(self.input)
         if file_type == FileType.IMAGE:
             return self.__capture_image()

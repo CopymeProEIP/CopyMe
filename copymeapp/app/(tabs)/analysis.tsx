@@ -27,7 +27,7 @@ export default function AnalysisListScreen() {
   ]);
   const [customDate, setCustomDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const { reviews, loading, error } = useReviews();
+  const { reviews, loading, error } = useReviews(-1);
 
   const handleDateFilterToggle = (id: string) => {
     if (id === 'custom') {
@@ -98,9 +98,9 @@ export default function AnalysisListScreen() {
 
   const handleAnalysisPress = (analysis: ProcessedData) => {
     (navigation as any).navigate('Analyze', {
-      id: analysis.id,
-      title: analysis.exercise.name,
-      exerciseName: analysis.exercise.name,
+      id: analysis._id,
+      title: analysis.exercise_id.name,
+      exerciseName: analysis.exercise_id.name,
     });
   };
 
@@ -123,7 +123,7 @@ export default function AnalysisListScreen() {
               item: ProcessedData;
               index: number;
             }) => (
-              <TouchableOpacity onPress={() => handleAnalysisPress(item)}>
+              <TouchableOpacity key={index} onPress={() => handleAnalysisPress(item)}>
                 <ReviewItem item={item} />
               </TouchableOpacity>
             )}

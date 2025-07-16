@@ -17,10 +17,11 @@ export default function HomeScreen() {
   const navigation = useNavigation();
 
   const handleAnalysisPress = (analysis: ProcessedData) => {
+    console.log('Navigating to analysis:', analysis);
     (navigation as any).navigate('Analyze', {
-      id: analysis.id,
-      title: analysis.exercise.name,
-      exerciseName: analysis.exercise.name,
+      id: analysis._id,
+      title: analysis.exercise_id.name,
+      exerciseName: analysis.exercise_id.name,
     });
   };
 

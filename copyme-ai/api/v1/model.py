@@ -25,9 +25,18 @@ from .basketball_analysis_model import BasketballAnalysisDB, BasketballAnalysisM
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 class ProcessResponse(BaseModel):
+    _id: str
     frames: List[FrameData]
     created_at: datetime
     version: int
+    
+    class Config:
+        # S'assurer que tous les champs sont inclus dans les réponses JSON
+        # et que les attributs sont bien convertis, y compris l'ID
+        json_encoders = {
+            # Gestion spéciale pour les ObjectID MongoDB ou autres types complexes
+            object: lambda obj: str(obj) if hasattr(obj, '__str__') else None
+        }
 
 class ProcessRequest(BaseModel):
     userId: str = Field(..., examples=["680a1e190ceb2230eeb132b6"])
@@ -51,17 +60,17 @@ async def process(
     request: Request,
     files: UploadFile = File(...),
     userId: str = Form(...),
+    exercise_id: str = Form(...),
     allow_training: Optional[bool] = Form(False),
-    processedDataId: Optional[str] = Form(None)
 ) -> ProcessResponse:
     """
     Traite une vidéo ou une image pour l'analyse de mouvements de basket.
     Met à jour un document existant si processedDataId est fourni, sinon en crée un nouveau.
     """
-    
+
     # Initialiser les settings ici au lieu du niveau module
     settings = get_variables()
-    
+
     yolo_basket: PhaseDetection = get_yolomodel(request)
     db_model: DatabaseManager = get_database(request)
 
@@ -69,59 +78,138 @@ async def process(
     results: List[FrameData] = yolo_basket.run(str(file_path))
     logging.info("YOLO processing completed.")
 
-    # Sanitize frames correctement pour la base de données
+    # Sanitize frames correctement pour la base de données - une seule conversion
     frames_data = [sanitize_float_values(sanitize_frame(f)) for f in results]
 
-    # Créer des objets FrameData propres pour la réponse
-    clean_frames = [create_clean_frame_data(sanitize_frame(f)) for f in results]
+    # Créer des objets FrameData propres pour la réponse - ne pas appeler sanitize_frame à nouveau
+    clean_frames = [create_clean_frame_data(f) for f in frames_data]
+
+    logging.info("Creating new document...")
 
     try:
-        existing_doc = await db_model.get_by_id(processedDataId) if processedDataId else None
+        created_at = datetime.combine(date.today(), datetime.min.time())
 
-        if existing_doc:
-            logging.info(f"Updating document ID {processedDataId}...")
+        # Préparation des frames pour MongoDB
+        mongo_ready_frames = []
+        for frame in frames_data:
+            # Si c'est déjà un dictionnaire, utiliser directement
+            if isinstance(frame, dict):
+                mongo_ready_frame = frame
+            # Sinon, convertir en dictionnaire
+            elif hasattr(frame, "model_dump"):
+                mongo_ready_frame = frame.model_dump()
+            else:
+                # Fallback
+                mongo_ready_frame = sanitize_frame(frame)
 
-            update_data = {
-                "url": str(file_path),
-                "frames": frames_data,
-                "updated_at": datetime.now()
-            }
+            # S'assurer que tous les objets sont sérialisables
+            # Pour les énumérations, on préserve leur valeur numérique
+            def serialize_custom(obj):
+                # Gestion spécifique pour les objets Direction
+                if obj.__class__.__name__ == 'Direction':
+                    if hasattr(obj, "value"):
+                        return obj.value
+                    elif hasattr(obj, "name"):
+                        if obj.name == "LEFT":
+                            return 1
+                        elif obj.name == "RIGHT":
+                            return 2
+                        elif obj.name == "INCREASE":
+                            return "increase"
+                        elif obj.name == "DECREASE":
+                            return "decrease"
+                        elif obj.name == "UNKNOWN":
+                            return "unknown"
+                        else:
+                            return str(obj.name).lower()
+                    return "unknown"
+                # Gestion générique pour les autres énumérations
+                if hasattr(obj, "value"):
+                    return obj.value
+                elif hasattr(obj, "name") and obj.name in ["LEFT", "RIGHT"]:
+                    return 1 if obj.name == "LEFT" else 2
+                return str(obj)
 
-            await db_model.update_entry(processedDataId, update_data)
+            # Sérialiser en JSON puis recharger pour garantir la compatibilité
+            mongo_ready_frame = json.loads(json.dumps(mongo_ready_frame, default=serialize_custom))
+            mongo_ready_frames.append(mongo_ready_frame)
 
-            return ProcessResponse(
-                frames=clean_frames,
-                created_at=existing_doc.get("created_at", datetime.now()),
-                version=existing_doc.get("version", 1) + 1
-            )
+        collection_insert = ProcessedImage(
+            url=str(file_path),
+            frames=mongo_ready_frames,  # Utiliser les frames préparées pour MongoDB
+            userId=userId,
+            is_reference=False,  # Par défaut, on ne crée pas de référence
+            exercise_id=exercise_id,
+            allow_training=allow_training,
+            created_at=created_at,
+            version=1,
+        )
+
+        # Convertir l'objet Pydantic en dictionnaire pour l'insertion dans MongoDB
+        insert_data = collection_insert.model_dump()
+        # Utiliser la même fonction de sérialisation personnalisée
+        insert_data = json.loads(json.dumps(insert_data, default=serialize_custom))
+        insert_result = await db_model.insert_new_entry(insert_data)
+
+        # Extraire l'ID du résultat d'insertion MongoDB
+        if hasattr(insert_result, 'inserted_id'):
+            id_str = str(insert_result.inserted_id)
         else:
-            logging.info("Creating new document...")
+            # Fallback au cas où la structure du résultat n'est pas celle attendue
+            id_str = str(insert_result)
 
-            created_at = datetime.combine(date.today(), datetime.min.time())
-            collection_insert = ProcessedImage(
-                url=str(file_path),
-                frames=frames_data,
-                userId=userId,
-                allow_training=allow_training,
-                created_at=created_at,
-                version=1,
-            )
+        logging.info(f"Document created with ID: {id_str}")
 
-            await db_model.insert_new_entry(json.loads(collection_insert.model_dump_json()))
+        # Créer la réponse DIRECTEMENT sans utiliser le constructeur ProcessResponse
+        # pour éviter toute transformation silencieuse par Pydantic
+        direct_response = {
+            "_id": id_str,
+            "frames": clean_frames,
+            "created_at": created_at,
+            "version": 1
+        }
 
-            return ProcessResponse(
-                frames=clean_frames,
-                created_at=created_at,
-                version=1
-            )
-
+        # Log détaillé pour débogage
+        logging.debug(f"ProcessResponse data: _id={id_str}, frames={len(clean_frames)} items")
+        
+        # Retourner la réponse directement au lieu de la passer par ProcessResponse
+        # FastAPI la convertira quand même en JSON, mais sans les transformations de Pydantic
+        from fastapi.responses import JSONResponse
+        
+        # Convertir les frames en dictionnaires et nettoyer les valeurs problématiques
+        frames_json = []
+        for frame in clean_frames:
+            if hasattr(frame, 'model_dump'):
+                frame_dict = frame.model_dump()
+            else:
+                frame_dict = frame
+            
+            # Sanitize special objects like Direction
+            frame_dict = json.loads(json.dumps(frame_dict, default=serialize_custom))
+            frames_json.append(frame_dict)
+            
+        response_content = {
+            "_id": id_str,  # Inclure l'ID directement à la racine
+            "frames": frames_json,
+            "created_at": created_at.isoformat(),
+            "version": 1
+        }
+        
+        # S'assurer que la réponse est sérialisable en JSON
+        try:
+            # Test de sérialisation pour détecter les erreurs
+            json_test = json.dumps(response_content)
+            logging.debug(f"Response JSON serialization successful: {len(json_test)} bytes")
+        except Exception as json_err:
+            logging.error(f"JSON serialization error: {str(json_err)}")
+            # Rechercher et corriger les valeurs problématiques
+            response_content = sanitize_float_values(response_content)
+            
+        return JSONResponse(content=response_content)
     except Exception as e:
         logging.error(f"Database operation error: {str(e)}")
-        return ProcessResponse(
-            frames=clean_frames,
-            created_at=datetime.combine(date.today(), datetime.min.time()),
-            version=1
-        )
+        # Si l'ID n'a pas été généré, on lève une exception
+        raise HTTPException(status_code=500, detail=f"Failed to process video: {str(e)}")
 
 
 class AnalysisRequest(BaseModel):
@@ -130,6 +218,7 @@ class AnalysisRequest(BaseModel):
     reference_id: Optional[str] = None
 
 class AnalysisResponse(BaseModel):
+    _id: str
     email: EmailStr
     video_id: str
     analysis_id: Optional[str] = None
@@ -176,7 +265,7 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
         frame_analysis = result.get("frame_analysis", [])        # Extraire les améliorations spécifiques
         improvements = []
         key_differences = []
-        
+
         for frame in frame_analysis:
             if frame.get("improvements"):
                 # Convertir les objets Improvement en dictionnaires
@@ -213,6 +302,7 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
 
         # Convertir le résultat en format AnalysisResponse
         return AnalysisResponse(
+            _id=str(analysis_id),
             email=analysis_data.email,
             video_id=analysis_data.video_id or "unknown",
             analysis_id=analysis_id,
@@ -243,12 +333,41 @@ def sanitize_float_values(data: Any) -> Any:
         return data
 
 def sanitize_frame(frame: FrameData) -> Dict:
-    frame_dict = frame.model_dump()
+    """Convertit un objet FrameData en dictionnaire nettoyé pour MongoDB."""
+    frame_dict = frame.model_dump() if hasattr(frame, 'model_dump') else frame
 
     # Nettoyer les angles
     for angle in frame_dict.get("angles", []):
         if angle.get("angle") is None or math.isnan(angle.get("angle")) or math.isinf(angle.get("angle")):
             angle["angle"] = 0.0
+
+        # Convertir les objets Direction en valeur numérique
+        if isinstance(angle.get("angle_name"), tuple) and len(angle.get("angle_name")) == 2:
+            angle_type, direction = angle.get("angle_name")
+            
+            # Convertir l'objet Direction en sa valeur appropriée
+            if hasattr(direction, "__class__") and direction.__class__.__name__ == 'Direction':
+                if hasattr(direction, "value"):
+                    direction_value = direction.value
+                elif hasattr(direction, "name"):
+                    if direction.name == "LEFT":
+                        direction_value = 1
+                    elif direction.name == "RIGHT":
+                        direction_value = 2
+                    else:
+                        direction_value = str(direction.name).lower()
+                else:
+                    direction_value = "unknown"
+            # Ou si c'est déjà un objet simple
+            elif hasattr(direction, "name") and direction.name == "LEFT":
+                direction_value = 1
+            elif hasattr(direction, "name") and direction.name == "RIGHT":
+                direction_value = 2
+            else:
+                # Cas de fallback - utiliser l'objet tel quel
+                direction_value = direction
+                
+            angle["angle_name"] = (angle_type, direction_value)
 
     # S'assurer que feedback est un dict
     if not isinstance(frame_dict.get("feedback"), dict):
@@ -259,13 +378,20 @@ def sanitize_frame(frame: FrameData) -> Dict:
 
     return frame_dict
 
-def create_clean_frame_data(frame_dict: Dict) -> FrameData:
+def create_clean_frame_data(frame_data: Any) -> FrameData:
     """
-    Crée un objet FrameData propre à partir d'un dictionnaire nettoyé
+    Crée un objet FrameData propre à partir d'un dictionnaire nettoyé ou d'un objet FrameData
     """
     try:
-        # Nettoyer d'abord le dictionnaire
-        clean_dict = sanitize_float_values(frame_dict)
+        # Si c'est déjà un dictionnaire, on l'utilise directement
+        if isinstance(frame_data, dict):
+            clean_dict = frame_data
+        # Si c'est un objet FrameData, on le convertit en dictionnaire
+        elif hasattr(frame_data, "model_dump"):
+            clean_dict = frame_data.model_dump()
+        else:
+            # Fallback - tenter une conversion en dictionnaire
+            clean_dict = sanitize_frame(frame_data)
         
         # S'assurer que les champs requis existent
         if 'frame_number' not in clean_dict:
@@ -280,6 +406,9 @@ def create_clean_frame_data(frame_dict: Dict) -> FrameData:
             clean_dict['class_name'] = 'unknown'
         if 'feedback' not in clean_dict:
             clean_dict['feedback'] = {}
+        # Ajout du champ url_path_frame qui est requis par FrameData
+        if 'url_path_frame' not in clean_dict:
+            clean_dict['url_path_frame'] = clean_dict.get('url_path_frame', f"frames/frame_{clean_dict.get('frame_number', 0)}.jpg")
             
         return FrameData(**clean_dict)
     except Exception as e:
@@ -291,7 +420,8 @@ def create_clean_frame_data(frame_dict: Dict) -> FrameData:
             keypoints_positions={},
             angles=[],
             class_name='unknown',
-            feedback={}
+            feedback={},
+            url_path_frame="frames/default_frame.jpg"  # Ajouter le champ requis
         )
 
 @router.get("/image")
@@ -301,83 +431,3 @@ def serve_image_with_param():
 @router.get("/latest-angle-collection")
 def latest_angle_collection():
     return {"status": "success", "message": "Latest angle collection."}
-
-@router.get("/analysis/{analysis_id}")
-async def get_analysis(request: Request, analysis_id: str):
-    """
-    Récupérer une analyse spécifique par son ID.
-    """
-    try:
-        db_model: DatabaseManager = get_database(request)
-        analysis_db = BasketballAnalysisDB(db_model)
-        
-        analysis = await analysis_db.get_analysis(analysis_id)
-        
-        if not analysis:
-            raise HTTPException(status_code=404, detail="Analysis not found")
-        
-        return analysis
-    except Exception as e:
-        logging.error(f"Error retrieving analysis: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve analysis: {str(e)}")
-
-@router.get("/analyses/video/{video_id}")
-async def get_analyses_by_video(request: Request, video_id: str):
-    """
-    Récupérer toutes les analyses d'une vidéo spécifique.
-    """
-    try:
-        db_model: DatabaseManager = get_database(request)
-        analysis_db = BasketballAnalysisDB(db_model)
-        
-        analyses = await analysis_db.get_analyses_by_video_id(video_id)
-        
-        return {
-            "video_id": video_id,
-            "total_analyses": len(analyses),
-            "analyses": analyses
-        }
-    except Exception as e:
-        logging.error(f"Error retrieving analyses for video {video_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve analyses: {str(e)}")
-
-@router.get("/statistics/{video_id}")
-async def get_user_statistics(request: Request, video_id: str):
-    """
-    Obtenir les statistiques d'un utilisateur pour une vidéo.
-    """
-    try:
-        db_model: DatabaseManager = get_database(request)
-        analysis_db = BasketballAnalysisDB(db_model)
-        
-        stats = await analysis_db.get_user_statistics(video_id)
-        
-        if not stats:
-            return {
-                "video_id": video_id,
-                "message": "No statistics found for this video"
-            }
-        
-        return stats
-    except Exception as e:
-        logging.error(f"Error retrieving statistics for video {video_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve statistics: {str(e)}")
-
-@router.delete("/analysis/{analysis_id}")
-async def delete_analysis(request: Request, analysis_id: str):
-    """
-    Supprimer une analyse spécifique.
-    """
-    try:
-        db_model: DatabaseManager = get_database(request)
-        analysis_db = BasketballAnalysisDB(db_model)
-        
-        success = await analysis_db.delete_analysis(analysis_id)
-        
-        if not success:
-            raise HTTPException(status_code=404, detail="Analysis not found or could not be deleted")
-        
-        return {"message": "Analysis deleted successfully", "analysis_id": analysis_id}
-    except Exception as e:
-        logging.error(f"Error deleting analysis {analysis_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete analysis: {str(e)}")
