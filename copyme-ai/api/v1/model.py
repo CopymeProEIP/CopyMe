@@ -58,10 +58,10 @@ async def process(
     Traite une vidéo ou une image pour l'analyse de mouvements de basket.
     Met à jour un document existant si processedDataId est fourni, sinon en crée un nouveau.
     """
-    
+
     # Initialiser les settings ici au lieu du niveau module
     settings = get_variables()
-    
+
     yolo_basket: PhaseDetection = get_yolomodel(request)
     db_model: DatabaseManager = get_database(request)
 
@@ -69,52 +69,63 @@ async def process(
     results: List[FrameData] = yolo_basket.run(str(file_path))
     logging.info("YOLO processing completed.")
 
-    # Sanitize frames correctement pour la base de données
+    # Sanitize frames correctement pour la base de données - une seule conversion
     frames_data = [sanitize_float_values(sanitize_frame(f)) for f in results]
 
-    # Créer des objets FrameData propres pour la réponse
-    clean_frames = [create_clean_frame_data(sanitize_frame(f)) for f in results]
+    # Créer des objets FrameData propres pour la réponse - ne pas appeler sanitize_frame à nouveau
+    clean_frames = [create_clean_frame_data(f) for f in frames_data]
+
+    logging.info("Creating new document...")
 
     try:
-        existing_doc = await db_model.get_by_id(processedDataId) if processedDataId else None
+        created_at = datetime.combine(date.today(), datetime.min.time())
 
-        if existing_doc:
-            logging.info(f"Updating document ID {processedDataId}...")
+        # Préparation des frames pour MongoDB
+        mongo_ready_frames = []
+        for frame in frames_data:
+            # Si c'est déjà un dictionnaire, utiliser directement
+            if isinstance(frame, dict):
+                mongo_ready_frame = frame
+            # Sinon, convertir en dictionnaire
+            elif hasattr(frame, "model_dump"):
+                mongo_ready_frame = frame.model_dump()
+            else:
+                # Fallback
+                mongo_ready_frame = sanitize_frame(frame)
 
-            update_data = {
-                "url": str(file_path),
-                "frames": frames_data,
-                "updated_at": datetime.now()
-            }
+            # S'assurer que tous les objets sont sérialisables
+            # Pour les énumérations, on préserve leur valeur numérique
+            def serialize_custom(obj):
+                if hasattr(obj, "value"):
+                    return obj.value
+                elif hasattr(obj, "name") and obj.name in ["LEFT", "RIGHT"]:
+                    return 1 if obj.name == "LEFT" else 2
+                return str(obj)
 
-            await db_model.update_entry(processedDataId, update_data)
+            # Sérialiser en JSON puis recharger pour garantir la compatibilité
+            mongo_ready_frame = json.loads(json.dumps(mongo_ready_frame, default=serialize_custom))
+            mongo_ready_frames.append(mongo_ready_frame)
 
-            return ProcessResponse(
-                frames=clean_frames,
-                created_at=existing_doc.get("created_at", datetime.now()),
-                version=existing_doc.get("version", 1) + 1
-            )
-        else:
-            logging.info("Creating new document...")
+        collection_insert = ProcessedImage(
+            url=str(file_path),
+            frames=mongo_ready_frames,  # Utiliser les frames préparées pour MongoDB
+            userId=userId,
+            allow_training=allow_training,
+            created_at=created_at,
+            version=1,
+        )
 
-            created_at = datetime.combine(date.today(), datetime.min.time())
-            collection_insert = ProcessedImage(
-                url=str(file_path),
-                frames=frames_data,
-                userId=userId,
-                allow_training=allow_training,
-                created_at=created_at,
-                version=1,
-            )
+        # Convertir l'objet Pydantic en dictionnaire pour l'insertion dans MongoDB
+        insert_data = collection_insert.model_dump()
+        # Utiliser la même fonction de sérialisation personnalisée
+        insert_data = json.loads(json.dumps(insert_data, default=serialize_custom))
+        await db_model.insert_new_entry(insert_data)
 
-            await db_model.insert_new_entry(json.loads(collection_insert.model_dump_json()))
-
-            return ProcessResponse(
-                frames=clean_frames,
-                created_at=created_at,
-                version=1
-            )
-
+        return ProcessResponse(
+            frames=clean_frames,
+            created_at=created_at,
+            version=1
+        )
     except Exception as e:
         logging.error(f"Database operation error: {str(e)}")
         return ProcessResponse(
@@ -176,7 +187,7 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
         frame_analysis = result.get("frame_analysis", [])        # Extraire les améliorations spécifiques
         improvements = []
         key_differences = []
-        
+
         for frame in frame_analysis:
             if frame.get("improvements"):
                 # Convertir les objets Improvement en dictionnaires
@@ -250,6 +261,18 @@ def sanitize_frame(frame: FrameData) -> Dict:
         if angle.get("angle") is None or math.isnan(angle.get("angle")) or math.isinf(angle.get("angle")):
             angle["angle"] = 0.0
 
+        # Convertir les objets Direction en valeur numérique
+        if isinstance(angle.get("angle_name"), tuple) and len(angle.get("angle_name")) == 2:
+            angle_type, direction = angle.get("angle_name")
+            # Convertir l'objet Direction en sa valeur entière
+            if hasattr(direction, "value"):
+                direction = direction.value
+            elif hasattr(direction, "name") and direction.name == "LEFT":
+                direction = 1  # Valeur associée à Direction.LEFT
+            elif hasattr(direction, "name") and direction.name == "RIGHT":
+                direction = 2  # Valeur associée à Direction.RIGHT
+            angle["angle_name"] = (angle_type, direction)
+
     # S'assurer que feedback est un dict
     if not isinstance(frame_dict.get("feedback"), dict):
         frame_dict["feedback"] = {}
@@ -259,13 +282,20 @@ def sanitize_frame(frame: FrameData) -> Dict:
 
     return frame_dict
 
-def create_clean_frame_data(frame_dict: Dict) -> FrameData:
+def create_clean_frame_data(frame_data: Any) -> FrameData:
     """
-    Crée un objet FrameData propre à partir d'un dictionnaire nettoyé
+    Crée un objet FrameData propre à partir d'un dictionnaire nettoyé ou d'un objet FrameData
     """
     try:
-        # Nettoyer d'abord le dictionnaire
-        clean_dict = sanitize_float_values(frame_dict)
+        # Si c'est déjà un dictionnaire, on l'utilise directement
+        if isinstance(frame_data, dict):
+            clean_dict = frame_data
+        # Si c'est un objet FrameData, on le convertit en dictionnaire
+        elif hasattr(frame_data, "model_dump"):
+            clean_dict = frame_data.model_dump()
+        else:
+            # Fallback - tenter une conversion en dictionnaire
+            clean_dict = sanitize_frame(frame_data)
         
         # S'assurer que les champs requis existent
         if 'frame_number' not in clean_dict:
@@ -280,6 +310,9 @@ def create_clean_frame_data(frame_dict: Dict) -> FrameData:
             clean_dict['class_name'] = 'unknown'
         if 'feedback' not in clean_dict:
             clean_dict['feedback'] = {}
+        # Ajout du champ url_path_frame qui est requis par FrameData
+        if 'url_path_frame' not in clean_dict:
+            clean_dict['url_path_frame'] = clean_dict.get('url_path_frame', f"frames/frame_{clean_dict.get('frame_number', 0)}.jpg")
             
         return FrameData(**clean_dict)
     except Exception as e:
@@ -291,7 +324,8 @@ def create_clean_frame_data(frame_dict: Dict) -> FrameData:
             keypoints_positions={},
             angles=[],
             class_name='unknown',
-            feedback={}
+            feedback={},
+            url_path_frame="frames/default_frame.jpg"  # Ajouter le champ requis
         )
 
 @router.get("/image")
@@ -301,83 +335,3 @@ def serve_image_with_param():
 @router.get("/latest-angle-collection")
 def latest_angle_collection():
     return {"status": "success", "message": "Latest angle collection."}
-
-@router.get("/analysis/{analysis_id}")
-async def get_analysis(request: Request, analysis_id: str):
-    """
-    Récupérer une analyse spécifique par son ID.
-    """
-    try:
-        db_model: DatabaseManager = get_database(request)
-        analysis_db = BasketballAnalysisDB(db_model)
-        
-        analysis = await analysis_db.get_analysis(analysis_id)
-        
-        if not analysis:
-            raise HTTPException(status_code=404, detail="Analysis not found")
-        
-        return analysis
-    except Exception as e:
-        logging.error(f"Error retrieving analysis: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve analysis: {str(e)}")
-
-@router.get("/analyses/video/{video_id}")
-async def get_analyses_by_video(request: Request, video_id: str):
-    """
-    Récupérer toutes les analyses d'une vidéo spécifique.
-    """
-    try:
-        db_model: DatabaseManager = get_database(request)
-        analysis_db = BasketballAnalysisDB(db_model)
-        
-        analyses = await analysis_db.get_analyses_by_video_id(video_id)
-        
-        return {
-            "video_id": video_id,
-            "total_analyses": len(analyses),
-            "analyses": analyses
-        }
-    except Exception as e:
-        logging.error(f"Error retrieving analyses for video {video_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve analyses: {str(e)}")
-
-@router.get("/statistics/{video_id}")
-async def get_user_statistics(request: Request, video_id: str):
-    """
-    Obtenir les statistiques d'un utilisateur pour une vidéo.
-    """
-    try:
-        db_model: DatabaseManager = get_database(request)
-        analysis_db = BasketballAnalysisDB(db_model)
-        
-        stats = await analysis_db.get_user_statistics(video_id)
-        
-        if not stats:
-            return {
-                "video_id": video_id,
-                "message": "No statistics found for this video"
-            }
-        
-        return stats
-    except Exception as e:
-        logging.error(f"Error retrieving statistics for video {video_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve statistics: {str(e)}")
-
-@router.delete("/analysis/{analysis_id}")
-async def delete_analysis(request: Request, analysis_id: str):
-    """
-    Supprimer une analyse spécifique.
-    """
-    try:
-        db_model: DatabaseManager = get_database(request)
-        analysis_db = BasketballAnalysisDB(db_model)
-        
-        success = await analysis_db.delete_analysis(analysis_id)
-        
-        if not success:
-            raise HTTPException(status_code=404, detail="Analysis not found or could not be deleted")
-        
-        return {"message": "Analysis deleted successfully", "analysis_id": analysis_id}
-    except Exception as e:
-        logging.error(f"Error deleting analysis {analysis_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete analysis: {str(e)}")

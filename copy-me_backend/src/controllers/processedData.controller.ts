@@ -155,8 +155,6 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 			});
 		}
 
-		const raw = await ProcessedData.findById(processedDataId);
-console.log('RAW analysis_id:', raw?.analysis_id);
 		return res.status(200).json({
 			success: true,
 			data: processedData
@@ -226,8 +224,6 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 		});
 
 		const responseData = await response.json();
-
-		console.log("Réponse de l'API IA:", responseData.frames.length);
 
 		return res.status(201).json({
 			success: true,
