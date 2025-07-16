@@ -2,9 +2,15 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar } from 'react-native';
+import { StatusBar, TouchableOpacity, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Home, Dumbbell, BarChart3, User } from 'lucide-react-native';
+import {
+  Home,
+  Dumbbell,
+  BarChart3,
+  User,
+  ChevronLeft,
+} from 'lucide-react-native';
 
 import LoginScreen from '@/app/login';
 import RegisterScreen from '@/app/register';
@@ -25,17 +31,47 @@ import color from './app/theme/color';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const HomeIcon = ({ color: iconColor, size }: { color: string; size: number }) => 
-  <Home color={iconColor} size={size} />;
+const HomeIcon = ({
+  color: iconColor,
+  size,
+}: {
+  color: string;
+  size: number;
+}) => <Home color={iconColor} size={size} />;
 
-const DumbbellIcon = ({ color: iconColor, size }: { color: string; size: number }) => 
-  <Dumbbell color={iconColor} size={size} />;
+const DumbbellIcon = ({
+  color: iconColor,
+  size,
+}: {
+  color: string;
+  size: number;
+}) => <Dumbbell color={iconColor} size={size} />;
 
-const BarChartIcon = ({ color: iconColor, size }: { color: string; size: number }) => 
-  <BarChart3 color={iconColor} size={size} />;
+const BarChartIcon = ({
+  color: iconColor,
+  size,
+}: {
+  color: string;
+  size: number;
+}) => <BarChart3 color={iconColor} size={size} />;
 
-const UserIcon = ({ color: iconColor, size }: { color: string; size: number }) => 
-  <User color={iconColor} size={size} />;
+const UserIcon = ({
+  color: iconColor,
+  size,
+}: {
+  color: string;
+  size: number;
+}) => <User color={iconColor} size={size} />;
+
+// Composant de bouton de retour personnalisé pour l'écran d'analyse
+const CustomBackButton = ({ navigation }: { navigation: any }) => (
+  <TouchableOpacity
+    style={styles.backButton}
+    onPress={() => navigation.navigate('Main', { screen: 'Analysis' })}
+  >
+    <ChevronLeft color={color.colors.textPrimary} size={24} />
+  </TouchableOpacity>
+);
 
 function TabNavigator() {
   return (
@@ -91,7 +127,7 @@ export default function App() {
   const colorScheme = useColorScheme();
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={styles.container}>
       <NavigationContainer>
         <AuthProvider>
           <StatusBar
@@ -150,7 +186,7 @@ export default function App() {
             <Stack.Screen
               name="Analyze"
               component={AnalyzeScreen}
-              options={{
+              options={({ navigation }) => ({
                 headerShown: true,
                 title: 'Analyse',
                 headerStyle: {
@@ -160,7 +196,8 @@ export default function App() {
                 headerTitleStyle: {
                   fontWeight: 'bold',
                 },
-              }}
+                headerLeft: () => <CustomBackButton navigation={navigation} />,
+              })}
             />
             <Stack.Screen name="NotFound" component={NotFoundScreen} />
           </Stack.Navigator>
@@ -169,3 +206,12 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  backButton: {
+    marginLeft: 10,
+  },
+});

@@ -85,9 +85,10 @@ export interface ProcessedData {
   role?: 'pro' | 'client' | 'ia';
   media_type?: string;
   frames: Frame[];
-  created_at?: Date;
-  updated_at?: Date;
+  created_at: Date;
+  updated_at: Date;
   analysis_id?: AnalysisData;
+	is_reference: boolean;
 }
 
 export interface Frame {
