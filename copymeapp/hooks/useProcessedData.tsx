@@ -79,8 +79,9 @@ export function useProcessedData(processId?: string) {
     setError(null);
 
     try {
-      const result = await api.getProcessedData<ProcessedData>(processId);
-      setData(result);
+      const result = await api.getProcessedData<any>(processId);
+      console.log('--------Processed Data:', result);
+      setData(result.data as ProcessedData);
     } catch (err) {
       console.error('Error fetching processed data:', err);
       setError(

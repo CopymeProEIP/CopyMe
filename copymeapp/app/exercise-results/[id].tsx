@@ -483,10 +483,6 @@ export default function ExerciseResultsScreen() {
           <ArrowLeft size={20} color={color.colors.textForeground} />
           <ThemedText type="button">Refaire l'exercice</ThemedText>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.refreshButton} onPress={refresh}>
-          <ThemedText type="button">Rafraîchir l'analyse</ThemedText>
-        </TouchableOpacity>
       </ThemedView>
     </ScrollView>
   );
