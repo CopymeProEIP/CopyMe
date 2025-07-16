@@ -25,9 +25,18 @@ from .basketball_analysis_model import BasketballAnalysisDB, BasketballAnalysisM
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 class ProcessResponse(BaseModel):
+    _id: str
     frames: List[FrameData]
     created_at: datetime
     version: int
+    
+    class Config:
+        # S'assurer que tous les champs sont inclus dans les réponses JSON
+        # et que les attributs sont bien convertis, y compris l'ID
+        json_encoders = {
+            # Gestion spéciale pour les ObjectID MongoDB ou autres types complexes
+            object: lambda obj: str(obj) if hasattr(obj, '__str__') else None
+        }
 
 class ProcessRequest(BaseModel):
     userId: str = Field(..., examples=["680a1e190ceb2230eeb132b6"])
@@ -52,7 +61,6 @@ async def process(
     files: UploadFile = File(...),
     userId: str = Form(...),
     allow_training: Optional[bool] = Form(False),
-    processedDataId: Optional[str] = Form(None)
 ) -> ProcessResponse:
     """
     Traite une vidéo ou une image pour l'analyse de mouvements de basket.
@@ -96,6 +104,25 @@ async def process(
             # S'assurer que tous les objets sont sérialisables
             # Pour les énumérations, on préserve leur valeur numérique
             def serialize_custom(obj):
+                # Gestion spécifique pour les objets Direction
+                if obj.__class__.__name__ == 'Direction':
+                    if hasattr(obj, "value"):
+                        return obj.value
+                    elif hasattr(obj, "name"):
+                        if obj.name == "LEFT":
+                            return 1
+                        elif obj.name == "RIGHT":
+                            return 2
+                        elif obj.name == "INCREASE":
+                            return "increase"
+                        elif obj.name == "DECREASE":
+                            return "decrease"
+                        elif obj.name == "UNKNOWN":
+                            return "unknown"
+                        else:
+                            return str(obj.name).lower()
+                    return "unknown"
+                # Gestion générique pour les autres énumérations
                 if hasattr(obj, "value"):
                     return obj.value
                 elif hasattr(obj, "name") and obj.name in ["LEFT", "RIGHT"]:
@@ -119,20 +146,67 @@ async def process(
         insert_data = collection_insert.model_dump()
         # Utiliser la même fonction de sérialisation personnalisée
         insert_data = json.loads(json.dumps(insert_data, default=serialize_custom))
-        await db_model.insert_new_entry(insert_data)
+        insert_result = await db_model.insert_new_entry(insert_data)
 
-        return ProcessResponse(
-            frames=clean_frames,
-            created_at=created_at,
-            version=1
-        )
+        # Extraire l'ID du résultat d'insertion MongoDB
+        if hasattr(insert_result, 'inserted_id'):
+            id_str = str(insert_result.inserted_id)
+        else:
+            # Fallback au cas où la structure du résultat n'est pas celle attendue
+            id_str = str(insert_result)
+
+        logging.info(f"Document created with ID: {id_str}")
+
+        # Créer la réponse DIRECTEMENT sans utiliser le constructeur ProcessResponse
+        # pour éviter toute transformation silencieuse par Pydantic
+        direct_response = {
+            "_id": id_str,
+            "frames": clean_frames,
+            "created_at": created_at,
+            "version": 1
+        }
+
+        # Log détaillé pour débogage
+        logging.debug(f"ProcessResponse data: _id={id_str}, frames={len(clean_frames)} items")
+        
+        # Retourner la réponse directement au lieu de la passer par ProcessResponse
+        # FastAPI la convertira quand même en JSON, mais sans les transformations de Pydantic
+        from fastapi.responses import JSONResponse
+        
+        # Convertir les frames en dictionnaires et nettoyer les valeurs problématiques
+        frames_json = []
+        for frame in clean_frames:
+            if hasattr(frame, 'model_dump'):
+                frame_dict = frame.model_dump()
+            else:
+                frame_dict = frame
+            
+            # Sanitize special objects like Direction
+            frame_dict = json.loads(json.dumps(frame_dict, default=serialize_custom))
+            frames_json.append(frame_dict)
+            
+        response_content = {
+            "_id": id_str,  # Inclure l'ID directement à la racine
+            "frames": frames_json,
+            "created_at": created_at.isoformat(),
+            "version": 1
+        }
+        
+        # S'assurer que la réponse est sérialisable en JSON
+        try:
+            # Test de sérialisation pour détecter les erreurs
+            json_test = json.dumps(response_content)
+            logging.debug(f"Response JSON serialization successful: {len(json_test)} bytes")
+        except Exception as json_err:
+            logging.error(f"JSON serialization error: {str(json_err)}")
+            # Rechercher et corriger les valeurs problématiques
+            response_content = sanitize_float_values(response_content)
+            
+        return JSONResponse(content=response_content)
     except Exception as e:
         logging.error(f"Database operation error: {str(e)}")
-        return ProcessResponse(
-            frames=clean_frames,
-            created_at=datetime.combine(date.today(), datetime.min.time()),
-            version=1
-        )
+        # Si l'ID n'a pas été généré, on lève une exception
+        raise HTTPException(status_code=500, detail=f"Failed to process video: {str(e)}")
 
 
 class AnalysisRequest(BaseModel):
@@ -141,6 +215,7 @@ class AnalysisRequest(BaseModel):
     reference_id: Optional[str] = None
 
 class AnalysisResponse(BaseModel):
+    _id: str
     email: EmailStr
     video_id: str
     analysis_id: Optional[str] = None
@@ -224,6 +299,7 @@ async def analyze_movement(request: Request, analysis_data: AnalysisRequest = Bo
 
         # Convertir le résultat en format AnalysisResponse
         return AnalysisResponse(
+            _id=str(analysis_id),
             email=analysis_data.email,
             video_id=analysis_data.video_id or "unknown",
             analysis_id=analysis_id,
@@ -254,7 +330,8 @@ def sanitize_float_values(data: Any) -> Any:
         return data
 
 def sanitize_frame(frame: FrameData) -> Dict:
-    frame_dict = frame.model_dump()
+    """Convertit un objet FrameData en dictionnaire nettoyé pour MongoDB."""
+    frame_dict = frame.model_dump() if hasattr(frame, 'model_dump') else frame
 
     # Nettoyer les angles
     for angle in frame_dict.get("angles", []):
@@ -264,14 +341,30 @@ def sanitize_frame(frame: FrameData) -> Dict:
         # Convertir les objets Direction en valeur numérique
         if isinstance(angle.get("angle_name"), tuple) and len(angle.get("angle_name")) == 2:
             angle_type, direction = angle.get("angle_name")
-            # Convertir l'objet Direction en sa valeur entière
-            if hasattr(direction, "value"):
-                direction = direction.value
+            
+            # Convertir l'objet Direction en sa valeur appropriée
+            if hasattr(direction, "__class__") and direction.__class__.__name__ == 'Direction':
+                if hasattr(direction, "value"):
+                    direction_value = direction.value
+                elif hasattr(direction, "name"):
+                    if direction.name == "LEFT":
+                        direction_value = 1
+                    elif direction.name == "RIGHT":
+                        direction_value = 2
+                    else:
+                        direction_value = str(direction.name).lower()
+                else:
+                    direction_value = "unknown"
+            # Ou si c'est déjà un objet simple
             elif hasattr(direction, "name") and direction.name == "LEFT":
-                direction = 1  # Valeur associée à Direction.LEFT
+                direction_value = 1
             elif hasattr(direction, "name") and direction.name == "RIGHT":
-                direction = 2  # Valeur associée à Direction.RIGHT
-            angle["angle_name"] = (angle_type, direction)
+                direction_value = 2
+            else:
+                # Cas de fallback - utiliser l'objet tel quel
+                direction_value = direction
+                
+            angle["angle_name"] = (angle_type, direction_value)
 
     # S'assurer que feedback est un dict
     if not isinstance(frame_dict.get("feedback"), dict):

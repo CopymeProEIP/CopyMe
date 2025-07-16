@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
-  Image,
   Alert,
   ScrollView,
 } from 'react-native';
@@ -12,7 +11,16 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedSafeAreaView, ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { Camera, Upload, X, VideoIcon } from 'lucide-react-native';
+import Video from 'react-native-video';
+import {
+  Camera,
+  Upload,
+  X,
+  VideoIcon,
+  FileUp,
+  Database,
+  MessageSquare,
+} from 'lucide-react-native';
 import color from '@/app/theme/color';
 import { useApi } from '@/utils/api';
 import {
@@ -33,6 +41,7 @@ export default function ExerciseSessionScreen() {
   const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState<string>('');
+  const [videoError, setVideoError] = useState(false);
   const api = useApi();
 
   const handleUploadVideo = async () => {
@@ -94,24 +103,33 @@ export default function ExerciseSessionScreen() {
       const data = (await api.uploadFile('/process', uploadedVideo, id)) as any;
       console.log('Video processed successfully:', data);
 
-      // Étape 2: Déclencher l'analyse avec l'endpoint analyze
-      setProcessingStep('Analyze movement');
+      // Étape 2: Déclencher l'analyse avec l'endpoint analyze et attendre la réponse
       console.log('Starting video analysis...');
-      const analysisResult = await api.analyzeVideo(
-        'idriss.said@epitech.eu', // TODO: Récupérer l'email de l'utilisateur connecté
-        data._id,
-        '685d70063c2a10a5fd8a07ea', // TODO: Utiliser l'ID d'une vraie vidéo de référence
-      );
-      console.log('Analysis completed:', analysisResult);
+      setProcessingStep('Analysing video');
 
-      // Navigation vers l'écran d'analyse
-      (navigation as any).navigate('Analyze', {
+      try {
+        // Attendre que l'analyse soit terminée avant de continuer
+        await api.analyzeVideo(
+          'idriss.said@epitech.eu',
+          data._id,
+          '685d70063c2a10a5fd8a07ea',
+        );
+        console.log('Video analysis initiated successfully');
+      } catch (error) {
+        console.error('Analysis error:', error);
+        // Continuer malgré l'erreur d'analyse, car nous avons déjà les données de base
+      }
+
+      // Navigation vers l'écran d'analyse après le démarrage de l'analyse
+      (navigation as any).navigate('ExerciseResults', {
         id: data._id,
-        title: title || 'Exercise Analysis',
-        exerciseName: title || 'Exercise Analysis',
+        title: title || 'Exercise Results',
+        exerciseName: title || 'Exercise Results',
+        backgroundAnalysis: true,
+        originalVideoUrl: uploadedVideo, // Passer l'URL de la vidéo originale
       });
     } catch (error) {
-      console.error('Error uploading/analyzing video:', error);
+      console.error('Error uploading video:', error);
       Alert.alert(
         'Upload Failed',
         'There was an error processing your video. Please try again.',
@@ -129,6 +147,143 @@ export default function ExerciseSessionScreen() {
   return (
     <ThemedSafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
+        {/* Banderole avec les étapes du processus */}
+        <Card style={styles.stepsCard}>
+          <ThemedView style={styles.stepsContainer}>
+            <ThemedView
+              style={[
+                styles.stepItem,
+                !uploadedVideo ? styles.activeStep : styles.completedStep,
+              ]}
+            >
+              <ThemedView
+                style={[
+                  styles.stepCircle,
+                  !uploadedVideo
+                    ? styles.activeStepCircle
+                    : styles.completedStepCircle,
+                ]}
+              >
+                <FileUp
+                  size={22}
+                  color={!uploadedVideo ? color.colors.primary : 'white'}
+                />
+              </ThemedView>
+              <ThemedText
+                type="small"
+                style={[
+                  styles.stepText,
+                  !uploadedVideo
+                    ? styles.activeStepText
+                    : styles.completedStepText,
+                ]}
+              >
+                Upload
+              </ThemedText>
+            </ThemedView>
+
+            <ThemedView style={styles.stepConnector} />
+
+            <ThemedView
+              style={[
+                styles.stepItem,
+                uploadedVideo &&
+                processing &&
+                processingStep === 'Get data from video'
+                  ? styles.activeStep
+                  : processingStep === 'Analysing video' ||
+                      (uploadedVideo && !processing)
+                    ? styles.completedStep
+                    : styles.inactiveStep,
+              ]}
+            >
+              <ThemedView
+                style={[
+                  styles.stepCircle,
+                  uploadedVideo &&
+                  processing &&
+                  processingStep === 'Get data from video'
+                    ? styles.activeStepCircle
+                    : processingStep === 'Analysing video' ||
+                        (uploadedVideo && !processing)
+                      ? styles.completedStepCircle
+                      : styles.inactiveStepCircle,
+                ]}
+              >
+                <Database
+                  size={22}
+                  color={
+                    uploadedVideo &&
+                    processing &&
+                    processingStep === 'Get data from video'
+                      ? color.colors.primary
+                      : processingStep === 'Analysing video' ||
+                          (uploadedVideo && !processing)
+                        ? 'white'
+                        : '#aaa'
+                  }
+                />
+              </ThemedView>
+              <ThemedText
+                type="small"
+                style={[
+                  styles.stepText,
+                  uploadedVideo &&
+                  processing &&
+                  processingStep === 'Get data from video'
+                    ? styles.activeStepText
+                    : processingStep === 'Analysing video' ||
+                        (uploadedVideo && !processing)
+                      ? styles.completedStepText
+                      : styles.inactiveStepText,
+                ]}
+              >
+                Traitement
+              </ThemedText>
+            </ThemedView>
+
+            <ThemedView style={styles.stepConnector} />
+
+            <ThemedView
+              style={[
+                styles.stepItem,
+                processingStep === 'Analysing video'
+                  ? styles.activeStep
+                  : styles.inactiveStep,
+              ]}
+            >
+              <ThemedView
+                style={[
+                  styles.stepCircle,
+                  processingStep === 'Analysing video'
+                    ? styles.activeStepCircle
+                    : styles.inactiveStepCircle,
+                ]}
+              >
+                <MessageSquare
+                  size={22}
+                  color={
+                    processingStep === 'Analysing video'
+                      ? color.colors.primary
+                      : '#aaa'
+                  }
+                />
+              </ThemedView>
+              <ThemedText
+                type="small"
+                style={[
+                  styles.stepText,
+                  processingStep === 'Analysing video'
+                    ? styles.activeStepText
+                    : styles.inactiveStepText,
+                ]}
+              >
+                Analyse
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
+        </Card>
+
         <Card style={styles.uploadCard}>
           {!uploadedVideo ? (
             <ThemedView style={styles.placeholderContainer}>
@@ -163,10 +318,29 @@ export default function ExerciseSessionScreen() {
             </ThemedView>
           ) : (
             <ThemedView style={styles.videoPreviewContainer}>
-              <Image
-                source={{ uri: uploadedVideo }}
-                style={styles.videoPreview}
-              />
+              {!videoError ? (
+                <Video
+                  source={{ uri: uploadedVideo }}
+                  style={styles.videoPreview}
+                  resizeMode="cover"
+                  paused={true}
+                  muted={true}
+                  controls={true}
+                  onError={e => {
+                    console.error('Erreur de prévisualisation vidéo:', e);
+                    setVideoError(true);
+                  }}
+                />
+              ) : (
+                <ThemedView
+                  style={[styles.videoPreview, styles.errorContainer]}
+                >
+                  <VideoIcon size={48} color={color.colors.primary} />
+                  <ThemedText style={styles.errorText}>
+                    Prévisualisation non disponible
+                  </ThemedText>
+                </ThemedView>
+              )}
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={handleCancelUpload}
@@ -187,9 +361,30 @@ export default function ExerciseSessionScreen() {
             disabled={processing}
           >
             <ThemedText type="button">
-              {processing ? processingStep || 'Processing...' : 'Analyze Video'}
+              {processing
+                ? `${processingStep || 'Traitement en cours'}...`
+                : 'Analyser la vidéo'}
             </ThemedText>
           </TouchableOpacity>
+        )}
+
+        {processing && (
+          <Card style={styles.processingCard}>
+            <ThemedText type="defaultSemiBold" style={styles.processingTitle}>
+              Traitement en cours
+            </ThemedText>
+            <ThemedText type="default" style={styles.processingText}>
+              {processingStep === 'Get data from video' &&
+                'Téléchargement et traitement initial de la vidéo...'}
+              {processingStep === 'Analysing video' &&
+                'Analyse du mouvement et détection des phases...'}
+              {!processingStep && "Préparation de l'analyse..."}
+            </ThemedText>
+            <ThemedText type="small" style={styles.processingNote}>
+              Cette opération peut prendre jusqu'à 30 secondes selon la longueur
+              de votre vidéo
+            </ThemedText>
+          </Card>
         )}
       </ScrollView>
     </ThemedSafeAreaView>
@@ -277,5 +472,97 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: {
     opacity: 0.6,
+  },
+  processingCard: {
+    marginTop: 16,
+    marginBottom: 24,
+    padding: 16,
+  },
+  processingTitle: {
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  processingText: {
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  processingNote: {
+    textAlign: 'center',
+    opacity: 0.7,
+    fontStyle: 'italic',
+  },
+  // Styles pour la banderole des étapes
+  stepsCard: {
+    marginBottom: 24,
+    padding: 16,
+  },
+  stepsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stepItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  stepCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 2,
+  },
+  activeStepCircle: {
+    borderColor: color.colors.primary,
+    backgroundColor: 'white',
+  },
+  completedStepCircle: {
+    borderColor: color.colors.primary,
+    backgroundColor: color.colors.primary,
+  },
+  inactiveStepCircle: {
+    borderColor: '#e0e0e0',
+    backgroundColor: 'white',
+  },
+  stepText: {
+    textAlign: 'center',
+    fontSize: 12,
+  },
+  stepConnector: {
+    height: 2,
+    backgroundColor: '#e0e0e0',
+    flex: 0.5,
+  },
+  activeStep: {
+    opacity: 1,
+  },
+  completedStep: {
+    opacity: 1,
+  },
+  inactiveStep: {
+    opacity: 0.5,
+  },
+  activeStepText: {
+    color: color.colors.primary,
+    fontWeight: '600',
+  },
+  completedStepText: {
+    color: color.colors.primary,
+    fontWeight: '600',
+  },
+  inactiveStepText: {
+    color: '#aaa',
+  },
+  errorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  errorText: {
+    marginTop: 12,
+    color: color.colors.primary,
+    textAlign: 'center',
   },
 });

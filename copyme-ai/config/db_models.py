@@ -149,7 +149,7 @@ class DatabaseManager:
         else:
             logging.debug("Frames déjà en format dictionnaire, pas de conversion nécessaire")
             
-        await self.collection.insert_one(image_dict)
+        return await self.collection.insert_one(image_dict)
 
     async def count_documents(self, capture_index: str) -> int:
         return await self.collection.count_documents({"url": capture_index})

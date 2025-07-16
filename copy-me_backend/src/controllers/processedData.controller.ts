@@ -145,16 +145,6 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 			});
 		}
 
-		if (
-			req.user?.role !== 'admin' &&
-			(!processedData.user_id || processedData.user_id.toString() !== req.user?.id?.toString())
-		) {
-			return res.status(403).json({
-				success: false,
-				message: 'Non autorisé à accéder à cette processed data',
-			});
-		}
-
 		return res.status(200).json({
 			success: true,
 			data: processedData
@@ -193,14 +183,6 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 				message: "L'ID de l'exercice n'est pas valide",
 			});
 		}
-		const processedData = await ProcessedData.create({
-			url: req.file.path,
-			exercise_id: exercise_id,
-			user_id: req.user?.id,
-			role: 'client',
-			media_type: fileType,
-			frames: [],
-		});
 
 		const fileBuffer = fs.readFileSync(req.file.path);
 
@@ -210,8 +192,6 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 		const blob = new Blob([fileBuffer], { type: req.file!.mimetype });
 		formData.append('files', blob, req.file!.originalname);
-
-		formData.append('processedDataId', processedData.id);
 		formData.append('exerciseId', exercise_id);
 		formData.append('fileType', fileType);
 
@@ -223,12 +203,21 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 			body: formData,
 		});
 
-		const responseData = await response.json();
+		if (!response.ok) {
+			logger.error('Erreur lors de l\'envoi des données traitées à l\'API AI:', response.statusText);
+			return res.status(response.status).json({
+				success: false,
+				message: 'Erreur lors de l\'envoi des données traitées à l\'API AI',
+				error: await response.text(),
+			});
+		}
+
+		const data = await response.json();
 
 		return res.status(201).json({
 			success: true,
-			data: processedData,
-			ai_frames: responseData.frames || [],
+			data,
+			_id: data._id,
 		});
 	} catch (error) {
 		logger.error('Erreur lors du téléchargement du média:', error);

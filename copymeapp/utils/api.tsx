@@ -71,6 +71,11 @@ export function useApi() {
     return response.json();
   };
 
+  // Get processed data by ID
+  const getProcessedData = async <T,>(processId: string): Promise<T> => {
+    return get<T>(`/process/${processId}`);
+  };
+
   // Analyze video with reference
   const analyzeVideo = async <T,>(
     email: string,
@@ -88,20 +93,29 @@ export function useApi() {
       data,
     });
 
-    const response = await authFetch(`${API_BASE_URL}/process/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+    // Attendre la réponse de l'API au lieu de la lancer en arrière-plan
+    try {
+      const response = await authFetch(`${API_BASE_URL}/process/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Analysis failed');
+      if (!response.ok) {
+        throw new Error(
+          `Analysis request failed with status: ${response.status}`,
+        );
+      }
+
+      const result = await response.json();
+      console.log('Analysis response:', result);
+      return result as T;
+    } catch (error) {
+      console.error('Analysis error:', error);
+      throw error;
     }
-
-    return response.json();
   };
 
   // Upload file with authentication
@@ -180,5 +194,6 @@ export function useApi() {
     delete: del,
     uploadFile,
     analyzeVideo,
+    getProcessedData,
   };
 }

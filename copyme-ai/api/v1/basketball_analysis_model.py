@@ -159,16 +159,12 @@ class BasketballAnalysisDB:
     async def save_analysis(self, analysis_data: Dict) -> str:
         """Sauvegarder une analyse dans MongoDB"""
         try:
-            print("Données d'analyse à sauvegarder:", analysis_data.frames.length)
             # Préprocesser les données pour convertir les objets Improvement
             cleaned_data = self._clean_analysis_data(analysis_data)
-            print("2 Données d'analyse à sauvegarder:", cleaned_data.frames.length)
             # Convertir les données en modèle Pydantic
             analysis_model = BasketballAnalysisModel(**cleaned_data)
-            print("3 Données d'analyse à sauvegarder:", analysis_model.frames.length)
             # Convertir en dictionnaire pour MongoDB
             analysis_dict = analysis_model.model_dump(by_alias=True, exclude_unset=True)
-            print("4 Données d'analyse à sauvegarder:", analysis_dict['frame_analysis'][0]['filtered_current_keypoints'].length)
 
             result = await self.collection.insert_one(analysis_dict)
 
