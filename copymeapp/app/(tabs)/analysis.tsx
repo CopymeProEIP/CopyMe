@@ -98,7 +98,7 @@ export default function AnalysisListScreen() {
 
   const handleAnalysisPress = (analysis: ProcessedData) => {
     (navigation as any).navigate('Analyze', {
-      id: analysis.id,
+      id: analysis._id,
       title: analysis.exercise_id.name,
       exerciseName: analysis.exercise_id.name,
     });

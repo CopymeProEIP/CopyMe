@@ -63,10 +63,6 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 		const withReference = req.query.withReference || false;
 		let query = { userId: req.user?.id, is_reference: withReference };
 
-		logger.debug(
-			`Récupération des processed data - limit: ${limit}, range: ${range}, user_id: ${req.user?.id}`,
-		);
-
 		if (range !== 'all') {
 			const now = new Date();
 			let dateFilter;

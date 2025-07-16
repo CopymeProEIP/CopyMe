@@ -14,17 +14,12 @@ import { Card } from '@/components/Card';
 import { WebView } from 'react-native-webview';
 import Video from 'react-native-video';
 import { useRoute } from '@react-navigation/native';
-import {
-  Lightbulb,
-  RotateCcw,
-  SkipBack,
-  SkipForward,
-  Play,
-  Pause,
-  Info,
-} from 'lucide-react-native';
+import { Lightbulb } from 'lucide-react-native';
 import color from '@/app/theme/color';
 import { useProcessedData } from '@/hooks/useProcessedData';
+import AnalysisInfoCard from '@/components/v1/AnalysisInfoCard';
+import FrameNavigator from '@/components/v1/FrameNavigator';
+import VideoControls from '@/components/v1/VideoControls';
 
 type RouteParams = {
   id: string;
@@ -49,7 +44,7 @@ function Feedback({ feedbacks }: { feedbacks: string[] }) {
 export default function AnalysisDetailScreen() {
   const route = useRoute();
   const { id, originalVideoUrl } = route.params as RouteParams;
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const frameNavigatorRef = React.useRef<any>(null);
   const [frame, setFrame] = useState(0);
   const [tipsExpanded, setTipsExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -60,6 +55,22 @@ export default function AnalysisDetailScreen() {
 
   // Référence à la vidéo native pour contrôler la lecture
   const videoRef = React.useRef<any>(null);
+
+  // Fonction pour faire défiler jusqu'au frame sélectionné
+  const scrollToSelected = (index: number) => {
+    if (
+      frameNavigatorRef.current &&
+      frameNavigatorRef.current.scrollToSelected
+    ) {
+      frameNavigatorRef.current.scrollToSelected(index);
+    }
+  };
+
+  // Fonction pour mettre à jour le frame courant et déclencher le défilement
+  const updateFrame = (newFrame: number): void => {
+    setFrame(newFrame);
+    setTimeout(() => scrollToSelected(newFrame), 100);
+  };
 
   // Utilisation du hook useProcessedData
   const { data: processedData, loading, error, refresh } = useProcessedData(id);
@@ -145,19 +156,6 @@ export default function AnalysisDetailScreen() {
       </body>
       </html>
     `;
-  };
-
-  const scrollToSelected = (index: number) => {
-    if (scrollViewRef.current) {
-      const itemWidth = 150;
-      const position = index * itemWidth;
-      scrollViewRef.current.scrollTo({ x: position, animated: true });
-    }
-  };
-
-  const updateFrame = (newFrame: number): void => {
-    setFrame(newFrame);
-    setTimeout(() => scrollToSelected(newFrame), 100);
   };
 
   const togglePlayPause = () => {
@@ -299,201 +297,42 @@ export default function AnalysisDetailScreen() {
           </ThemedView>
         </ThemedView>
 
+        {/* Navigation des frames */}
+        <FrameNavigator
+          ref={frameNavigatorRef}
+          frames={framesArray}
+          currentFrame={frame}
+          onFrameChange={newFrame => {
+            setFrame(newFrame);
+            setTimeout(() => scrollToSelected(newFrame), 100);
+          }}
+        />
+
+        <VideoControls
+          currentFrame={frame}
+          totalFrames={framesArray.length}
+          frames={framesArray}
+          isPlaying={isPlaying}
+          onPreviousFrame={() => {
+            const newFrame = Math.max(0, frame - 1);
+            updateFrame(newFrame);
+          }}
+          onNextFrame={() => {
+            const newFrame = Math.min(framesArray.length - 1, frame + 1);
+            updateFrame(newFrame);
+          }}
+          onResetFrame={() => {
+            updateFrame(0);
+          }}
+          onPlayPauseToggle={togglePlayPause}
+          onJumpToFrame={updateFrame}
+        />
+
         {/* Section d'informations sur les données */}
-        <Card style={styles.dataInfoCard}>
-          <TouchableOpacity
-            style={styles.dataInfoHeader}
-            onPress={() => {
-              // On peut ajouter une fonctionnalité pour réduire/développer cette section
-            }}
-          >
-            <ThemedView style={styles.headerView}>
-              <Info color={color.colors.primary} />
-              <ThemedText type="subtitle">Informations d'analyse</ThemedText>
-            </ThemedView>
-          </TouchableOpacity>
-
-          <ThemedView style={styles.dataInfoContent}>
-            {processedData.analysis_id ? (
-              <>
-                <ThemedView style={styles.dataInfoItem}>
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={styles.dataInfoLabel}
-                  >
-                    Score technique:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.dataInfoValue}>
-                    {processedData.analysis_id.analysis_summary.summary.average_technical_score.toFixed(
-                      1,
-                    )}
-                    /100
-                  </ThemedText>
-                </ThemedView>
-
-                <ThemedView style={styles.dataInfoItem}>
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={styles.dataInfoLabel}
-                  >
-                    Évaluation:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.dataInfoValue}>
-                    {
-                      processedData.analysis_id.analysis_summary
-                        .performance_rating
-                    }
-                  </ThemedText>
-                </ThemedView>
-
-                <ThemedView style={styles.dataInfoItem}>
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={styles.dataInfoLabel}
-                  >
-                    Phases détectées:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.dataInfoValue}>
-                    {processedData.analysis_id.metadata.phases_detected.join(
-                      ', ',
-                    )}
-                  </ThemedText>
-                </ThemedView>
-
-                <ThemedView style={styles.dataInfoItem}>
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={styles.dataInfoLabel}
-                  >
-                    Frames analysées:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.dataInfoValue}>
-                    {
-                      processedData.analysis_id.analysis_summary.summary
-                        .total_frames_analyzed
-                    }
-                  </ThemedText>
-                </ThemedView>
-
-                <ThemedView style={styles.dataInfoItem}>
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={styles.dataInfoLabel}
-                  >
-                    Feedback global:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.dataInfoValue}>
-                    {processedData.analysis_id.global_feedback}
-                  </ThemedText>
-                </ThemedView>
-              </>
-            ) : (
-              <ThemedText type="default">
-                Aucune analyse avancée disponible pour cette vidéo.
-              </ThemedText>
-            )}
-          </ThemedView>
-        </Card>
-
-        <ThemedView style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.navButton]}
-            onPress={() => {
-              const newFrame = Math.max(0, frame - 1);
-              updateFrame(newFrame);
-            }}
-          >
-            <ThemedText type="defaultSemiBold">{'<'}</ThemedText>
-          </TouchableOpacity>
-
-          <ThemedView style={styles.frameIndicator}>
-            <ScrollView
-              ref={scrollViewRef}
-              horizontal={true}
-              showsHorizontalScrollIndicator={false}
-              style={styles.positionScroll}
-              contentContainerStyle={styles.positionScrollContent}
-            >
-              {framesArray.map((frameData, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[
-                    styles.positionItem,
-                    frame === idx ? styles.activePositionItem : null,
-                  ]}
-                  onPress={() => updateFrame(idx)}
-                >
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={frame === idx ? styles.activePositionText : null}
-                  >
-                    {idx + 1}. {frameData.persons?.[0]?.step_position || '-'}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </ThemedView>
-
-          <TouchableOpacity
-            style={[styles.button, styles.navButton]}
-            onPress={() => {
-              const newFrame = Math.min(framesArray.length - 1, frame + 1);
-              updateFrame(newFrame);
-            }}
-          >
-            <ThemedText type="defaultSemiBold">{'>'}</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-        <ThemedView style={styles.controlBox}>
-          <ThemedView style={styles.controlLeft}>
-            <ThemedText type="default" style={styles.stepText}>
-              Step
-            </ThemedText>
-            <ThemedView style={styles.controlButtons}>
-              <TouchableOpacity
-                style={styles.controlButton}
-                onPress={() => {
-                  const newFrame = Math.max(0, frame - 1);
-                  updateFrame(newFrame);
-                }}
-              >
-                <SkipBack size={32} color={color.colors.primary} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.controlButton}
-                onPress={() => {
-                  updateFrame(0);
-                }}
-              >
-                <RotateCcw size={32} color={color.colors.primary} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.controlButton}
-                onPress={() => {
-                  const newFrame = Math.min(framesArray.length - 1, frame + 1);
-                  updateFrame(newFrame);
-                }}
-              >
-                <SkipForward size={32} color={color.colors.primary} />
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
-
-          <ThemedView style={styles.controlRight}>
-            <TouchableOpacity
-              style={styles.playButton}
-              onPress={togglePlayPause}
-            >
-              {isPlaying ? (
-                <Pause color={color.colors.primary} size={32} />
-              ) : (
-                <Play color={color.colors.primary} size={32} />
-              )}
-            </TouchableOpacity>
-          </ThemedView>
-        </ThemedView>
+        <AnalysisInfoCard
+          analysisData={processedData.analysis_id}
+          onHeaderPress={() => {}}
+        />
       </ScrollView>
     </ThemedView>
   );
@@ -540,29 +379,6 @@ const styles = StyleSheet.create({
     minWidth: 50,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // Frame indicator and scroll
-  frameIndicator: {
-    flex: 1,
-    height: 50,
-  },
-  positionScroll: {
-    width: '100%',
-  },
-  positionScrollContent: {
-    alignItems: 'center',
-  },
-  positionItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginHorizontal: 4,
-    borderRadius: 8,
-  },
-  activePositionItem: {
-    backgroundColor: color.colors.primaryForeground,
-  },
-  activePositionText: {
-    color: color.colors.primary,
   },
   // Tips card
   tipsCard: {
@@ -622,7 +438,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dataInfoItem: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'flex-start',
     marginBottom: 4,
   },
@@ -632,42 +448,6 @@ const styles = StyleSheet.create({
   },
   dataInfoValue: {
     flex: 1,
-  },
-  // Control box
-  controlBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  controlLeft: {
-    width: '80%',
-    height: '100%',
-    borderWidth: 1,
-    borderRadius: 12,
-    borderColor: color.colors.border,
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  controlRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  controlButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  controlButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   playButton: {
     width: 50,
