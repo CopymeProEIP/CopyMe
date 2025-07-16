@@ -47,6 +47,7 @@ class ProcessedImage(BaseModel):
     uuid: UUID = uuid4()
     url: str
     frames: List["FrameData"]
+    exercise_id: str
     userId: str
     allow_training: Optional[bool] = False
     created_at: datetime = datetime.utcnow()

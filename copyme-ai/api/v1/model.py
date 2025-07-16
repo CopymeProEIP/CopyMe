@@ -60,6 +60,7 @@ async def process(
     request: Request,
     files: UploadFile = File(...),
     userId: str = Form(...),
+    exercise_id: str = Form(...),
     allow_training: Optional[bool] = Form(False),
 ) -> ProcessResponse:
     """
@@ -137,6 +138,8 @@ async def process(
             url=str(file_path),
             frames=mongo_ready_frames,  # Utiliser les frames préparées pour MongoDB
             userId=userId,
+            is_reference=False,  # Par défaut, on ne crée pas de référence
+            exercise_id=exercise_id,
             allow_training=allow_training,
             created_at=created_at,
             version=1,

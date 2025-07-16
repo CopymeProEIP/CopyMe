@@ -60,7 +60,12 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 	try {
 		const limit = req.query.limit ? parseInt(req.query.limit?.toString()) : -1;
 		const range = req.query.range?.toString() || 'all';
-		let query = { user_id: req.user?.id };
+		const withReference = req.query.withReference || false;
+		let query = { userId: req.user?.id, is_reference: withReference };
+
+		logger.debug(
+			`Récupération des processed data - limit: ${limit}, range: ${range}, user_id: ${req.user?.id}`,
+		);
 
 		if (range !== 'all') {
 			const now = new Date();
@@ -102,22 +107,30 @@ export const getAllProcessedData = async (req: AuthenticatedRequest, res: Respon
 			}
 		}
 
-		const processedData = await ProcessedData.find(query)
-			.limit(limit)
-			.select('-__v -user_id')
-			.populate({ path: 'exercise_id', select: '-user_id -_id' });
+		console.log('Query for processed data:', query);
 
-		const transformedData = processedData.map((item) => {
-			const itemObj = item.toObject() as any;
-			itemObj.exercise = itemObj.exercise_id;
-			delete itemObj.exercise_id;
-			return itemObj;
-		});
+		let processedDataQuery = ProcessedData.find(query)
+			.select('-__v -user_id -frames')
+			.populate({ path: 'exercise_id', select: '-user_id -_id' })
+			.populate({ path: 'analysis_id', select: '-user_id -_id -frame_analysis' });
+
+		if (limit > 0) {
+			processedDataQuery = processedDataQuery.limit(limit);
+		}
+
+		const processedData = await processedDataQuery;
+
+		if (!processedData || processedData.length === 0) {
+			return res.status(404).json({
+				success: false,
+				message: 'Aucune donnée traitée trouvée',
+			});
+		}
 
 		return res.status(200).json({
 			success: true,
-			count: transformedData.length,
-			data: transformedData,
+			count: processedData.length,
+			data: processedData,
 		});
 	} catch (error) {
 		logger.error('Erreur lors de la récupération des processed data:', error);
@@ -147,7 +160,7 @@ export const getProcessedDataById = async (req: AuthenticatedRequest, res: Respo
 
 		return res.status(200).json({
 			success: true,
-			data: processedData
+			data: processedData,
 		});
 	} catch (error) {
 		logger.error('Erreur lors de la récupération de la processed data:', error);
@@ -192,7 +205,7 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 		const blob = new Blob([fileBuffer], { type: req.file!.mimetype });
 		formData.append('files', blob, req.file!.originalname);
-		formData.append('exerciseId', exercise_id);
+		formData.append('exercise_id', exercise_id);
 		formData.append('fileType', fileType);
 
 		const response = await fetch(`${process.env.AI_API_URL}/process`, {
@@ -204,10 +217,10 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 		});
 
 		if (!response.ok) {
-			logger.error('Erreur lors de l\'envoi des données traitées à l\'API AI:', response.statusText);
+			logger.error("Erreur lors de l'envoi des données traitées à l'API AI:", response.statusText);
 			return res.status(response.status).json({
 				success: false,
-				message: 'Erreur lors de l\'envoi des données traitées à l\'API AI',
+				message: "Erreur lors de l'envoi des données traitées à l'API AI",
 				error: await response.text(),
 			});
 		}
