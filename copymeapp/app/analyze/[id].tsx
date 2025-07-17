@@ -6,12 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Platform,
+  View,
+  Dimensions,
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Card } from '@/components/Card';
-import { WebView } from 'react-native-webview';
 import Video from 'react-native-video';
 import { useRoute } from '@react-navigation/native';
 import { Lightbulb } from 'lucide-react-native';
@@ -20,12 +20,13 @@ import { useProcessedData } from '@/hooks/useProcessedData';
 import AnalysisInfoCard from '@/components/v1/AnalysisInfoCard';
 import FrameNavigator from '@/components/v1/FrameNavigator';
 import VideoControls from '@/components/v1/VideoControls';
+import SkeletonView from '@/components/v1/SkeletonView';
+import { API_URL } from '@env';
 
 type RouteParams = {
   id: string;
   title?: string;
   exerciseName?: string;
-  originalVideoUrl?: string;
 };
 
 function Feedback({ feedbacks }: { feedbacks: string[] }) {
@@ -43,18 +44,42 @@ function Feedback({ feedbacks }: { feedbacks: string[] }) {
 
 export default function AnalysisDetailScreen() {
   const route = useRoute();
-  const { id, originalVideoUrl } = route.params as RouteParams;
+  const { id } = route.params as RouteParams;
   const frameNavigatorRef = React.useRef<any>(null);
   const [frame, setFrame] = useState(0);
   const [tipsExpanded, setTipsExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [useNativeVideo, setUseNativeVideo] = useState(
-    Platform.OS === 'ios' && originalVideoUrl?.startsWith('file://'),
+  const [alternativeVideoUrl, setAlternativeVideoUrl] = useState<string | null>(
+    null,
   );
-  const webViewRef = React.useRef<WebView>(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
 
   // Référence à la vidéo native pour contrôler la lecture
   const videoRef = React.useRef<any>(null);
+
+  // Utilisation du hook useProcessedData
+  const { data: processedData, loading, error, refresh } = useProcessedData(id);
+
+  // Effet pour utiliser l'URL de la vidéo du backend
+  React.useEffect(() => {
+    if (processedData) {
+      console.log('Données processées reçues:', processedData);
+
+      // Créer une URL complète vers le fichier vidéo
+      const apiBaseUrl = API_URL || 'http://localhost:3000';
+
+      // Obtenir la vidéo complète depuis l'API
+      const timestamp = new Date().getTime();
+      const videoUrl = `${apiBaseUrl}/api/process/${id}/video?t=${timestamp}`;
+      console.log('URL vidéo à utiliser:', videoUrl);
+
+      // Réinitialiser l'état de chargement
+      setIsVideoLoading(true);
+
+      // Mettre à jour l'URL de la vidéo
+      setAlternativeVideoUrl(videoUrl);
+    }
+  }, [id]);
 
   // Fonction pour faire défiler jusqu'au frame sélectionné
   const scrollToSelected = (index: number) => {
@@ -72,109 +97,17 @@ export default function AnalysisDetailScreen() {
     setTimeout(() => scrollToSelected(newFrame), 100);
   };
 
-  // Utilisation du hook useProcessedData
-  const { data: processedData, loading, error, refresh } = useProcessedData(id);
-
-  const generateVideoHTML = (videoUrl: string) => {
-    // Correction pour les URLs de fichiers locaux
-    let formattedUrl = videoUrl;
-
-    // Vérifier si c'est une URL de fichier local (commence par "file://")
-    if (videoUrl.startsWith('file://')) {
-      // Sur iOS, les URL file:// ne fonctionnent pas directement dans les WebViews
-      console.log("Utilisation d'une URL de fichier local:", videoUrl);
-
-      // Si c'est iOS, nous utiliserons le composant Video natif à la place
-      if (Platform.OS === 'ios') {
-        setUseNativeVideo(true);
-      }
-    }
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <style>
-          body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: transparent;
-            overflow: hidden;
-          }
-          .video-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-          video {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-          }
-          .error-message {
-            color: red;
-            text-align: center;
-            padding: 20px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="video-container">
-          <video id="videoPlayer" controls playsinline webkit-playsinline>
-            <source src="${formattedUrl}" type="video/mp4">
-            <div class="error-message">
-              Votre navigateur ne supporte pas la lecture de vidéos ou l'URL est invalide.
-            </div>
-          </video>
-        </div>
-        <script>
-          const video = document.getElementById('videoPlayer');
-          
-          video.addEventListener('play', function() {
-            window.ReactNativeWebView.postMessage('play');
-          });
-          
-          video.addEventListener('pause', function() {
-            window.ReactNativeWebView.postMessage('pause');
-          });
-          
-          video.addEventListener('ended', function() {
-            window.ReactNativeWebView.postMessage('ended');
-          });
-          
-          // Ajouter la gestion des erreurs
-          video.addEventListener('error', function(e) {
-            console.error('Erreur de chargement vidéo:', e);
-            window.ReactNativeWebView.postMessage('video-error:' + e.target.error.code);
-          });
-        </script>
-      </body>
-      </html>
-    `;
-  };
-
   const togglePlayPause = () => {
     const newPlayingState = !isPlaying;
     setIsPlaying(newPlayingState);
 
-    if (useNativeVideo && videoRef.current) {
-      // Si on utilise le composant Video natif
+    if (videoRef.current) {
+      // Contrôle de la lecture de la vidéo
       if (newPlayingState) {
         videoRef.current.resume && videoRef.current.resume();
       } else {
         videoRef.current.pause && videoRef.current.pause();
       }
-    } else if (webViewRef.current) {
-      // Si on utilise WebView, injecter du JavaScript pour contrôler la vidéo
-      const script = newPlayingState
-        ? 'document.getElementById("videoPlayer").play(); true;'
-        : 'document.getElementById("videoPlayer").pause(); true;';
-      webViewRef.current.injectJavaScript(script);
     }
   };
 
@@ -202,6 +135,58 @@ export default function AnalysisDetailScreen() {
   const feedbacks = processedData.frames?.[frame]?.persons?.[0]?.feedback || [];
   const framesArray = processedData.frames || [];
   const tipCount = feedbacks.length;
+
+  // Fonction pour valider une frame avant de l'utiliser
+  const getValidatedFrame = (indexFrame: number) => {
+    const currentFrame = framesArray[indexFrame];
+    if (!currentFrame) return {};
+
+    // Vérifions si les keypoints sont au format objet (avec nose_x, nose_y, etc.)
+    if (
+      currentFrame.keypoints_positions &&
+      typeof currentFrame.keypoints_positions === 'object' &&
+      !Array.isArray(currentFrame.keypoints_positions)
+    ) {
+      // Conversion du format objet vers format tableau
+      const keypoints = [];
+      const kp = currentFrame.keypoints_positions;
+
+      // Créons les paires dans l'ordre approprié
+      keypoints.push([kp.nose_x || 0, kp.nose_y || 0]); // 0: nez
+      keypoints.push([kp.left_eye_x || 0, kp.left_eye_y || 0]); // 1: œil gauche
+      keypoints.push([kp.right_eye_x || 0, kp.right_eye_y || 0]); // 2: œil droit
+      keypoints.push([kp.left_ear_x || 0, kp.left_ear_y || 0]); // 3: oreille gauche
+      keypoints.push([kp.right_ear_x || 0, kp.right_ear_y || 0]); // 4: oreille droite
+      keypoints.push([kp.left_shoulder_x || 0, kp.left_shoulder_y || 0]); // 5: épaule gauche
+      keypoints.push([kp.right_shoulder_x || 0, kp.right_shoulder_y || 0]); // 6: épaule droite
+      keypoints.push([kp.left_elbow_x || 0, kp.left_elbow_y || 0]); // 7: coude gauche
+      keypoints.push([kp.right_elbow_x || 0, kp.right_elbow_y || 0]); // 8: coude droit
+      keypoints.push([kp.left_wrist_x || 0, kp.left_wrist_y || 0]); // 9: poignet gauche
+      keypoints.push([kp.right_wrist_x || 0, kp.right_wrist_y || 0]); // 10: poignet droit
+      keypoints.push([kp.left_hip_x || 0, kp.left_hip_y || 0]); // 11: hanche gauche
+      keypoints.push([kp.right_hip_x || 0, kp.right_hip_y || 0]); // 12: hanche droite
+      keypoints.push([kp.left_knee_x || 0, kp.left_knee_y || 0]); // 13: genou gauche
+      keypoints.push([kp.right_knee_x || 0, kp.right_knee_y || 0]); // 14: genou droit
+      keypoints.push([kp.left_ankle_x || 0, kp.left_ankle_y || 0]); // 15: cheville gauche
+      keypoints.push([kp.right_ankle_x || 0, kp.right_ankle_y || 0]); // 16: cheville droite
+
+      return { ...currentFrame, keypoints_positions: keypoints };
+    }
+
+    // Vérification du format tableau habituel
+    if (
+      !currentFrame.keypoints_positions ||
+      !Array.isArray(currentFrame.keypoints_positions)
+    ) {
+      console.log(
+        'Frame invalide ou keypoints_positions manquants:',
+        currentFrame,
+      );
+      return { ...currentFrame, keypoints_positions: [] };
+    }
+
+    return currentFrame;
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -235,65 +220,149 @@ export default function AnalysisDetailScreen() {
           )}
         </Card>
         <ThemedView>
-          <ThemedView style={styles.videoContainer}>
-            {originalVideoUrl || processedData.url ? (
-              useNativeVideo ? (
-                // Utiliser un composant Video natif pour les fichiers locaux sur iOS
-                <Video
-                  ref={videoRef}
-                  source={{ uri: originalVideoUrl || '' }}
-                  style={styles.video}
-                  controls={true}
-                  resizeMode="contain"
-                  paused={!isPlaying}
-                  onLoad={() => console.log('Video loaded')}
-                  onError={videoErr => {
-                    console.error('Video error:', videoErr);
-                    // Si le Video natif échoue, essayons WebView
-                    setUseNativeVideo(false);
-                  }}
-                />
-              ) : (
-                <WebView
-                  ref={webViewRef}
-                  source={{
-                    html: generateVideoHTML(
-                      originalVideoUrl || processedData.url || '',
-                    ),
-                  }}
-                  style={styles.video}
-                  allowsFullscreenVideo={true}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  mediaPlaybackRequiresUserAction={false}
-                  originWhitelist={['*']}
-                  startInLoadingState={true}
-                  onMessage={event => {
-                    const { data } = event.nativeEvent;
-                    if (data === 'play') {
-                      setIsPlaying(true);
-                    } else if (data === 'pause' || data === 'ended') {
-                      setIsPlaying(false);
-                    } else if (data.startsWith('video-error:')) {
-                      console.error(
-                        'WebView video error code:',
-                        data.split(':')[1],
+          {/* Conteneur vidéo avec titre */}
+          <ThemedView style={styles.sectionContainer}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+              Vidéo
+            </ThemedText>
+            <ThemedView style={styles.videoContainer}>
+              {alternativeVideoUrl ? (
+                // Utiliser uniquement le composant Video natif pour la lecture
+                <View style={styles.videoWrapper}>
+                  <Video
+                    ref={videoRef}
+                    source={{
+                      uri: alternativeVideoUrl,
+                    }}
+                    style={styles.video}
+                    controls={true}
+                    resizeMode="contain"
+                    paused={!isPlaying}
+                    repeat={false}
+                    playInBackground={false}
+                    playWhenInactive={false}
+                    ignoreSilentSwitch="ignore"
+                    progressUpdateInterval={250}
+                    // Configuration de buffer optimisée pour un téléchargement complet
+                    bufferConfig={{
+                      minBufferMs: 15000,
+                      maxBufferMs: 60000,
+                      bufferForPlaybackMs: 2500,
+                      bufferForPlaybackAfterRebufferMs: 5000,
+                    }}
+                    poster={require('@/assets/images/placeholder.png')}
+                    onLoadStart={() => {
+                      console.log('Video load started');
+                      setIsVideoLoading(true);
+                    }}
+                    onLoad={() => {
+                      console.log('Video loaded successfully');
+                      setIsVideoLoading(false);
+                      // Force le démarrage de la lecture après chargement pour tester
+                      if (videoRef.current) {
+                        videoRef.current.seek(0);
+                      }
+                    }}
+                    onReadyForDisplay={() => {
+                      console.log('Video ready for display');
+                      setIsVideoLoading(false);
+                    }}
+                    onProgress={data => {
+                      // Calcul du frame correspondant à la position actuelle de la vidéo
+                      if (isPlaying && framesArray.length > 0) {
+                        const videoPositionSeconds = data.currentTime;
+                        const totalDuration = data.seekableDuration || 30;
+                        const estimatedFrame = Math.min(
+                          Math.floor(
+                            (videoPositionSeconds / totalDuration) *
+                              framesArray.length,
+                          ),
+                          framesArray.length - 1,
+                        );
+                        if (estimatedFrame !== frame) {
+                          setFrame(estimatedFrame);
+                          scrollToSelected(estimatedFrame);
+                        }
+                      }
+                    }}
+                    onError={videoErr => {
+                      console.error('Video error:', JSON.stringify(videoErr));
+                      setIsVideoLoading(false);
+
+                      // Message d'erreur détaillé
+                      const errorCode = videoErr?.error?.code || 'inconnu';
+                      const errorDesc =
+                        videoErr?.error?.localizedDescription ||
+                        'Erreur inconnue';
+                      const errorReason =
+                        videoErr?.error?.localizedFailureReason || '';
+                      const errorDomain = videoErr?.error?.domain || '';
+
+                      console.log(
+                        `Erreur de lecture: Code ${errorCode} - ${errorDesc} - ${errorReason} - Domaine: ${errorDomain}`,
                       );
-                    }
-                  }}
-                  onError={syntheticEvent => {
-                    const { nativeEvent } = syntheticEvent;
-                    console.error('WebView error:', nativeEvent);
-                  }}
+                      console.log(
+                        `URL qui a causé l'erreur: ${alternativeVideoUrl}`,
+                      );
+
+                      // Essayer une URL alternative directement vers le fichier uploads
+                      const apiBaseUrl = API_URL || 'http://localhost:3000';
+
+                      // Extraire le nom du fichier de l'URL originale ou de l'ID
+                      let fileName;
+                      if (processedData && processedData.original_path) {
+                        // Récupérer le nom du fichier en extrayant la dernière partie du chemin
+                        const pathParts =
+                          processedData.original_path.split('/');
+                        fileName = pathParts[pathParts.length - 1];
+                      } else {
+                        fileName = `media-${id.split('-').pop()}.mp4`;
+                      }
+
+                      const timestamp = new Date().getTime();
+                      // Essayer directement l'URL du fichier statique
+                      const altUrl = `${apiBaseUrl}/uploads/${fileName}?t=${timestamp}`;
+                      console.log(`Tentative avec URL directe: ${altUrl}`);
+                      setAlternativeVideoUrl(altUrl);
+                    }}
+                  />
+
+                  {/* Indicateur de chargement superposé à la vidéo */}
+                  {isVideoLoading && (
+                    <View style={styles.loadingOverlay}>
+                      <ThemedText type="defaultSemiBold">
+                        Chargement de la vidéo...
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.videoWrapper}>
+                  <Image
+                    source={require('@/assets/images/placeholder.png')}
+                    style={styles.video}
+                    resizeMode="contain"
+                  />
+                </View>
+              )}
+            </ThemedView>
+          </ThemedView>
+
+          {/* Conteneur squelette avec titre */}
+          <ThemedView style={styles.sectionContainer}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+              Analyse posturale
+            </ThemedText>
+            <ThemedView style={styles.skeletonContainer}>
+              {framesArray[frame] && (
+                <SkeletonView
+                  frame={getValidatedFrame(frame)}
+                  isPlaying={isPlaying}
+                  width={Dimensions.get('window').width - 32}
+                  height={200}
                 />
-              )
-            ) : (
-              <Image
-                source={require('@/assets/images/placeholder.png')}
-                style={styles.video}
-                resizeMode="contain"
-              />
-            )}
+              )}
+            </ThemedView>
           </ThemedView>
         </ThemedView>
 
@@ -348,6 +417,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 24,
   },
+  sectionContainer: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
   videoContainer: {
     height: 220,
     borderRadius: 12,
@@ -355,6 +431,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: color.colors.border,
+  },
+  skeletonContainer: {
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: color.colors.border,
+    backgroundColor: '#F8F8F8', // Léger gris pour un meilleur contraste
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoWrapper: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
   },
   video: {
     width: '100%',
@@ -368,17 +460,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     alignItems: 'center',
   },
-  button: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  navButton: {
-    minWidth: 50,
-    alignItems: 'center',
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   // Tips card
   tipsCard: {

@@ -10,6 +10,7 @@ import { useApi } from '../utils/api';
 interface ProcessedData {
   _id: string;
   url?: string;
+  original_path?: string;
   exercise_id?: {
     name: string;
     description: string;
