@@ -88,7 +88,10 @@ export default function AnalysisDetailScreen() {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.errorContainer}>
-          <ThemedText type="defaultSemiBold" style={{ color: 'red', marginBottom: 20 }}>
+          <ThemedText
+            type="defaultSemiBold"
+            style={{ color: 'red', marginBottom: 20 }}
+          >
             Erreur: {error ? error.message : 'Aucune donnée disponible'}
           </ThemedText>
           <TouchableOpacity style={styles.retryButton} onPress={refresh}>

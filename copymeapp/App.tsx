@@ -21,7 +21,7 @@ import ProfileScreen from '@/app/(tabs)/profile';
 import ExerciseDetailScreen from '@/app/exercise/[id]';
 import ExerciseSessionScreen from '@/app/exercise-session/[id]';
 import ExerciseResultsScreen from '@/app/exercise-results/[id]';
-import AnalyzeScreen from '@/app/analyze/[id]';
+import AnalyzeScreen from '@/app/analyze/ezaezz[id]';
 import NotFoundScreen from '@/app/+not-found';
 
 import { AuthProvider } from '@/utils/auth';
