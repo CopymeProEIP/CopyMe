@@ -4,13 +4,13 @@ import color from "@/app/theme/color";
 
 export const theme = {
   colors: {
-    primary: color.colors.primary, // gold
+    primary: color.colors.primary,
     secondary: '#36A2EB',
     danger: '#FF6384',
     background: '#FFFFFF',
     text: '#11181C',
     border: '#E5E5E5',
-    lightBackground: color.colors.primary, // gold avec opacité
+    lightBackground: color.colors.primary,
   },
   spacing: {
     xs: 4,

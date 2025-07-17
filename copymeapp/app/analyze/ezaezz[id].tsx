@@ -24,7 +24,6 @@ type RouteParams = {
   id: string;
   title?: string;
   exerciseName?: string;
-  originalVideoUrl?: string;
 };
 
 function Feedback({ feedbacks }: { feedbacks: string[] }) {
@@ -67,92 +66,6 @@ export default function AnalysisDetailScreen() {
     setTimeout(() => scrollToSelected(newFrame), 100);
   };
 
-  // Utilisation du hook useProcessedData
-  const { data: processedData, loading, error, refresh } = useProcessedData(id);
-
-  const generateVideoHTML = (videoUrl: string) => {
-    // Correction pour les URLs de fichiers locaux
-    let formattedUrl = videoUrl;
-
-    // Vérifier si c'est une URL de fichier local (commence par "file://")
-    if (videoUrl.startsWith('file://')) {
-      // Sur iOS, les URL file:// ne fonctionnent pas directement dans les WebViews
-      console.log("Utilisation d'une URL de fichier local:", videoUrl);
-
-      // Si c'est iOS, nous utiliserons le composant Video natif à la place
-      if (Platform.OS === 'ios') {
-        setUseNativeVideo(true);
-      }
-    }
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <style>
-          body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: transparent;
-            overflow: hidden;
-          }
-          .video-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-          video {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-          }
-          .error-message {
-            color: red;
-            text-align: center;
-            padding: 20px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="video-container">
-          <video id="videoPlayer" controls playsinline webkit-playsinline>
-            <source src="${formattedUrl}" type="video/mp4">
-            <div class="error-message">
-              Votre navigateur ne supporte pas la lecture de vidéos ou l'URL est invalide.
-            </div>
-          </video>
-        </div>
-        <script>
-          const video = document.getElementById('videoPlayer');
-          
-          video.addEventListener('play', function() {
-            window.ReactNativeWebView.postMessage('play');
-          });
-          
-          video.addEventListener('pause', function() {
-            window.ReactNativeWebView.postMessage('pause');
-          });
-          
-          video.addEventListener('ended', function() {
-            window.ReactNativeWebView.postMessage('ended');
-          });
-          
-          // Ajouter la gestion des erreurs
-          video.addEventListener('error', function(e) {
-            console.error('Erreur de chargement vidéo:', e);
-            window.ReactNativeWebView.postMessage('video-error:' + e.target.error.code);
-          });
-        </script>
-      </body>
-      </html>
-    `;
-  };
-
   const togglePlayPause = () => {
     const newPlayingState = !isPlaying;
     setIsPlaying(newPlayingState);
@@ -175,7 +88,10 @@ export default function AnalysisDetailScreen() {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.errorContainer}>
-          <ThemedText type="defaultSemiBold" style={{ color: 'red', marginBottom: 20 }}>
+          <ThemedText
+            type="defaultSemiBold"
+            style={{ color: 'red', marginBottom: 20 }}
+          >
             Erreur: {error ? error.message : 'Aucune donnée disponible'}
           </ThemedText>
           <TouchableOpacity style={styles.retryButton} onPress={refresh}>
@@ -435,7 +351,6 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: 'white',
     fontSize: 16,
-
   },
   playButton: {
     width: 50,
@@ -449,12 +364,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  stepText: {
-    borderBottomWidth: 1,
-    borderBottomColor: color.colors.border,
-    width: '90%',
-    textAlign: 'center',
   },
   stepText: {
     borderBottomWidth: 1,
