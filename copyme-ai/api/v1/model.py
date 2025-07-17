@@ -134,8 +134,23 @@ async def process(
             mongo_ready_frame = json.loads(json.dumps(mongo_ready_frame, default=serialize_custom))
             mongo_ready_frames.append(mongo_ready_frame)
 
+        # Récupération du chemin original à partir du formulaire
+        original_path = None
+        try:
+            form_data = await request.form()
+            original_path = form_data.get("original_path")
+            if original_path:
+                logging.info(f"Chemin original reçu: {original_path}")
+            else:
+                logging.info("Aucun chemin original reçu, utilisation du chemin par défaut")
+                original_path = str(file_path)
+        except Exception as e:
+            logging.error(f"Erreur lors de la récupération du chemin original: {e}")
+            original_path = str(file_path)
+        
         collection_insert = ProcessedImage(
-            url=str(file_path),
+            url=form_data.get("url"),
+            original_path=original_path,  # Ajouter le chemin original
             frames=mongo_ready_frames,  # Utiliser les frames préparées pour MongoDB
             userId=userId,
             is_reference=False,  # Par défaut, on ne crée pas de référence
@@ -192,7 +207,8 @@ async def process(
             "_id": id_str,  # Inclure l'ID directement à la racine
             "frames": frames_json,
             "created_at": created_at.isoformat(),
-            "version": 1
+            "version": 1,
+            "original_path": original_path  # Ajouter le chemin original à la réponse
         }
         
         # S'assurer que la réponse est sérialisable en JSON

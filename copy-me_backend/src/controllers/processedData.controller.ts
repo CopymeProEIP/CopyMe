@@ -201,6 +201,14 @@ export const uploadProcessedData = async (req: AuthenticatedRequest, res: Respon
 
 		const blob = new Blob([fileBuffer], { type: req.file!.mimetype });
 		formData.append('files', blob, req.file!.originalname);
+		formData.append('original_path', req.file.path);
+
+		// Ajouter l'URL pour accéder au fichier
+		const fileName = path.basename(req.file.path);
+		const fileUrl = `/uploads/${fileName}`;
+		console.log('File URL to be used:', fileUrl);
+		formData.append('url', fileUrl);
+
 		formData.append('exercise_id', exercise_id);
 		formData.append('fileType', fileType);
 

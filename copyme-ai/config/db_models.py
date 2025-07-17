@@ -46,6 +46,8 @@ class FrameDataResponse(BaseModel):
 class ProcessedImage(BaseModel):
     uuid: UUID = uuid4()
     url: str
+    is_reference: Optional[bool] = False
+    original_path: Optional[str] = None  # Ajout du champ pour le chemin original
     frames: List["FrameData"]
     exercise_id: str
     userId: str
